@@ -1,3 +1,5 @@
+namespace Monetria.Domain.Entities;
+
 public class Debt
 {
     public Guid Id { get; set; }

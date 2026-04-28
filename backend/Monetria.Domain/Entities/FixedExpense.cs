@@ -1,3 +1,7 @@
+using Monetria.Domain.Enums;
+
+namespace Monetria.Domain.Entities;
+
 public class FixedExpense
 {
     public Guid Id { get; set; }
@@ -8,7 +12,7 @@ public class FixedExpense
     public decimal Amount { get; set; }
     public string Category { get; set; } = null!;
 
-    public string Period { get; set; } = null!; // monthly, weekly, yearly
+    public ExpensePeriod Period { get; set; }
     public int? DueDay { get; set; }
 
     public bool IsActive { get; set; } = true;
