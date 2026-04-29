@@ -85,6 +85,10 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(budget => budget.Category).HasMaxLength(120).IsRequired();
             entity.Property(budget => budget.LimitAmount).HasPrecision(18, 2);
             entity.Property(budget => budget.Period).HasConversion<string>().HasMaxLength(30).IsRequired();
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(budget => budget.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 
@@ -111,6 +115,10 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(debt => debt.InterestRate).HasPrecision(9, 4);
             entity.Property(debt => debt.MinimumPayment).HasPrecision(18, 2);
             entity.Property(debt => debt.Type).HasMaxLength(80);
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(debt => debt.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 
@@ -124,6 +132,10 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(expense => expense.Category).HasMaxLength(120).IsRequired();
             entity.Property(expense => expense.Period).HasConversion<string>().HasMaxLength(30).IsRequired();
             entity.Property(expense => expense.Notes).HasMaxLength(500);
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(expense => expense.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Account>()
                 .WithMany()
                 .HasForeignKey(expense => expense.AccountId)
@@ -142,6 +154,10 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(goal => goal.Category).HasMaxLength(120);
             entity.Property(goal => goal.Color).HasMaxLength(20);
             entity.Property(goal => goal.Description).HasMaxLength(500);
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(goal => goal.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
