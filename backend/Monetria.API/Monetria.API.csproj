@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Monetria.Application\Monetria.Application.csproj" />
+    <ProjectReference Include="..\Monetria.Infrastructure\Monetria.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
