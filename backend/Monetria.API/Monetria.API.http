@@ -1,6 +1,45 @@
 @Monetria.API_HostAddress = http://localhost:5245
 
-GET {{Monetria.API_HostAddress}}/weatherforecast/
+POST {{Monetria.API_HostAddress}}/accounts/
+Content-Type: application/json
+
+{
+  "userId": "00000000-0000-0000-0000-000000000001",
+  "name": "Cuenta principal",
+  "type": "Debit",
+  "balance": 0,
+  "currency": "PEN",
+  "bank": null,
+  "cardHolderName": null,
+  "cardLast4Digits": null,
+  "expiryDate": null,
+  "creditLimit": null,
+  "billingDate": null,
+  "paymentDay": null
+}
+
+###
+
+GET {{Monetria.API_HostAddress}}/users/00000000-0000-0000-0000-000000000001/accounts
+Accept: application/json
+
+###
+
+POST {{Monetria.API_HostAddress}}/transactions/
+Content-Type: application/json
+
+{
+  "accountId": "00000000-0000-0000-0000-000000000001",
+  "type": "Expense",
+  "category": "Food",
+  "amount": 25.50,
+  "description": "Lunch",
+  "date": "2026-04-29T00:00:00Z"
+}
+
+###
+
+GET {{Monetria.API_HostAddress}}/accounts/00000000-0000-0000-0000-000000000001/transactions
 Accept: application/json
 
 ###
