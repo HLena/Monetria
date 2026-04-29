@@ -1,0 +1,31 @@
+using Microsoft.EntityFrameworkCore;
+using Monetria.Application.Accounts;
+using Monetria.Domain.Entities;
+using Monetria.Infrastructure.Persistence;
+
+namespace Monetria.Infrastructure.Accounts;
+
+public sealed class AccountRepository(MonetriaDbContext dbContext) : IAccountRepository
+{
+    public async Task AddAsync(Account account, CancellationToken cancellationToken = default)
+    {
+        await dbContext.Accounts.AddAsync(account, cancellationToken);
+    }
+
+    public Task<bool> ExistsAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        return dbContext.Accounts.AnyAsync(account => account.Id == accountId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Account>> ListByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Accounts
+            .AsNoTracking()
+            .Where(account => account.UserId == userId)
+            .OrderBy(account => account.Name)
+            .ThenBy(account => account.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+}
