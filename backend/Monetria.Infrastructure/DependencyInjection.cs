@@ -2,10 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Monetria.Application.Accounts;
+using Monetria.Application.Auth;
 using Monetria.Application.Common;
 using Monetria.Application.Transactions;
 using Monetria.Application.Users;
 using Monetria.Infrastructure.Accounts;
+using Monetria.Infrastructure.Auth;
 using Monetria.Infrastructure.Persistence;
 using Monetria.Infrastructure.Transactions;
 using Monetria.Infrastructure.Users;
@@ -24,11 +26,16 @@ public static class DependencyInjection
         services.AddDbContext<MonetriaDbContext>(options =>
             options.UseNpgsql(connectionString));
 
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+
         services.AddScoped<IUnitOfWork, MonetriaUnitOfWork>();
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IPasswordService, PasswordService>();
+        services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<IUserService, UserService>();
 

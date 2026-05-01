@@ -10,11 +10,13 @@ public static class TransactionEndpoints
             .WithTags("Transactions");
 
         group.MapPost("/", CreateTransactionAsync)
-            .WithName("CreateTransaction");
+            .WithName("CreateTransaction")
+            .RequireAuthorization();
 
         endpoints.MapGet("/accounts/{accountId:guid}/transactions", ListTransactionsByAccountAsync)
             .WithName("ListTransactionsByAccount")
-            .WithTags("Transactions");
+            .WithTags("Transactions")
+            .RequireAuthorization();
 
         return endpoints;
     }

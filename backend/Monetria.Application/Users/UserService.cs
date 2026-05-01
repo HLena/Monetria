@@ -1,10 +1,14 @@
 using System.ComponentModel.DataAnnotations;
+using Monetria.Application.Auth;
 using Monetria.Application.Common;
 using Monetria.Domain.Entities;
 
 namespace Monetria.Application.Users;
 
-public sealed class UserService(IUserRepository userRepository, IUnitOfWork unitOfWork) : IUserService
+public sealed class UserService(
+    IUserRepository userRepository,
+    IUnitOfWork unitOfWork,
+    IPasswordService passwordService) : IUserService
 {
     public async Task<UserResponse> CreateAsync(
         CreateUserRequest request,
@@ -12,7 +16,9 @@ public sealed class UserService(IUserRepository userRepository, IUnitOfWork unit
     {
         ValidateCreateRequest(request);
 
-        if (await userRepository.ExistsUserWithEmailAsync(request.Email, cancellationToken))
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+        if (await userRepository.ExistsUserWithEmailAsync(normalizedEmail, cancellationToken))
         {
             throw new ArgumentException("Email already exists.", nameof(request));
         }
@@ -20,12 +26,12 @@ public sealed class UserService(IUserRepository userRepository, IUnitOfWork unit
         var user = new User
         {
             Id = Guid.NewGuid(),
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Email = request.Email,
-            PasswordHash = request.Password,
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
+            Email = normalizedEmail,
             CreatedAt = DateTime.UtcNow
         };
+        user.PasswordHash = passwordService.HashPassword(user, request.Password);
 
         await userRepository.AddAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);

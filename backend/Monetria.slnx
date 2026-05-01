@@ -3,4 +3,5 @@
   <Project Path="Monetria.Application/Monetria.Application.csproj" />
   <Project Path="Monetria.Domain/Monetria.Domain.csproj" />
   <Project Path="Monetria.Infrastructure/Monetria.Infrastructure.csproj" />
+  <Project Path="Monetria.Tests/Monetria.Tests.csproj" />
 </Solution>

@@ -12,6 +12,12 @@ public sealed class UserRepository(MonetriaDbContext dbContext) : IUserRepositor
         return dbContext.Users.FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
     }
 
+    public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = email.Trim().ToLower();
+        return dbContext.Users.FirstOrDefaultAsync(user => user.Email.ToLower() == normalizedEmail, cancellationToken);
+    }
+
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
         await dbContext.Users.AddAsync(user, cancellationToken);
@@ -19,6 +25,7 @@ public sealed class UserRepository(MonetriaDbContext dbContext) : IUserRepositor
 
     public Task<bool> ExistsUserWithEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        return dbContext.Users.AnyAsync(user => user.Email == email, cancellationToken);
+        var normalizedEmail = email.Trim().ToLower();
+        return dbContext.Users.AnyAsync(user => user.Email.ToLower() == normalizedEmail, cancellationToken);
     }
 }
