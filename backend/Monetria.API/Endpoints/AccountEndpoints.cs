@@ -1,4 +1,5 @@
 using Monetria.Application.Accounts;
+using Monetria.Domain.Enums;
 
 namespace Monetria.API.Endpoints;
 
@@ -39,12 +40,13 @@ public static class AccountEndpoints
 
     private static async Task<IResult> ListAccountsByUserAsync(
         Guid userId,
+        AccountType? type,
         IAccountService accountService,
         CancellationToken cancellationToken)
     {
         try
         {
-            var accounts = await accountService.ListByUserIdAsync(userId, cancellationToken);
+            var accounts = await accountService.ListByUserIdAsync(userId, type, cancellationToken);
             return Results.Ok(accounts);
         }
         catch (ArgumentException exception)

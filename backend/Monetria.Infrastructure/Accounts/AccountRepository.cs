@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Monetria.Application.Accounts;
 using Monetria.Domain.Entities;
+using Monetria.Domain.Enums;
 using Monetria.Infrastructure.Persistence;
 
 namespace Monetria.Infrastructure.Accounts;
@@ -19,11 +20,19 @@ public sealed class AccountRepository(MonetriaDbContext dbContext) : IAccountRep
 
     public async Task<IReadOnlyList<Account>> ListByUserIdAsync(
         Guid userId,
+        AccountType? type = null,
         CancellationToken cancellationToken = default)
     {
-        return await dbContext.Accounts
+        var query = dbContext.Accounts
             .AsNoTracking()
-            .Where(account => account.UserId == userId)
+            .Where(account => account.UserId == userId);
+
+        if (type.HasValue)
+        {
+            query = query.Where(account => account.Type == type.Value);
+        }
+
+        return await query
             .OrderBy(account => account.Name)
             .ThenBy(account => account.CreatedAt)
             .ToListAsync(cancellationToken);

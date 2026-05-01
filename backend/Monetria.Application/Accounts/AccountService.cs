@@ -86,6 +86,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
 
     public async Task<IReadOnlyList<AccountResponse>> ListByUserIdAsync(
         Guid userId,
+        AccountType? type = null,
         CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
@@ -93,7 +94,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             throw new ArgumentException("User id is required.", nameof(userId));
         }
 
-        var accounts = await accountRepository.ListByUserIdAsync(userId, cancellationToken);
+        var accounts = await accountRepository.ListByUserIdAsync(userId, type, cancellationToken);
 
         return accounts
             .Select(MapToResponse)
