@@ -30,7 +30,8 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    FirstName = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
+                    LastName = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
                     Email = table.Column<string>(type: "character varying(180)", maxLength: 180, nullable: false),
                     PasswordHash = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -48,7 +49,7 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: true),
                     Type = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
-                    Balance = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    InitialBalance = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     Currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
                     Bank = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: true),
                     CardHolderName = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: true),

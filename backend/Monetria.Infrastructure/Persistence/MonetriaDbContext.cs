@@ -33,7 +33,8 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(user => user.Id);
-            entity.Property(user => user.Name).HasMaxLength(120).IsRequired();
+            entity.Property(user => user.FirstName).HasMaxLength(80).IsRequired();
+            entity.Property(user => user.LastName).HasMaxLength(80).IsRequired();
             entity.Property(user => user.Email).HasMaxLength(180).IsRequired();
             entity.Property(user => user.PasswordHash).HasMaxLength(500).IsRequired();
             entity.HasIndex(user => user.Email).IsUnique();
@@ -47,7 +48,7 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.HasKey(account => account.Id);
             entity.Property(account => account.Name).HasMaxLength(120);
             entity.Property(account => account.Type).HasConversion<string>().HasMaxLength(30).IsRequired();
-            entity.Property(account => account.Balance).HasPrecision(18, 2);
+            entity.Property(account => account.InitialBalance).HasPrecision(18, 2);
             entity.Property(account => account.Currency).HasMaxLength(3).IsRequired();
             entity.Property(account => account.Bank).HasMaxLength(120);
             entity.Property(account => account.CardHolderName).HasMaxLength(160);

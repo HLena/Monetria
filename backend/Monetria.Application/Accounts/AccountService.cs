@@ -17,7 +17,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             UserId = request.UserId,
             Name = request.Name,
             Type = request.Type,
-            Balance = request.Balance,
+            InitialBalance = request.InitialBalance,
             Currency = request.Currency.Trim().ToUpperInvariant(),
             Bank = request.Bank,
             CardHolderName = request.CardHolderName,
@@ -68,9 +68,9 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             throw new ArgumentException("Account currency must use a three-letter code.", nameof(request));
         }
 
-        if (request.Balance < 0)
+        if (request.InitialBalance < 0)
         {
-            throw new ArgumentException("Account balance cannot be negative.", nameof(request));
+            throw new ArgumentException("Account initial balance cannot be negative.", nameof(request));
         }
     }
 
@@ -81,7 +81,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             account.UserId,
             account.Name,
             account.Type,
-            account.Balance,
+            account.InitialBalance,
             account.Currency,
             account.Bank,
             account.CardLast4Digits,

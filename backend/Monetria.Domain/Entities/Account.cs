@@ -9,7 +9,7 @@ public class Account
 
     public string? Name { get; set; }
     public AccountType Type { get; set; }
-    public decimal Balance { get; set; }
+    public decimal InitialBalance { get; set; }
     public string Currency { get; set; } = "PEN";
 
     public string? Bank { get; set; }

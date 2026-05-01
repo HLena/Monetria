@@ -28,7 +28,7 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("Balance")
+                    b.Property<decimal>("InitialBalance")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
@@ -339,10 +339,15 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                         .HasMaxLength(180)
                         .HasColumnType("character varying(180)");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
