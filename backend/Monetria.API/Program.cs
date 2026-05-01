@@ -65,6 +65,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
+app.MapUserEndpoints();
 app.MapAccountEndpoints();
 app.MapTransactionEndpoints();
 

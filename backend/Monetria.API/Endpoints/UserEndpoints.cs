@@ -8,30 +8,12 @@ public static class UserEndpoints
     {
         var group = endpoints.MapGroup("/users")
             .WithTags("Users");
-        
-        group.MapPost("/", CreateUserAsync)
-            .WithName("CreateUser");
 
         group.MapGet("/{id:guid}", GetUserByIdAsync)
-            .WithName("GetUserById");
+            .WithName("GetUserById")
+            .RequireAuthorization();
 
         return endpoints;
-    }
-
-    private static async Task<IResult> CreateUserAsync(
-        CreateUserRequest request,
-        IUserService userService,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var user = await userService.CreateAsync(request, cancellationToken);
-            return Results.Created($"/users/{user.Id}", user);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
     }
 
     private static async Task<IResult> GetUserByIdAsync(
