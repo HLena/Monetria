@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Monetria.Domain.Entities;
+using Monetria.Domain.Enums;
 
 namespace Monetria.Infrastructure.Persistence;
 
@@ -68,13 +69,16 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
         {
             entity.HasKey(transaction => transaction.Id);
             entity.Property(transaction => transaction.Type).HasConversion<string>().HasMaxLength(30).IsRequired();
-            entity.Property(transaction => transaction.Category).HasMaxLength(120).IsRequired();
             entity.Property(transaction => transaction.Amount).HasPrecision(18, 2);
             entity.Property(transaction => transaction.Description).HasMaxLength(500);
             entity.HasOne<Account>()
                 .WithMany(account => account.Transactions)
                 .HasForeignKey(transaction => transaction.AccountId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(transaction => transaction.Category)
+                .WithMany(category => category.Transactions)
+                .HasForeignKey(transaction => transaction.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 
@@ -98,9 +102,26 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
         modelBuilder.Entity<Category>(entity =>
         {
             entity.HasKey(category => category.Id);
+            entity.Property(category => category.UserId);
             entity.Property(category => category.Name).HasMaxLength(120).IsRequired();
             entity.Property(category => category.Type).HasConversion<string>().HasMaxLength(30).IsRequired();
             entity.Property(category => category.Color).HasMaxLength(20);
+            entity.Property(category => category.IsDefault).IsRequired();
+            entity.Property(category => category.IsActive).IsRequired();
+            entity.Property(category => category.CreatedAt).IsRequired();
+            entity.Property(category => category.UpdatedAt).IsRequired();
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(category => category.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(category => new { category.UserId, category.Type, category.IsActive });
+            entity.HasIndex(category => new { category.UserId, category.Type, category.Name })
+                .IsUnique()
+                .HasFilter("\"UserId\" IS NOT NULL");
+            entity.HasIndex(category => new { category.Type, category.Name })
+                .IsUnique()
+                .HasFilter("\"IsDefault\" = TRUE");
+            entity.HasData(DefaultCategories);
         });
     }
 
@@ -160,5 +181,37 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
                 .HasForeignKey(goal => goal.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+    }
+
+    private static readonly DateTime DefaultCategoryTimestamp = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    private static readonly Category[] DefaultCategories =
+    [
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111111", "Alimentación", TransactionType.Expense, "#F97316"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111112", "Transporte", TransactionType.Expense, "#3B82F6"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111113", "Vivienda", TransactionType.Expense, "#14B8A6"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111114", "Salud", TransactionType.Expense, "#EF4444"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111115", "Entretenimiento", TransactionType.Expense, "#A855F7"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111116", "Educación", TransactionType.Expense, "#6366F1"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111117", "Ahorro", TransactionType.Expense, "#22C55E"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111118", "Otros", TransactionType.Expense, "#64748B"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111119", "Ingresos", TransactionType.Income, "#10B981"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111120", "Otros", TransactionType.Income, "#64748B"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111121", "Transferencias", TransactionType.Transfer, "#0EA5E9")
+    ];
+
+    private static Category CreateDefaultCategory(string id, string name, TransactionType type, string color)
+    {
+        return new Category
+        {
+            Id = Guid.Parse(id),
+            Name = name,
+            Type = type,
+            Color = color,
+            IsDefault = true,
+            IsActive = true,
+            CreatedAt = DefaultCategoryTimestamp,
+            UpdatedAt = DefaultCategoryTimestamp
+        };
     }
 }

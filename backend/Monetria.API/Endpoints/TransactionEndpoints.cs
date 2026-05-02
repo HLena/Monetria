@@ -18,6 +18,11 @@ public static class TransactionEndpoints
             .WithTags("Transactions")
             .RequireAuthorization();
 
+        endpoints.MapGet("/users/{userId:guid}/transactions", ListTransactionsByUserAsync)
+            .WithName("ListTransactionsByUser")
+            .WithTags("Transactions")
+            .RequireAuthorization();
+
         return endpoints;
     }
 
@@ -43,12 +48,30 @@ public static class TransactionEndpoints
 
     private static async Task<IResult> ListTransactionsByAccountAsync(
         Guid accountId,
+        [AsParameters] TransactionFilterRequest filter,
         ITransactionService transactionService,
         CancellationToken cancellationToken)
     {
         try
         {
-            var transactions = await transactionService.ListByAccountIdAsync(accountId, cancellationToken);
+            var transactions = await transactionService.ListByAccountIdAsync(accountId, filter, cancellationToken);
+            return Results.Ok(transactions);
+        }
+        catch (ArgumentException exception)
+        {
+            return Results.BadRequest(new { error = exception.Message });
+        }
+    }
+
+    private static async Task<IResult> ListTransactionsByUserAsync(
+        Guid userId,
+        [AsParameters] TransactionFilterRequest filter,
+        ITransactionService transactionService,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var transactions = await transactionService.ListByUserIdAsync(userId, filter, cancellationToken);
             return Results.Ok(transactions);
         }
         catch (ArgumentException exception)
