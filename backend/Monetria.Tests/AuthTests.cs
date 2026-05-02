@@ -72,7 +72,7 @@ public sealed class AuthTests : IDisposable
     {
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync($"/users/{Guid.NewGuid()}/accounts");
+        var response = await client.GetAsync("/accounts");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
