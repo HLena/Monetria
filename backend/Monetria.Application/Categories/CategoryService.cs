@@ -9,14 +9,15 @@ public sealed class CategoryService(
     IUnitOfWork unitOfWork) : ICategoryService
 {
     public async Task<CategoryResponse> CreateAsync(
+        Guid userId,
         CreateCategoryRequest request,
         CancellationToken cancellationToken = default)
     {
-        ValidateUserId(request.UserId);
+        ValidateUserId(userId);
         var name = NormalizeName(request.Name);
 
         await EnsureNameIsAvailableAsync(
-            request.UserId,
+            userId,
             request.Type,
             name,
             excludedCategoryId: null,
@@ -26,7 +27,7 @@ public sealed class CategoryService(
         var category = new Category
         {
             Id = Guid.NewGuid(),
-            UserId = request.UserId,
+            UserId = userId,
             Name = name,
             Type = request.Type,
             Color = NormalizeColor(request.Color),
@@ -62,18 +63,19 @@ public sealed class CategoryService(
     }
 
     public async Task<CategoryResponse> UpdateAsync(
+        Guid userId,
         Guid categoryId,
         UpdateCategoryRequest request,
         CancellationToken cancellationToken = default)
     {
         ValidateCategoryId(categoryId);
-        ValidateUserId(request.UserId);
+        ValidateUserId(userId);
 
-        var category = await GetEditableCategoryAsync(categoryId, request.UserId, cancellationToken);
+        var category = await GetEditableCategoryAsync(categoryId, userId, cancellationToken);
         var name = NormalizeName(request.Name);
 
         await EnsureNameIsAvailableAsync(
-            request.UserId,
+            userId,
             category.Type,
             name,
             category.Id,
@@ -89,14 +91,14 @@ public sealed class CategoryService(
     }
 
     public async Task<CategoryResponse> DeactivateAsync(
+        Guid userId,
         Guid categoryId,
-        DeactivateCategoryRequest request,
         CancellationToken cancellationToken = default)
     {
         ValidateCategoryId(categoryId);
-        ValidateUserId(request.UserId);
+        ValidateUserId(userId);
 
-        var category = await GetEditableCategoryAsync(categoryId, request.UserId, cancellationToken);
+        var category = await GetEditableCategoryAsync(categoryId, userId, cancellationToken);
         category.IsActive = false;
         category.UpdatedAt = DateTime.UtcNow;
 
@@ -111,7 +113,7 @@ public sealed class CategoryService(
         CancellationToken cancellationToken)
     {
         var category = await categoryRepository.GetByIdAsync(categoryId, cancellationToken)
-            ?? throw new InvalidOperationException($"Category '{categoryId}' was not found.");
+            ?? throw new NotFoundException($"Category '{categoryId}' was not found.");
 
         if (category.IsDefault)
         {
@@ -120,7 +122,7 @@ public sealed class CategoryService(
 
         if (category.UserId != userId)
         {
-            throw new InvalidOperationException("Category does not belong to the user.");
+            throw new UnauthorizedAccessException("Category does not belong to the user.");
         }
 
         return category;

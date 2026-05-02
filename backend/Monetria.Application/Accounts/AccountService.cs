@@ -7,12 +7,14 @@ namespace Monetria.Application.Accounts;
 public sealed class AccountService(IAccountRepository accountRepository, IUnitOfWork unitOfWork) : IAccountService
 {
     public async Task<AccountResponse> CreateAsync(
+        Guid userId,
         CreateAccountRequest request,
         CancellationToken cancellationToken = default)
     {
+        ValidateUserId(userId);
         ValidateCreateRequest(request);
 
-        var account = CreateAccount(request);
+        var account = CreateAccount(userId, request);
 
         await accountRepository.AddAsync(account, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -20,23 +22,23 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         return MapToResponse(account);
     }
 
-    private static Account CreateAccount(CreateAccountRequest request)
+    private static Account CreateAccount(Guid userId, CreateAccountRequest request)
     {
         return request.Type switch
         {
-            AccountType.Cash => CreateCashAccount(request),
-            AccountType.Debit => CreateDebitAccount(request),
-            AccountType.Credit => CreateCreditAccount(request),
+            AccountType.Cash => CreateCashAccount(userId, request),
+            AccountType.Debit => CreateDebitAccount(userId, request),
+            AccountType.Credit => CreateCreditAccount(userId, request),
             _ => throw new ArgumentException("Invalid account type.", nameof(request))
         };
     }
 
-    private static Account CreateDebitAccount(CreateAccountRequest request)
+    private static Account CreateDebitAccount(Guid userId, CreateAccountRequest request)
     {
         return new Account
         {
             Id = Guid.NewGuid(),
-            UserId = request.UserId,
+            UserId = userId,
             Name = request.Name,
             Type = AccountType.Debit,
             InitialBalance = request.InitialBalance,
@@ -49,12 +51,12 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         };
     }
 
-    private static Account CreateCreditAccount(CreateAccountRequest request)
+    private static Account CreateCreditAccount(Guid userId, CreateAccountRequest request)
     {
         return new Account
         {
             Id = Guid.NewGuid(),
-            UserId = request.UserId,
+            UserId = userId,
             Name = request.Name,
             Type = AccountType.Credit,
             InitialBalance = request.InitialBalance,
@@ -70,12 +72,12 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         };
     }
 
-    private static Account CreateCashAccount(CreateAccountRequest request)
+    private static Account CreateCashAccount(Guid userId, CreateAccountRequest request)
     {
         return new Account
         {
             Id = Guid.NewGuid(),
-            UserId = request.UserId,
+            UserId = userId,
             Name = request.Name,
             Type = AccountType.Cash,
             InitialBalance = request.InitialBalance,
@@ -103,11 +105,6 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
 
     private static void ValidateCreateRequest(CreateAccountRequest request)
     {
-        if (request.UserId == Guid.Empty)
-        {
-            throw new ArgumentException("User id is required.", nameof(request));
-        }
-
         if (string.IsNullOrWhiteSpace(request.Currency))
         {
             throw new ArgumentException("Account currency is required.", nameof(request));
@@ -136,6 +133,14 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
                 break;
             default:
                 throw new ArgumentException("Invalid account type.", nameof(request));
+        }
+    }
+
+    private static void ValidateUserId(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            throw new ArgumentException("User id is required.", nameof(userId));
         }
     }
 

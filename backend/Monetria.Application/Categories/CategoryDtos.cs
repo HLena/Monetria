@@ -3,17 +3,13 @@ using Monetria.Domain.Enums;
 namespace Monetria.Application.Categories;
 
 public sealed record CreateCategoryRequest(
-    Guid UserId,
     string Name,
     TransactionType Type,
     string? Color);
 
 public sealed record UpdateCategoryRequest(
-    Guid UserId,
     string Name,
     string? Color);
-
-public sealed record DeactivateCategoryRequest(Guid UserId);
 
 public sealed record CategoryResponse(
     Guid Id,

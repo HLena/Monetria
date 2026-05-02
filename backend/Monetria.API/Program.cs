@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text.Json.Serialization;
+using Monetria.API;
 using Monetria.API.Endpoints;
 using Monetria.Infrastructure;
 using Monetria.Infrastructure.Auth;
@@ -61,13 +62,18 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapAccountEndpoints();
+app.MapBudgetEndpoints();
 app.MapCategoryEndpoints();
+app.MapDebtEndpoints();
+app.MapFixedExpenseEndpoints();
+app.MapSavingsGoalEndpoints();
 app.MapTransactionEndpoints();
 
 app.Run();

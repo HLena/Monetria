@@ -24,15 +24,9 @@ public static class AuthEndpoints
         IAuthService authService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var response = await authService.RegisterAsync(request, cancellationToken);
-            return Results.Created($"/users/{response.UserId}", response);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
+        var response = await authService.RegisterAsync(request, cancellationToken);
+
+        return Results.Created($"/users/{response.UserId}", response);
     }
 
     private static async Task<IResult> LoginAsync(
@@ -40,18 +34,8 @@ public static class AuthEndpoints
         IAuthService authService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var response = await authService.LoginAsync(request, cancellationToken);
-            return Results.Ok(response);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Results.Unauthorized();
-        }
+        var response = await authService.LoginAsync(request, cancellationToken);
+
+        return Results.Ok(response);
     }
 }

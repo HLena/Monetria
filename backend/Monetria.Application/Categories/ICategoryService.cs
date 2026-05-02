@@ -4,7 +4,7 @@ namespace Monetria.Application.Categories;
 
 public interface ICategoryService
 {
-    Task<CategoryResponse> CreateAsync(CreateCategoryRequest request, CancellationToken cancellationToken = default);
+    Task<CategoryResponse> CreateAsync(Guid userId, CreateCategoryRequest request, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<CategoryResponse>> ListByUserIdAsync(
         Guid userId,
@@ -13,12 +13,13 @@ public interface ICategoryService
         CancellationToken cancellationToken = default);
 
     Task<CategoryResponse> UpdateAsync(
+        Guid userId,
         Guid categoryId,
         UpdateCategoryRequest request,
         CancellationToken cancellationToken = default);
 
     Task<CategoryResponse> DeactivateAsync(
+        Guid userId,
         Guid categoryId,
-        DeactivateCategoryRequest request,
         CancellationToken cancellationToken = default);
 }

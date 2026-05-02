@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Monetria.Application.Categories;
 using Monetria.Domain.Enums;
 
@@ -20,91 +21,60 @@ public static class CategoryEndpoints
         group.MapPatch("/{categoryId:guid}/deactivate", DeactivateCategoryAsync)
             .WithName("DeactivateCategory");
 
-        endpoints.MapGet("/users/{userId:guid}/categories", ListCategoriesByUserAsync)
+        group.MapGet("/", ListCategoriesAsync)
             .WithName("ListCategoriesByUser")
-            .WithTags("Categories")
-            .RequireAuthorization();
+            .WithTags("Categories");
 
         return endpoints;
     }
 
     private static async Task<IResult> CreateCategoryAsync(
         CreateCategoryRequest request,
+        ClaimsPrincipal user,
         ICategoryService categoryService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var category = await categoryService.CreateAsync(request, cancellationToken);
-            return Results.Created($"/categories/{category.Id}", category);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
-        catch (InvalidOperationException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
+        var userId = user.GetRequiredUserId();
+        var category = await categoryService.CreateAsync(userId, request, cancellationToken);
+
+        return Results.Created($"/categories/{category.Id}", category);
     }
 
-    private static async Task<IResult> ListCategoriesByUserAsync(
-        Guid userId,
+    private static async Task<IResult> ListCategoriesAsync(
         TransactionType? type,
         bool includeInactive,
+        ClaimsPrincipal user,
         ICategoryService categoryService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var categories = await categoryService.ListByUserIdAsync(userId, type, includeInactive, cancellationToken);
-            return Results.Ok(categories);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
+        var userId = user.GetRequiredUserId();
+        var categories = await categoryService.ListByUserIdAsync(userId, type, includeInactive, cancellationToken);
+
+        return Results.Ok(categories);
     }
 
     private static async Task<IResult> UpdateCategoryAsync(
         Guid categoryId,
         UpdateCategoryRequest request,
+        ClaimsPrincipal user,
         ICategoryService categoryService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var category = await categoryService.UpdateAsync(categoryId, request, cancellationToken);
-            return Results.Ok(category);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
-        catch (InvalidOperationException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
+        var userId = user.GetRequiredUserId();
+        var category = await categoryService.UpdateAsync(userId, categoryId, request, cancellationToken);
+
+        return Results.Ok(category);
     }
 
     private static async Task<IResult> DeactivateCategoryAsync(
         Guid categoryId,
-        DeactivateCategoryRequest request,
+        ClaimsPrincipal user,
         ICategoryService categoryService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var category = await categoryService.DeactivateAsync(categoryId, request, cancellationToken);
-            return Results.Ok(category);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
-        catch (InvalidOperationException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
+        var userId = user.GetRequiredUserId();
+        var category = await categoryService.DeactivateAsync(userId, categoryId, cancellationToken);
+
+        return Results.Ok(category);
     }
 }

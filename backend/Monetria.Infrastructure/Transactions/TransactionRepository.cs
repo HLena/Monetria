@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Monetria.Application.Transactions;
 using Monetria.Domain.Entities;
+using Monetria.Domain.Enums;
 using Monetria.Infrastructure.Persistence;
 
 namespace Monetria.Infrastructure.Transactions;
@@ -10,6 +11,20 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
     public async Task AddAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
         await dbContext.Transactions.AddAsync(transaction, cancellationToken);
+    }
+
+    public Task<decimal> GetAccountBalanceDeltaAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        return dbContext.Transactions
+            .AsNoTracking()
+            .Where(transaction => transaction.AccountId == accountId)
+            .SumAsync(transaction =>
+                transaction.Type == TransactionType.Income
+                    ? transaction.Amount
+                    : transaction.Type == TransactionType.Expense
+                        ? -transaction.Amount
+                        : 0,
+                cancellationToken);
     }
 
     public async Task<IReadOnlyList<Transaction>> ListByUserIdAsync(

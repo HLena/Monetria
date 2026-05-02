@@ -21,14 +21,8 @@ public static class UserEndpoints
         IUserService userService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var user = await userService.GetByIdAsync(id, cancellationToken);
-            return Results.Ok(user);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.NotFound(new { error = exception.Message });
-        }
+        var user = await userService.GetByIdAsync(id, cancellationToken);
+
+        return Results.Ok(user);
     }
 }

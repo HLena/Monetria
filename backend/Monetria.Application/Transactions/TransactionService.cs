@@ -1,25 +1,38 @@
 using Monetria.Application.Accounts;
+using Monetria.Application.Categories;
 using Monetria.Application.Common;
 using Monetria.Domain.Entities;
+using Monetria.Domain.Enums;
 
 namespace Monetria.Application.Transactions;
 
 public sealed class TransactionService(
     ITransactionRepository transactionRepository,
     IAccountRepository accountRepository,
+    ICategoryRepository categoryRepository,
     IUnitOfWork unitOfWork) : ITransactionService
 {
     public async Task<TransactionResponse> CreateAsync(
+        Guid userId,
         CreateTransactionRequest request,
         CancellationToken cancellationToken = default)
     {
+        ValidateUserId(userId);
         ValidateCreateRequest(request);
 
-        var accountExists = await accountRepository.ExistsAsync(request.AccountId, cancellationToken);
-        if (!accountExists)
+        var account = await accountRepository.GetByIdAsync(request.AccountId, cancellationToken)
+            ?? throw new NotFoundException($"Account '{request.AccountId}' was not found.");
+
+        if (account.UserId != userId)
         {
-            throw new InvalidOperationException($"Account '{request.AccountId}' was not found.");
+            throw new UnauthorizedAccessException("Account does not belong to the user.");
         }
+
+        var category = await categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken)
+            ?? throw new NotFoundException($"Category '{request.CategoryId}' was not found.");
+
+        ValidateCategory(userId, request, category);
+        await ValidateCreditLimitAsync(account, request, cancellationToken);
 
         var transaction = new Transaction
         {
@@ -30,7 +43,8 @@ public sealed class TransactionService(
             Amount = request.Amount,
             Description = request.Description.Trim(),
             Date = request.Date,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            Category = category
         };
 
         transaction.Validate();
@@ -61,16 +75,26 @@ public sealed class TransactionService(
     }
 
     public async Task<IReadOnlyList<TransactionResponse>> ListByAccountIdAsync(
+        Guid userId,
         Guid accountId,
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default)
     {
+        ValidateUserId(userId);
+
         if (accountId == Guid.Empty)
         {
             throw new ArgumentException("Account id is required.", nameof(accountId));
         }
 
         ValidateFilter(filter);
+        var account = await accountRepository.GetByIdAsync(accountId, cancellationToken)
+            ?? throw new NotFoundException($"Account '{accountId}' was not found.");
+
+        if (account.UserId != userId)
+        {
+            throw new UnauthorizedAccessException("Account does not belong to the user.");
+        }
 
         var accountFilter = filter with { AccountId = accountId };
         var transactions = await transactionRepository.ListByAccountIdAsync(accountId, accountFilter, cancellationToken);
@@ -100,6 +124,58 @@ public sealed class TransactionService(
         if (request.Amount <= 0)
         {
             throw new ArgumentException("Transaction amount must be greater than 0.", nameof(request));
+        }
+
+        if (request.Type is not (TransactionType.Income or TransactionType.Expense))
+        {
+            throw new ArgumentException("Transaction type must be Income or Expense.", nameof(request));
+        }
+    }
+
+    private static void ValidateCategory(Guid userId, CreateTransactionRequest request, Category category)
+    {
+        if (!category.IsActive)
+        {
+            throw new InvalidOperationException("Transaction category is inactive.");
+        }
+
+        if (category.UserId.HasValue && category.UserId.Value != userId)
+        {
+            throw new UnauthorizedAccessException("Category does not belong to the user.");
+        }
+
+        if (category.Type != request.Type)
+        {
+            throw new InvalidOperationException("Transaction type must match the category type.");
+        }
+    }
+
+    private async Task ValidateCreditLimitAsync(
+        Account account,
+        CreateTransactionRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (account.Type != AccountType.Credit || request.Type != TransactionType.Expense)
+        {
+            return;
+        }
+
+        var currentBalance = account.InitialBalance
+            + await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+        var projectedBalance = currentBalance - request.Amount;
+        var projectedDebt = Math.Max(0, -projectedBalance);
+
+        if (projectedDebt > account.CreditLimit)
+        {
+            throw new InvalidOperationException("Transaction exceeds the account credit limit.");
+        }
+    }
+
+    private static void ValidateUserId(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            throw new ArgumentException("User id is required.", nameof(userId));
         }
     }
 

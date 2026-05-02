@@ -196,11 +196,14 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
         CreateDefaultCategory("11111111-1111-1111-1111-111111111117", "Ahorro", TransactionType.Expense, "#22C55E"),
         CreateDefaultCategory("11111111-1111-1111-1111-111111111118", "Otros", TransactionType.Expense, "#64748B"),
         CreateDefaultCategory("11111111-1111-1111-1111-111111111119", "Ingresos", TransactionType.Income, "#10B981"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111120", "Otros", TransactionType.Income, "#64748B"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111121", "Transferencias", TransactionType.Transfer, "#0EA5E9")
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111120", "Otros", TransactionType.Income, "#64748B")
     ];
 
-    private static Category CreateDefaultCategory(string id, string name, TransactionType type, string color)
+    private static Category CreateDefaultCategory(
+        string id,
+        string name,
+        TransactionType type,
+        string color)
     {
         return new Category
         {

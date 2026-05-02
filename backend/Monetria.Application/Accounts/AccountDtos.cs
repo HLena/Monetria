@@ -3,7 +3,6 @@ using Monetria.Domain.Enums;
 namespace Monetria.Application.Accounts;
 
 public sealed record CreateAccountRequest(
-    Guid UserId,
     string? Name,
     AccountType Type,
     decimal InitialBalance,

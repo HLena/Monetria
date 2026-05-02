@@ -277,17 +277,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Name = "Otros",
                             Type = "Income",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111121"),
-                            Color = "#0EA5E9",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            IsDefault = true,
-                            Name = "Transferencias",
-                            Type = "Transfer",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });
 

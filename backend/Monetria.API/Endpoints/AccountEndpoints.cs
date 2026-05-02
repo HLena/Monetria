@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Monetria.Application.Accounts;
 using Monetria.Domain.Enums;
 
@@ -8,50 +9,40 @@ public static class AccountEndpoints
     public static IEndpointRouteBuilder MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/accounts")
-            .WithTags("Accounts");
-
-        group.MapPost("/", CreateAccountAsync)
-            .WithName("CreateAccount")
-            .RequireAuthorization();
-
-        endpoints.MapGet("/users/{userId:guid}/accounts", ListAccountsByUserAsync)
-            .WithName("ListAccountsByUser")
             .WithTags("Accounts")
             .RequireAuthorization();
+
+        group.MapPost("/", CreateAccountAsync)
+            .WithName("CreateAccount");
+
+        group.MapGet("/", ListAccountsAsync)
+            .WithName("ListAccountsByUser")
+            .WithTags("Accounts");
 
         return endpoints;
     }
 
     private static async Task<IResult> CreateAccountAsync(
         CreateAccountRequest request,
+        ClaimsPrincipal user,
         IAccountService accountService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var account = await accountService.CreateAsync(request, cancellationToken);
-            return Results.Created($"/accounts/{account.Id}", account);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
+        var userId = user.GetRequiredUserId();
+        var account = await accountService.CreateAsync(userId, request, cancellationToken);
+
+        return Results.Created($"/accounts/{account.Id}", account);
     }
 
-    private static async Task<IResult> ListAccountsByUserAsync(
-        Guid userId,
+    private static async Task<IResult> ListAccountsAsync(
         AccountType? type,
+        ClaimsPrincipal user,
         IAccountService accountService,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var accounts = await accountService.ListByUserIdAsync(userId, type, cancellationToken);
-            return Results.Ok(accounts);
-        }
-        catch (ArgumentException exception)
-        {
-            return Results.BadRequest(new { error = exception.Message });
-        }
+        var userId = user.GetRequiredUserId();
+        var accounts = await accountService.ListByUserIdAsync(userId, type, cancellationToken);
+
+        return Results.Ok(accounts);
     }
 }
