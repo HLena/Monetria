@@ -67,6 +67,7 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapUserEndpoints();
 app.MapAccountEndpoints();
+app.MapCategoryEndpoints();
 app.MapTransactionEndpoints();
 
 app.Run();

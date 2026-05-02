@@ -13,6 +13,13 @@ public sealed class AccountRepository(MonetriaDbContext dbContext) : IAccountRep
         await dbContext.Accounts.AddAsync(account, cancellationToken);
     }
 
+    public Task<Account?> GetByIdAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        return dbContext.Accounts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(account => account.Id == accountId, cancellationToken);
+    }
+
     public Task<bool> ExistsAsync(Guid accountId, CancellationToken cancellationToken = default)
     {
         return dbContext.Accounts.AnyAsync(account => account.Id == accountId, cancellationToken);

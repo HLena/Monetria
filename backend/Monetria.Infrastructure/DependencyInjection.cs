@@ -3,11 +3,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Monetria.Application.Accounts;
 using Monetria.Application.Auth;
+using Monetria.Application.Categories;
 using Monetria.Application.Common;
 using Monetria.Application.Transactions;
 using Monetria.Application.Users;
 using Monetria.Infrastructure.Accounts;
 using Monetria.Infrastructure.Auth;
+using Monetria.Infrastructure.Categories;
 using Monetria.Infrastructure.Persistence;
 using Monetria.Infrastructure.Transactions;
 using Monetria.Infrastructure.Users;
@@ -30,10 +32,12 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, MonetriaUnitOfWork>();
         services.AddScoped<IAccountRepository, AccountRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ITransactionService, TransactionService>();
