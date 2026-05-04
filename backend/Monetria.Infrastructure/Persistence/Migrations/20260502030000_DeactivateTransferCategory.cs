@@ -1,4 +1,3 @@
-using System;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -14,41 +13,21 @@ namespace Monetria.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DeleteData(
-                table: "Categories",
-                keyColumn: "Id",
-                keyValue: new Guid("11111111-1111-1111-1111-111111111121"));
+            migrationBuilder.Sql(
+                """
+                DELETE FROM "Categories"
+                WHERE "Id" = '11111111-1111-1111-1111-111111111121';
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.InsertData(
-                table: "Categories",
-                columns:
-                [
-                    "Id",
-                    "Color",
-                    "CreatedAt",
-                    "IsActive",
-                    "IsDefault",
-                    "Name",
-                    "Type",
-                    "UpdatedAt",
-                    "UserId"
-                ],
-                values:
-                [
-                    new Guid("11111111-1111-1111-1111-111111111121"),
-                    "#0EA5E9",
-                    new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                    true,
-                    true,
-                    "Transferencias",
-                    "Transfer",
-                    new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                    null
-                ]);
+            migrationBuilder.Sql(
+                """
+                INSERT INTO "Categories" ("Id", "Color", "CreatedAt", "IsActive", "IsDefault", "Name", "Type", "UpdatedAt", "UserId")
+                VALUES ('11111111-1111-1111-1111-111111111121', '#0EA5E9', TIMESTAMPTZ '2026-01-01 00:00:00Z', TRUE, TRUE, 'Transferencias', 'Transfer', TIMESTAMPTZ '2026-01-01 00:00:00Z', NULL);
+                """);
         }
     }
 }

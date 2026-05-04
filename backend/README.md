@@ -33,10 +33,17 @@ PostgreSQL runs through `docker-compose.yml` with these development values:
 Apply migrations manually:
 
 ```bash
-dotnet tool restore
+dotnet tool restore --tool-manifest ../.config/dotnet-tools.json
 dotnet tool run dotnet-ef database update \
   --project Monetria.Infrastructure/Monetria.Infrastructure.csproj \
   --startup-project Monetria.API/Monetria.API.csproj
+```
+
+If `dotnet-ef` was restored but still reports that you need to run `dotnet tool restore`, clear the stale resolver cache and restore again:
+
+```bash
+rm "$HOME/.dotnet/toolResolverCache/1/dotnet-ef"
+dotnet tool restore --tool-manifest ../.config/dotnet-tools.json
 ```
 
 Connect with `psql`:

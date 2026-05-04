@@ -2,7 +2,23 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+TOOL_MANIFEST="$REPO_ROOT/.config/dotnet-tools.json"
 cd "$SCRIPT_DIR"
+
+run_dotnet_ef() {
+  local output
+
+  if ! output="$(dotnet tool run dotnet-ef "$@" 2>&1)"; then
+    echo "$output" >&2
+    echo "Failed to run dotnet-ef from $TOOL_MANIFEST." >&2
+    echo "If the tool was restored but still cannot run, clear the stale resolver cache:" >&2
+    echo "  rm \"\$HOME/.dotnet/toolResolverCache/1/dotnet-ef\" && dotnet tool restore --tool-manifest \"$TOOL_MANIFEST\"" >&2
+    return 1
+  fi
+
+  echo "$output"
+}
 
 echo "Starting PostgreSQL with Docker Compose..."
 docker compose up -d
@@ -25,12 +41,12 @@ if [[ "$status" != "healthy" ]]; then
 fi
 
 echo "Restoring local .NET tools..."
-dotnet tool restore
+dotnet tool restore --tool-manifest "$TOOL_MANIFEST"
 
 echo "Applying EF Core migrations..."
-dotnet tool run dotnet-ef database update \
-  --project Monetria.Infrastructure/Monetria.Infrastructure.csproj \
-  --startup-project Monetria.API/Monetria.API.csproj
+run_dotnet_ef database update \
+  --project "$SCRIPT_DIR/Monetria.Infrastructure/Monetria.Infrastructure.csproj" \
+  --startup-project "$SCRIPT_DIR/Monetria.API/Monetria.API.csproj"
 
 echo "Swagger UI: http://localhost:5245/swagger"
 echo "PostgreSQL: localhost:5432"
