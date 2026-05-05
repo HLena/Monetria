@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Monetria.Application.Auth;
+using Monetria.API.Responses;
 using Monetria.Infrastructure.Persistence;
 
 namespace Monetria.Tests;
@@ -26,9 +27,12 @@ public sealed class AuthTests : IDisposable
         var response = await client.PostAsJsonAsync("/auth/register", request);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(authResponse);
-        Assert.False(string.IsNullOrWhiteSpace(authResponse.Token));
+        var payload = await response.Content.ReadFromJsonAsync<AuthSessionResponse>();
+        Assert.NotNull(payload);
+        Assert.False(string.IsNullOrWhiteSpace(payload.Token));
+        Assert.Equal("test@example.com", payload.User.Email);
+        Assert.Equal("Test", payload.User.FirstName);
+        Assert.Equal("User", payload.User.LastName);
 
         await using var scope = factory.Services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MonetriaDbContext>();
@@ -49,9 +53,10 @@ public sealed class AuthTests : IDisposable
         var response = await client.PostAsJsonAsync("/auth/login", loginRequest);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(authResponse);
-        Assert.False(string.IsNullOrWhiteSpace(authResponse.Token));
+        var payload = await response.Content.ReadFromJsonAsync<AuthSessionResponse>();
+        Assert.NotNull(payload);
+        Assert.False(string.IsNullOrWhiteSpace(payload.Token));
+        Assert.Equal("login@example.com", payload.User.Email);
     }
 
     [Fact]

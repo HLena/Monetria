@@ -1,4 +1,5 @@
 using Monetria.Application.Auth;
+using Monetria.API.Responses;
 
 namespace Monetria.API.Endpoints;
 
@@ -26,7 +27,9 @@ public static class AuthEndpoints
     {
         var response = await authService.RegisterAsync(request, cancellationToken);
 
-        return Results.Created($"/users/{response.UserId}", response);
+        return Results.Created(
+            $"/users/{response.UserId}",
+            AuthSessionResponse.FromAuth(response));
     }
 
     private static async Task<IResult> LoginAsync(
@@ -36,6 +39,6 @@ public static class AuthEndpoints
     {
         var response = await authService.LoginAsync(request, cancellationToken);
 
-        return Results.Ok(response);
+        return Results.Ok(AuthSessionResponse.FromAuth(response));
     }
 }
