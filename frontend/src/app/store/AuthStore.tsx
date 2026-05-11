@@ -12,25 +12,10 @@ export interface AuthUser {
 
 /** Formato JSON que devuelve el backend (login / register) — camelCase o PascalCase (.NET) */
 interface AuthApiResponse {
-  userId?: string;
-  UserId?: string;
-  firstName?: string;
-  FirstName?: string;
-  lastName?: string;
-  LastName?: string;
-  email?: string;
-  Email?: string;
-  token?: string;
-  Token?: string;
+  token: string;
+  user: AuthUser;
 }
 
-function userFromFlatResponse(data: AuthApiResponse): AuthUser {
-  const userId = String(data.userId ?? data.UserId ?? '').trim();
-  const firstName = String(data.firstName ?? data.FirstName ?? '').trim();
-  const lastName = String(data.lastName ?? data.LastName ?? '').trim();
-  const email = String(data.email ?? data.Email ?? '').trim();
-  return { userId, firstName, lastName, email };
-}
 
 interface AuthState {
   user: AuthUser | null;
@@ -53,10 +38,10 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const data = await api.post<AuthApiResponse>('/auth/login', { email, password });
-          const token = String(data.token ?? data.Token ?? '').trim();
+          const token = String(data.token).trim();
           localStorage.setItem('auth_token', token);
           set({
-            user: userFromFlatResponse(data),
+            user: data.user,
             accessToken: token,
             isLoading: false,
           });
@@ -74,10 +59,10 @@ export const useAuthStore = create<AuthState>()(
             email,
             password,
           });
-          const token = String(data.token ?? data.Token ?? '').trim();
+          const token = String(data.token).trim();
           localStorage.setItem('auth_token', token);
           set({
-            user: userFromFlatResponse(data),
+            user: data.user,
             accessToken: token,
             isLoading: false,
           });

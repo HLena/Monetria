@@ -60,32 +60,16 @@ function StatCard({
 
 export function Dashboard() {
   const { user } = useAuthStore();
-  const { accounts, transactions, budgets, savingsGoals, loadAccounts } = useFinanceStore();
+  const { accounts, transactions, budgets, savingsGoals } = useFinanceStore();
   const currentMonth = getCurrentMonthKey();
-
-  useEffect(() => {
-    const load = () => {
-      if (!useAuthStore.persist.hasHydrated()) return;
-      void loadAccounts(useAuthStore.getState().user?.userId ?? '');
-    };
-    if (useAuthStore.persist.hasHydrated()) {
-      load();
-    }
-    return useAuthStore.persist.onFinishHydration(load);
-  }, [loadAccounts]);
-
-  useEffect(() => {
-    if (!useAuthStore.persist.hasHydrated()) return;
-    void loadAccounts(user?.userId ?? '');
-  }, [loadAccounts, user?.userId]);
 
   // Calculate total net worth
   const totalDebitCash = accounts
     .filter(a => a.type !== 'credit')
-    .reduce((sum, a) => sum + a.balance, 0);
+    .reduce((sum, a) => sum + a.initialBalance, 0);
   const totalCreditDebt = accounts
     .filter(a => a.type === 'credit')
-    .reduce((sum, a) => sum + a.balance, 0);
+    .reduce((sum, a) => sum + a.initialBalance, 0);
   const netWorth = totalDebitCash - totalCreditDebt;
 
   // Monthly income and expenses
@@ -396,7 +380,7 @@ export function Dashboard() {
                     <p className="text-slate-400 dark:text-slate-500 text-xs">{account.type === 'credit' ? 'Crédito' : account.type === 'debit' ? 'Débito' : 'Efectivo'}</p>
                   </div>
                   <span className={`text-xs font-semibold ${account.type === 'credit' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {account.type === 'credit' ? '-' : ''}{formatCurrency(account.balance)}
+                    {account.type === 'credit' ? '-' : ''}{formatCurrency(account.initialBalance)}
                   </span>
                 </Link>
               ))}

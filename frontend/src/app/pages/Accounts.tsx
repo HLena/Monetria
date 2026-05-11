@@ -29,7 +29,7 @@ function AccountForm({
     cardHolder: initial?.cardHolder || '',
     expiryDate: initial?.expiryDate || '',
     bank: initial?.bank || '',
-    balance: initial?.balance || 0,
+    initialBalance: initial?.initialBalance || 0,
     creditLimit: initial?.creditLimit,
     billingDate: initial?.billingDate,
     paymentDate: initial?.paymentDate,
@@ -89,8 +89,8 @@ function AccountForm({
             min="0"
             step="0.01"
             className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            value={form.balance}
-            onChange={e => set('balance', parseFloat(e.target.value) || 0)}
+            value={form.initialBalance}
+            onChange={e => set('initialBalance', parseFloat(e.target.value) || 0)}
           />
         </div>
       </div>
@@ -232,9 +232,6 @@ export function Accounts() {
   useEffect(() => {
     const load = () => {
       if (!useAuthStore.persist.hasHydrated()) return;
-      // #region agent log
-      fetch('http://127.0.0.1:7592/ingest/26a8da7e-5502-422e-8769-a05baec37821',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6cc597'},body:JSON.stringify({sessionId:'6cc597',runId:'initial',hypothesisId:'H1',location:'pages/Accounts.tsx:load-hydration',message:'Accounts hydration load triggered',data:{hasHydrated:useAuthStore.persist.hasHydrated(),hasUserId:Boolean(useAuthStore.getState().user?.userId)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       void loadAccounts(useAuthStore.getState().user?.userId ?? '');
     };
     if (useAuthStore.persist.hasHydrated()) {
@@ -243,13 +240,11 @@ export function Accounts() {
     return useAuthStore.persist.onFinishHydration(load);
   }, [loadAccounts]);
 
-  useEffect(() => {
-    if (!useAuthStore.persist.hasHydrated()) return;
-    // #region agent log
-    fetch('http://127.0.0.1:7592/ingest/26a8da7e-5502-422e-8769-a05baec37821',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6cc597'},body:JSON.stringify({sessionId:'6cc597',runId:'initial',hypothesisId:'H1',location:'pages/Accounts.tsx:user-effect',message:'Accounts user effect triggered',data:{hasHydrated:useAuthStore.persist.hasHydrated(),hasUserId:Boolean(user?.userId)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    void loadAccounts(user?.userId ?? '');
-  }, [loadAccounts, user?.userId]);
+  // useEffect(() => {
+  //   console.log('user', user);
+  //   if (!useAuthStore.persist.hasHydrated()) return;
+  //   void loadAccounts(user?.userId ?? '');
+  // }, [loadAccounts, user?.userId]);
 
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<AccountType | 'all'>('all');
@@ -258,10 +253,10 @@ export function Accounts() {
 
   const totalDebitCash = accounts
     .filter(a => a.type !== 'credit')
-    .reduce((sum, a) => sum + a.balance, 0);
+    .reduce((sum, a) => sum + a.initialBalance, 0);
   const totalCredit = accounts
     .filter(a => a.type === 'credit')
-    .reduce((sum, a) => sum + a.balance, 0);
+    .reduce((sum, a) => sum + a.initialBalance, 0);
 
   const getAccountTransactionTotal = (accountId: string) =>
     transactions
