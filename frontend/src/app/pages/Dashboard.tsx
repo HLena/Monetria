@@ -60,24 +60,24 @@ function StatCard({
 
 export function Dashboard() {
   const { user } = useAuthStore();
-  const { accounts, transactions, budgets, savingsGoals, getAccounts } = useFinanceStore();
+  const { accounts, transactions, budgets, savingsGoals, loadAccounts } = useFinanceStore();
   const currentMonth = getCurrentMonthKey();
 
   useEffect(() => {
     const load = () => {
       if (!useAuthStore.persist.hasHydrated()) return;
-      void getAccounts(useAuthStore.getState().user?.userId ?? '');
+      void loadAccounts(useAuthStore.getState().user?.userId ?? '');
     };
     if (useAuthStore.persist.hasHydrated()) {
       load();
     }
     return useAuthStore.persist.onFinishHydration(load);
-  }, [getAccounts]);
+  }, [loadAccounts]);
 
   useEffect(() => {
     if (!useAuthStore.persist.hasHydrated()) return;
-    void getAccounts(user?.userId ?? '');
-  }, [getAccounts, user?.userId]);
+    void loadAccounts(user?.userId ?? '');
+  }, [loadAccounts, user?.userId]);
 
   // Calculate total net worth
   const totalDebitCash = accounts

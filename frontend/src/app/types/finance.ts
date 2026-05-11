@@ -12,7 +12,7 @@ export interface Account {
   cardHolder?: string;
   expiryDate?: string; // MM/YY
   bank?: string;
-  balance: number; // credit: amount owed (positive); debit/cash: available (positive)
+  initialBalance: number; // credit: amount owed (positive); debit/cash: available (positive)
   creditLimit?: number;
   billingDate?: number; // day 1-31
   paymentDate?: number; // day 1-31

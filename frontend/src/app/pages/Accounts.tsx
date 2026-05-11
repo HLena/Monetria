@@ -224,7 +224,7 @@ export function Accounts() {
     transactions,
     addAccount,
     deleteAccount,
-    getAccounts,
+    loadAccounts,
     isLoading,
     error: accountsError,
   } = useFinanceStore();
@@ -232,18 +232,24 @@ export function Accounts() {
   useEffect(() => {
     const load = () => {
       if (!useAuthStore.persist.hasHydrated()) return;
-      void getAccounts(useAuthStore.getState().user?.userId ?? '');
+      // #region agent log
+      fetch('http://127.0.0.1:7592/ingest/26a8da7e-5502-422e-8769-a05baec37821',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6cc597'},body:JSON.stringify({sessionId:'6cc597',runId:'initial',hypothesisId:'H1',location:'pages/Accounts.tsx:load-hydration',message:'Accounts hydration load triggered',data:{hasHydrated:useAuthStore.persist.hasHydrated(),hasUserId:Boolean(useAuthStore.getState().user?.userId)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      void loadAccounts(useAuthStore.getState().user?.userId ?? '');
     };
     if (useAuthStore.persist.hasHydrated()) {
       load();
     }
     return useAuthStore.persist.onFinishHydration(load);
-  }, [getAccounts]);
+  }, [loadAccounts]);
 
   useEffect(() => {
     if (!useAuthStore.persist.hasHydrated()) return;
-    void getAccounts(user?.userId ?? '');
-  }, [getAccounts, user?.userId]);
+    // #region agent log
+    fetch('http://127.0.0.1:7592/ingest/26a8da7e-5502-422e-8769-a05baec37821',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6cc597'},body:JSON.stringify({sessionId:'6cc597',runId:'initial',hypothesisId:'H1',location:'pages/Accounts.tsx:user-effect',message:'Accounts user effect triggered',data:{hasHydrated:useAuthStore.persist.hasHydrated(),hasUserId:Boolean(user?.userId)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    void loadAccounts(user?.userId ?? '');
+  }, [loadAccounts, user?.userId]);
 
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<AccountType | 'all'>('all');
