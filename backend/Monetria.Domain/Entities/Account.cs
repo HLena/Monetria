@@ -26,9 +26,6 @@ public class Account
     // Wallet only
     public string? ProviderName { get; set; }
     
-    public int? BillingDate { get; set; }
-    public int? PaymentDay { get; set; }
-
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
