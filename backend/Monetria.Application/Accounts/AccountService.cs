@@ -71,8 +71,6 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             CardHolderName = request.CardHolderName,
             CardLast4Digits = request.CardLast4Digits,
             CreditLimit = request.CreditLimit,
-            BillingDate = request.BillingDate,
-            PaymentDay = request.PaymentDay,
             CreatedAt = now,
             UpdatedAt = now
         };
