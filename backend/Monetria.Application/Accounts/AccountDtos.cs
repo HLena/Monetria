@@ -16,6 +16,18 @@ public sealed record CreateAccountRequest(
     string? ProviderName,
     string? ColorCode);
 
+public sealed record UpdateAccountRequest(
+    string? Name,
+    decimal InitialBalance,
+    string? CurrencyCode,
+    string? InstitutionName,
+    string? CardHolderName,
+    string? CardLast4Digits,
+    decimal? CreditLimit,
+    int? StatementClosingDay,
+    int? PaymentDueDay,
+    string? ColorCode);
+
 public sealed record AccountResponse(
     Guid Id,
     Guid UserId,

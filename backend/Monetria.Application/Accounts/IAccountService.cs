@@ -10,4 +10,8 @@ public interface IAccountService
         Guid userId,
         AccountType? type = null,
         CancellationToken cancellationToken = default);
+
+    Task<AccountResponse> UpdateAsync(Guid userId, Guid accountId, UpdateAccountRequest request, CancellationToken cancellationToken = default);
+
+    Task DeleteAsync(Guid userId, Guid accountId, CancellationToken cancellationToken = default);
 }

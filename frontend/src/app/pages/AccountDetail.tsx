@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
-import { ArrowLeft, TrendingUp, TrendingDown, Calendar, CreditCard } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Calendar, CreditCard, Pencil, Trash2 } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -15,15 +15,21 @@ import { CATEGORY_COLORS, AccountType } from '../types/finance';
 import { CreditCardVisual } from '../components/CreditCardVisual';
 import { CategoryIconCircle } from '../lib/categoryIcons';
 import { useFinanceStore } from '../store/FinanceStore';
+import { Modal } from '../components/Modal';
+import { AccountForm } from '../components/accounts/AccountForm';
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 export function AccountDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { accounts, transactions } = useFinanceStore();
+  const { accounts, transactions, updateAccount, deleteAccount } = useFinanceStore();
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const account = accounts.find(a => a.id === id);
+  const isCard = account?.type === AccountType.CreditCard || account?.type === AccountType.BankAccount;
   if (!account) {
     return (
       <div className="p-6 text-center">
@@ -83,10 +89,24 @@ export function AccountDetail() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-slate-800 dark:text-slate-100 text-2xl font-bold">{account.name}</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">{account.institutionName || 'Cuenta personal'}</p>
         </div>
+        <button
+          onClick={() => setShowEdit(true)}
+          className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-xl transition-colors"
+          title="Editar cuenta"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
+          title="Eliminar cuenta"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -95,76 +115,80 @@ export function AccountDetail() {
           <CreditCardVisual account={account} />
 
           {/* Account Info */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 space-y-3">
-            <h3 className="text-slate-700 dark:text-slate-200 font-semibold text-sm">Información de la Cuenta</h3>
-            {account.cardHolderName && (
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Titular</span>
-                <span className="text-slate-700 font-medium">{account.cardHolderName}</span>
-              </div>
-            )}
-            {account.expiryDate && (
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Vencimiento</span>
-                <span className="text-slate-700">{account.expiryDate}</span>
-              </div>
-            )}
-            {account.cardLast4Digits && (
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Terminación</span>
-                <span className="text-slate-700">•••• {account.cardLast4Digits}</span>
-              </div>
-            )}
-            {isCredit && account.creditLimit && (
-              <>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Límite</span>
-                  <span className="text-slate-700 font-medium">{formatCurrency(account.creditLimit)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Disponible</span>
-                  <span className="text-emerald-600 font-medium">{formatCurrency(availableCredit)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Usado</span>
-                  <span className="text-rose-600 font-medium">{formatCurrency(account.initialBalance)}</span>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-400">Uso de crédito</span>
-                    <span className={usagePercent > 70 ? 'text-rose-500' : 'text-slate-500'}>{usagePercent.toFixed(0)}%</span>
+          {
+            isCard && (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 space-y-3">
+                <h3 className="text-slate-700 dark:text-slate-200 font-semibold text-sm">Información de la Cuenta</h3>
+                {account.cardHolderName && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Titular</span>
+                    <span className="text-slate-700 font-medium">{account.cardHolderName}</span>
                   </div>
-                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.min(usagePercent, 100)}%`,
-                        background: usagePercent > 80 ? '#ef4444' : usagePercent > 60 ? '#f59e0b' : '#10b981',
-                      }}
-                    />
+                )}
+                {account.expiryDate && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Vencimiento</span>
+                    <span className="text-slate-700">{account.expiryDate}</span>
                   </div>
-                </div>
-              </>
-            )}
-            {isCredit && account.statementClosingDay && (
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Día de corte</span>
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-slate-700">Día {account.statementClosingDay}</span>
-                </div>
+                )}
+                {account.cardLast4Digits && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Terminación</span>
+                    <span className="text-slate-700">•••• {account.cardLast4Digits}</span>
+                  </div>
+                )}
+                {isCredit && account.creditLimit && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Límite</span>
+                      <span className="text-slate-700 font-medium">{formatCurrency(account.creditLimit)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Disponible</span>
+                      <span className="text-emerald-600 font-medium">{formatCurrency(availableCredit)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Usado</span>
+                      <span className="text-rose-600 font-medium">{formatCurrency(account.initialBalance)}</span>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-slate-400">Uso de crédito</span>
+                        <span className={usagePercent > 70 ? 'text-rose-500' : 'text-slate-500'}>{usagePercent.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.min(usagePercent, 100)}%`,
+                            background: usagePercent > 80 ? '#ef4444' : usagePercent > 60 ? '#f59e0b' : '#10b981',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+                {isCredit && account.statementClosingDay && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Día de corte</span>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-700">Día {account.statementClosingDay}</span>
+                    </div>
+                  </div>
+                )}
+                {isCredit && account.paymentDueDay && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Pago límite</span>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-slate-700">Día {account.paymentDueDay}</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            {isCredit && account.paymentDueDay && (
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Pago límite</span>
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-slate-700">Día {account.paymentDueDay}</span>
-                </div>
-              </div>
-            )}
-          </div>
+            )
+          }
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
@@ -267,6 +291,55 @@ export function AccountDetail() {
           </div>
         </div>
       </div>
+
+      {/* Modal de edición */}
+      <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Editar cuenta" size="lg">
+        <AccountForm
+          initial={account}
+          onSave={async data => {
+            await updateAccount(account.id, data);
+          }}
+          onClose={() => setShowEdit(false)}
+        />
+      </Modal>
+
+      {/* Modal de confirmación de eliminación */}
+      <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Eliminar cuenta">
+        <div className="space-y-4">
+          <p className="text-slate-600 dark:text-slate-300 text-sm">
+            ¿Estás seguro de que deseas eliminar la cuenta{' '}
+            <span className="font-semibold text-slate-800 dark:text-slate-100">"{account.name}"</span>?
+            Esta acción no se puede deshacer.
+          </p>
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={isDeleting}
+              className="flex-1 border border-slate-200 text-slate-600 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={async () => {
+                setIsDeleting(true);
+                try {
+                  await deleteAccount(account.id);
+                  navigate('/accounts');
+                } finally {
+                  setIsDeleting(false);
+                  setShowDeleteConfirm(false);
+                }
+              }}
+              className="flex-1 bg-rose-600 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-rose-700 transition-colors disabled:opacity-50"
+            >
+              {isDeleting ? 'Eliminando…' : 'Eliminar'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -44,4 +44,17 @@ public sealed class AccountRepository(MonetriaDbContext dbContext) : IAccountRep
             .ThenBy(account => account.CreatedAt)
             .ToListAsync(cancellationToken);
     }
+
+    public Task UpdateAsync(Account account, CancellationToken cancellationToken = default)
+    {
+        dbContext.Accounts.Update(account);
+        return Task.CompletedTask;
+    }
+
+    public async Task DeleteAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        var account = await dbContext.Accounts.FindAsync([accountId], cancellationToken);
+        if (account is not null)
+            dbContext.Accounts.Remove(account);
+    }
 }

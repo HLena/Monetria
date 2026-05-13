@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Account, Budget, Debt, FixedExpense, SavingsGoal, Transaction } from '../types/finance';
 import { persist } from 'zustand/middleware';
 import { api, getAuthToken } from '../lib/apiClient';
-import { listAccounts } from '../api/accounts';
+import { listAccounts, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi } from '../api/accounts';
 import {
   filterAccountDtosForUser,
   mapAccountDtoToFinanceAccount,
@@ -19,6 +19,7 @@ interface FinanceStoreState {
   savingsGoals: SavingsGoal[];
   debts: Debt[];
   addAccount: (account: Omit<Account, 'id'>, userId: string) => Promise<void>;
+  updateAccount: (id: string, account: Omit<Account, 'id'>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
   /** Requires non-blank userId and a valid token; otherwise leaves accounts empty and does not call the API. */
   loadAccounts: (userId: string) => Promise<void>;
@@ -58,15 +59,31 @@ export const useFinanceStore = create<FinanceStoreState>()(
           throw caught;
         }
       },
+      updateAccount: async (id: string, account: Omit<Account, 'id'>) => {
+        set({ isLoading: true, error: null });
+        try {
+          const dto = await updateAccountApi(id, account);
+          const updated = mapAccountDtoToFinanceAccount(dto);
+          set(state => ({
+            accounts: state.accounts.map(a => a.id === id ? updated : a),
+            isLoading: false,
+            error: null,
+          }));
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo actualizar la cuenta';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
       deleteAccount: async (id: string) => {
         set({ isLoading: true, error: null });
         try {
-          await api.delete(`/accounts/${id}`);
-          set({
-            accounts: get().accounts.filter(account => account.id !== id),
+          await deleteAccountApi(id);
+          set(state => ({
+            accounts: state.accounts.filter(a => a.id !== id),
             isLoading: false,
             error: null,
-          });
+          }));
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo eliminar la cuenta';
           set({ error: msg, isLoading: false });

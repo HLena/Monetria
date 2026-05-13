@@ -12,4 +12,8 @@ public interface IAccountRepository
         Guid userId,
         AccountType? type = null,
         CancellationToken cancellationToken = default);
+
+    Task UpdateAsync(Account account, CancellationToken cancellationToken = default);
+
+    Task DeleteAsync(Guid accountId, CancellationToken cancellationToken = default);
 }

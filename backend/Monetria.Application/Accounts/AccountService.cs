@@ -107,6 +107,52 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             .ToList();
     }
 
+    public async Task<AccountResponse> UpdateAsync(
+        Guid userId,
+        Guid accountId,
+        UpdateAccountRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(userId);
+
+        var account = await accountRepository.GetByIdAsync(accountId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Account {accountId} not found.");
+
+        if (account.UserId != userId)
+            throw new UnauthorizedAccessException("Account does not belong to the current user.");
+
+        account.Name = request.Name?.Trim() ?? account.Name;
+        account.InitialBalance = request.InitialBalance;
+        account.CurrencyCode = NormalizeCurrency(request.CurrencyCode ?? account.CurrencyCode);
+        account.ColorCode = NormalizeColor(request.ColorCode ?? account.ColorCode);
+        account.InstitutionName = request.InstitutionName;
+        account.CardHolderName = request.CardHolderName;
+        account.CardLast4Digits = request.CardLast4Digits;
+        account.CreditLimit = request.CreditLimit;
+        account.StatementClosingDay = request.StatementClosingDay;
+        account.PaymentDueDay = request.PaymentDueDay;
+        account.UpdatedAt = DateTime.UtcNow;
+
+        await accountRepository.UpdateAsync(account, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return MapToResponse(account);
+    }
+
+    public async Task DeleteAsync(Guid userId, Guid accountId, CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(userId);
+
+        var account = await accountRepository.GetByIdAsync(accountId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Account {accountId} not found.");
+
+        if (account.UserId != userId)
+            throw new UnauthorizedAccessException("Account does not belong to the current user.");
+
+        await accountRepository.DeleteAsync(accountId, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
     private static void ValidateCreateRequest(CreateAccountRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.CurrencyCode))

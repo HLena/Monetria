@@ -62,6 +62,21 @@ const FRONTEND_TYPE_MAP: Record<number, string> = {
   [AccountType.Savings]: 'Savings',
 };
 
+export function toUpdateAccountRequestBody(a: Omit<Account, 'id'>) {
+  return {
+    name: a.name,
+    initialBalance: a.initialBalance,
+    currencyCode: a.currencyCode || 'USD',
+    institutionName: a.institutionName ?? null,
+    cardHolderName: a.cardHolderName ?? null,
+    cardLast4Digits: a.cardLast4Digits ?? null,
+    colorCode: a.colorCode,
+    creditLimit: a.creditLimit ?? null,
+    statementClosingDay: a.statementClosingDay ?? null,
+    paymentDueDay: a.paymentDueDay ?? null,
+  };
+}
+
 export function toCreateAccountRequestBody(a: Omit<Account, 'id'>) {
   return {
     name: a.name,

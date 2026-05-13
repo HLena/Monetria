@@ -21,6 +21,14 @@ public static class AccountEndpoints
             .WithTags("Accounts")
             .WithSummary("List accounts by user");
 
+        group.MapPut("/{id:guid}", UpdateAccountAsync)
+            .WithName("UpdateAccount")
+            .WithSummary("Update an existing account");
+
+        group.MapDelete("/{id:guid}", DeleteAccountAsync)
+            .WithName("DeleteAccount")
+            .WithSummary("Delete an account");
+
         return endpoints;
     }
 
@@ -34,6 +42,51 @@ public static class AccountEndpoints
         var account = await accountService.CreateAsync(userId, request, cancellationToken);
 
         return Results.Created($"/accounts/{account.Id}", account);
+    }
+
+    private static async Task<IResult> UpdateAccountAsync(
+        Guid id,
+        UpdateAccountRequest request,
+        ClaimsPrincipal user,
+        IAccountService accountService,
+        CancellationToken cancellationToken)
+    {
+        var userId = user.GetRequiredUserId();
+        try
+        {
+            var account = await accountService.UpdateAsync(userId, id, request, cancellationToken);
+            return Results.Ok(account);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Results.Forbid();
+        }
+    }
+
+    private static async Task<IResult> DeleteAccountAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        IAccountService accountService,
+        CancellationToken cancellationToken)
+    {
+        var userId = user.GetRequiredUserId();
+        try
+        {
+            await accountService.DeleteAsync(userId, id, cancellationToken);
+            return Results.NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Results.Forbid();
+        }
     }
 
     private static async Task<IResult> ListAccountsAsync(
