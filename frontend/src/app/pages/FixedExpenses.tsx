@@ -12,6 +12,7 @@ import {
 } from '../types/finance';
 import { Modal } from '../components/Modal';
 import { CategoryIconCircle } from '../lib/categoryIcons';
+import { useFinanceStore } from '../store/FinanceStore';
 
 const PERIOD_LABEL: Record<FixedExpensePeriod, string> = {
   monthly: 'Mensual',
@@ -192,10 +193,7 @@ export function FixedExpenses() {
   const {
     accounts,
     fixedExpenses,
-    addFixedExpense,
-    updateFixedExpense,
-    deleteFixedExpense,
-  } = useFinance();
+  } = useFinanceStore();
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState<FixedExpense | null>(null);
 
@@ -302,7 +300,7 @@ export function FixedExpenses() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => deleteFixedExpense(item.id)}
+                      onClick={() => {}}
                       className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -318,7 +316,7 @@ export function FixedExpenses() {
       <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto fijo">
         <FixedExpenseForm
           accounts={accounts}
-          onSave={addFixedExpense}
+          onSave={() => {}}
           onClose={() => setShowForm(false)}
         />
       </Modal>
@@ -327,7 +325,7 @@ export function FixedExpenses() {
           <FixedExpenseForm
             initial={editItem}
             accounts={accounts}
-            onSave={data => updateFixedExpense(editItem.id, data)}
+            onSave={() => {}}
             onClose={() => setEditItem(null)}
           />
         )}

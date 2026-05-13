@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import { useFinanceStore } from '../store/FinanceStore';
 
 const DEBT_COLORS = [
   '#e63946', '#2563eb', '#7c3aed', '#d97706', '#059669',
@@ -282,7 +283,7 @@ function DebtCalculator() {
 }
 
 export function DebtPlanning() {
-  const { debts, addDebt, updateDebt, deleteDebt } = useFinance();
+  const { debts } = useFinanceStore();
   const [showForm, setShowForm] = useState(false);
   const [editDebt, setEditDebt] = useState<Debt | null>(null);
 
@@ -456,7 +457,7 @@ export function DebtPlanning() {
                       Editar
                     </button>
                     <button
-                      onClick={() => deleteDebt(debt.id)}
+                      onClick={() => {}}
                       className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -494,13 +495,13 @@ export function DebtPlanning() {
       </div>
 
       <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Registrar Deuda" size="lg">
-        <DebtForm onSave={addDebt} onClose={() => setShowForm(false)} />
+        <DebtForm onSave={() => {}} onClose={() => setShowForm(false)} />
       </Modal>
       <Modal isOpen={!!editDebt} onClose={() => setEditDebt(null)} title="Editar Deuda" size="lg">
         {editDebt && (
           <DebtForm
             initial={editDebt}
-            onSave={data => updateDebt(editDebt.id, data)}
+            onSave={() => {}}
             onClose={() => setEditDebt(null)}
           />
         )}

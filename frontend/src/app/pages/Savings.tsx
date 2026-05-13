@@ -3,6 +3,7 @@ import { Plus, Trash2, Edit2, PiggyBank, Calculator, Calendar, Target } from 'lu
 import { useFinance, formatCurrency } from '../store/FinanceContext';
 import { SavingsGoal } from '../types/finance';
 import { Modal } from '../components/Modal';
+import { useFinanceStore } from '../store/FinanceStore';
 
 const GOAL_COLORS = [
   '#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
@@ -304,7 +305,7 @@ function SavingsCalculator() {
 }
 
 export function Savings() {
-  const { savingsGoals, addSavingsGoal, updateSavingsGoal, deleteSavingsGoal } = useFinance();
+  const { savingsGoals } = useFinanceStore();
   const [showForm, setShowForm] = useState(false);
   const [editGoal, setEditGoal] = useState<SavingsGoal | null>(null);
   const [addToGoal, setAddToGoal] = useState<SavingsGoal | null>(null);
@@ -460,7 +461,7 @@ export function Savings() {
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => deleteSavingsGoal(goal.id)}
+                      onClick={() => {}}
                       className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -479,13 +480,13 @@ export function Savings() {
       </div>
 
       <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Nueva Meta de Ahorro" size="lg">
-        <SavingsGoalForm onSave={addSavingsGoal} onClose={() => setShowForm(false)} />
+        <SavingsGoalForm onSave={() => {}} onClose={() => setShowForm(false)} />
       </Modal>
       <Modal isOpen={!!editGoal} onClose={() => setEditGoal(null)} title="Editar Meta" size="lg">
         {editGoal && (
           <SavingsGoalForm
             initial={editGoal}
-            onSave={data => updateSavingsGoal(editGoal.id, data)}
+            onSave={() => {}}
             onClose={() => setEditGoal(null)}
           />
         )}
@@ -494,7 +495,7 @@ export function Savings() {
         {addToGoal && (
           <AddToGoalModal
             goal={addToGoal}
-            onUpdate={amount => updateSavingsGoal(addToGoal.id, { currentAmount: amount })}
+            onUpdate={ () => {}}
             onClose={() => setAddToGoal(null)}
           />
         )}

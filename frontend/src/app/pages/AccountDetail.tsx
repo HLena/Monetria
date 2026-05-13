@@ -10,17 +10,18 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { useFinance, formatCurrency, getMonthKey } from '../store/FinanceContext';
+import { formatCurrency, getMonthKey } from '../store/FinanceContext';
 import { CATEGORY_COLORS } from '../types/finance';
 import { CreditCardVisual } from '../components/CreditCardVisual';
 import { CategoryIconCircle } from '../lib/categoryIcons';
+import { useFinanceStore } from '../store/FinanceStore';
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 export function AccountDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { accounts, transactions } = useFinance();
+  const { accounts, transactions } = useFinanceStore();
 
   const account = accounts.find(a => a.id === id);
   if (!account) {
@@ -69,8 +70,8 @@ export function AccountDetail() {
     .sort(([, a], [, b]) => b - a);
 
   const isCredit = account.type === 'credit';
-  const availableCredit = isCredit ? (account.creditLimit ?? 0) - account.balance : 0;
-  const usagePercent = isCredit && account.creditLimit ? (account.balance / account.creditLimit) * 100 : 0;
+  const availableCredit = isCredit ? (account.creditLimit ?? 0) - account.initialBalance : 0;
+  const usagePercent = isCredit && account.creditLimit ? (account.initialBalance / account.creditLimit) * 100 : 0;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -126,7 +127,7 @@ export function AccountDetail() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Usado</span>
-                  <span className="text-rose-600 font-medium">{formatCurrency(account.balance)}</span>
+                  <span className="text-rose-600 font-medium">{formatCurrency(account.initialBalance)}</span>
                 </div>
                 <div>
                   <div className="flex justify-between text-xs mb-1">

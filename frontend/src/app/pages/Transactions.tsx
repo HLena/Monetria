@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Search, Filter, Trash2, Edit2, TrendingUp, TrendingDown } from 'lucide-react';
-import { useFinance, formatCurrency, getMonthKey, getCurrentMonthKey } from '../store/FinanceContext';
+import { formatCurrency, getMonthKey, getCurrentMonthKey } from '../store/FinanceContext';
 import { Transaction, EXPENSE_CATEGORIES, INCOME_CATEGORIES, TransactionType } from '../types/finance';
 import { Modal } from '../components/Modal';
 import { CategoryIconCircle } from '../lib/categoryIcons';
+import { useFinanceStore } from '../store/FinanceStore';
 
 function TransactionForm({
   initial,
@@ -14,7 +15,7 @@ function TransactionForm({
   onSave: (data: Omit<Transaction, 'id' | 'createdAt'>) => void;
   onClose: () => void;
 }) {
-  const { accounts } = useFinance();
+  const { accounts } = useFinanceStore();
   const [type, setType] = useState<TransactionType>(initial?.type || 'expense');
   const [form, setForm] = useState({
     accountId: initial?.accountId || (accounts[0]?.id || ''),
@@ -157,7 +158,7 @@ function TransactionForm({
 }
 
 export function Transactions() {
-  const { accounts, transactions, addTransaction, updateTransaction, deleteTransaction } = useFinance();
+  const { accounts, transactions } = useFinanceStore();
   const [showForm, setShowForm] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [search, setSearch] = useState('');
@@ -327,7 +328,7 @@ export function Transactions() {
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => deleteTransaction(tx.id)}
+                      onClick={() => {}}
                       className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -343,7 +344,7 @@ export function Transactions() {
       {/* Add modal */}
       <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Nueva Transacción">
         <TransactionForm
-          onSave={data => addTransaction(data)}
+          onSave={ () => {}}
           onClose={() => setShowForm(false)}
         />
       </Modal>
@@ -353,7 +354,7 @@ export function Transactions() {
         {editTx && (
           <TransactionForm
             initial={editTx}
-            onSave={data => updateTransaction(editTx.id, data)}
+            onSave={() => {}}
             onClose={() => setEditTx(null)}
           />
         )}

@@ -4,6 +4,7 @@ import { useFinance, formatCurrency, getCurrentMonthKey, getMonthKey } from '../
 import { Budget, EXPENSE_CATEGORIES, CATEGORY_COLORS, BudgetPeriod } from '../types/finance';
 import { Modal } from '../components/Modal';
 import { CategoryIconCircle } from '../lib/categoryIcons';
+import { useFinanceStore } from '../store/FinanceStore';
 
 const BUDGET_COLORS = [
   '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#6366f1',
@@ -119,7 +120,7 @@ interface BudgetWithSpent extends Budget {
 }
 
 export function Budgets() {
-  const { budgets, transactions, addBudget, updateBudget, deleteBudget } = useFinance();
+  const { budgets, transactions } = useFinanceStore();
   const [showForm, setShowForm] = useState(false);
   const [editBudget, setEditBudget] = useState<Budget | null>(null);
   const currentMonth = getCurrentMonthKey();
@@ -273,7 +274,7 @@ export function Budgets() {
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => deleteBudget(budget.id)}
+                    onClick={() => {}}
                     className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -286,13 +287,13 @@ export function Budgets() {
       )}
 
       <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Nuevo Presupuesto">
-        <BudgetForm onSave={addBudget} onClose={() => setShowForm(false)} />
+        <BudgetForm onSave={() => {}} onClose={() => setShowForm(false)} />
       </Modal>
       <Modal isOpen={!!editBudget} onClose={() => setEditBudget(null)} title="Editar Presupuesto">
         {editBudget && (
           <BudgetForm
             initial={editBudget}
-            onSave={data => updateBudget(editBudget.id, data)}
+            onSave={() => {}}
             onClose={() => setEditBudget(null)}
           />
         )}

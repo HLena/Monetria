@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import { useFinance, formatCurrency, getMonthKey } from '../store/FinanceContext';
 import { CATEGORY_COLORS } from '../types/finance';
+import { useFinanceStore } from '../store/FinanceStore';
 
 const MONTHS_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const MONTHS_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -55,7 +56,7 @@ function SummaryCard({ label, value, prev, icon: Icon, color }: {
 }
 
 export function Reports() {
-  const { transactions, accounts, budgets } = useFinance();
+  const { transactions, accounts, budgets } = useFinanceStore();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
@@ -105,7 +106,7 @@ export function Reports() {
   // Account distribution
   const accountData = accounts.map(a => ({
     name: a.name,
-    value: a.type === 'credit' ? a.balance : a.balance,
+    value: a.type === 'credit' ? a.initialBalance : a.initialBalance,
     color: a.color,
   }));
 
