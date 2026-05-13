@@ -50,12 +50,16 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(account => account.Name).HasMaxLength(120);
             entity.Property(account => account.Type).HasConversion<string>().HasMaxLength(30).IsRequired();
             entity.Property(account => account.InitialBalance).HasPrecision(18, 2);
-            entity.Property(account => account.Currency).HasMaxLength(3).IsRequired();
-            entity.Property(account => account.Bank).HasMaxLength(120);
+            entity.Property(account => account.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.Property(account => account.ColorCode).HasMaxLength(20).IsRequired();
+            entity.Property(account => account.IsActive).IsRequired();
+            entity.Property(account => account.InstitutionName).HasMaxLength(120);
             entity.Property(account => account.CardHolderName).HasMaxLength(160);
             entity.Property(account => account.CardLast4Digits).HasMaxLength(4);
-            entity.Property(account => account.ExpiryDate).HasMaxLength(7);
             entity.Property(account => account.CreditLimit).HasPrecision(18, 2);
+            entity.Property(account => account.ProviderName).HasMaxLength(120);
+            entity.Property(account => account.CreatedAt).IsRequired();
+            entity.Property(account => account.UpdatedAt).IsRequired();
             entity.HasOne<User>()
                 .WithMany(user => user.Accounts)
                 .HasForeignKey(account => account.UserId)

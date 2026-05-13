@@ -102,7 +102,7 @@ public sealed class ApplicationServiceTests
     {
         await using var dbContext = CreateDbContext();
         var userId = Guid.NewGuid();
-        var account = AddAccount(dbContext, userId, AccountType.Credit, creditLimit: 100);
+        var account = AddAccount(dbContext, userId, AccountType.CreditCard, creditLimit: 100);
         var category = AddCategory(dbContext, userId, TransactionType.Expense);
         await dbContext.SaveChangesAsync();
         var service = CreateTransactionService(dbContext);
@@ -167,16 +167,17 @@ public sealed class ApplicationServiceTests
     {
         return new CreateAccountRequest(
             Name: "Credit Card",
-            Type: AccountType.Credit,
+            Type: AccountType.CreditCard,
             InitialBalance: 0,
             Currency: "PEN",
-            Bank: "Bank",
+            InstitutionName: "Bank",
             CardHolderName: "Test User",
             CardLast4Digits: "1234",
-            ExpiryDate: "12/30",
             CreditLimit: creditLimit,
             BillingDate: 10,
-            PaymentDay: 25);
+            PaymentDay: 25,
+            ProviderName: null,
+            ColorCode: null);
     }
 
     private static CreateTransactionRequest CreateTransactionRequest(
@@ -200,6 +201,7 @@ public sealed class ApplicationServiceTests
         AccountType type,
         decimal? creditLimit = null)
     {
+        var now = DateTime.UtcNow;
         var account = new Account
         {
             Id = Guid.NewGuid(),
@@ -207,11 +209,12 @@ public sealed class ApplicationServiceTests
             Name = "Test account",
             Type = type,
             InitialBalance = 0,
-            Currency = "PEN",
+            CurrencyCode = "PEN",
             CreditLimit = creditLimit,
-            BillingDate = type == AccountType.Credit ? 10 : null,
-            PaymentDay = type == AccountType.Credit ? 25 : null,
-            CreatedAt = DateTime.UtcNow
+            BillingDate = type == AccountType.CreditCard ? 10 : null,
+            PaymentDay = type == AccountType.CreditCard ? 25 : null,
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         dbContext.Accounts.Add(account);

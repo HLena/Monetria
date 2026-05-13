@@ -13,11 +13,13 @@ public static class AccountEndpoints
             .RequireAuthorization();
 
         group.MapPost("/", CreateAccountAsync)
-            .WithName("CreateAccount");
+            .WithName("CreateAccount")
+            .WithSummary("Create a new account");
 
         group.MapGet("/", ListAccountsAsync)
             .WithName("ListAccountsByUser")
-            .WithTags("Accounts");
+            .WithTags("Accounts")
+            .WithSummary("List accounts by user");
 
         return endpoints;
     }

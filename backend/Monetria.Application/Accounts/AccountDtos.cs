@@ -7,13 +7,14 @@ public sealed record CreateAccountRequest(
     AccountType Type,
     decimal InitialBalance,
     string Currency,
-    string? Bank,
+    string? InstitutionName,
     string? CardHolderName,
     string? CardLast4Digits,
-    string? ExpiryDate,
     decimal? CreditLimit,
     int? BillingDate,
-    int? PaymentDay);
+    int? PaymentDay,
+    string? ProviderName,
+    string? ColorCode);
 
 public sealed record AccountResponse(
     Guid Id,
@@ -21,8 +22,11 @@ public sealed record AccountResponse(
     string? Name,
     AccountType Type,
     decimal InitialBalance,
-    string Currency,
-    string? Bank,
+    string CurrencyCode,
+    string? InstitutionName,
     string? CardLast4Digits,
     decimal? CreditLimit,
-    DateTime CreatedAt);
+    bool IsActive,
+    string ColorCode,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);

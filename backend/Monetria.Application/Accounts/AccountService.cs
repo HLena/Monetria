@@ -27,62 +27,106 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         return request.Type switch
         {
             AccountType.Cash => CreateCashAccount(userId, request),
-            AccountType.Debit => CreateDebitAccount(userId, request),
-            AccountType.Credit => CreateCreditAccount(userId, request),
+            AccountType.BankAccount => CreateBankAccount(userId, request),
+            AccountType.CreditCard => CreateCreditCardAccount(userId, request),
+            AccountType.EWallet => CreateEWalletAccount(userId, request),
+            AccountType.Savings => CreateSavingsAccount(userId, request),
             _ => throw new ArgumentException("Invalid account type.", nameof(request))
         };
     }
 
-    private static Account CreateDebitAccount(Guid userId, CreateAccountRequest request)
+    private static Account CreateBankAccount(Guid userId, CreateAccountRequest request)
     {
+        var now = DateTime.UtcNow;
         return new Account
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Name = request.Name,
-            Type = AccountType.Debit,
+            Name = request.Name ?? string.Empty,
+            Type = AccountType.BankAccount,
             InitialBalance = request.InitialBalance,
-            Currency = NormalizeCurrency(request.Currency),
-            Bank = request.Bank,
+            CurrencyCode = NormalizeCurrency(request.Currency),
+            ColorCode = NormalizeColor(request.ColorCode),
+            InstitutionName = request.InstitutionName,
             CardHolderName = request.CardHolderName,
             CardLast4Digits = request.CardLast4Digits,
-            ExpiryDate = request.ExpiryDate,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
     }
 
-    private static Account CreateCreditAccount(Guid userId, CreateAccountRequest request)
+    private static Account CreateCreditCardAccount(Guid userId, CreateAccountRequest request)
     {
+        var now = DateTime.UtcNow;
         return new Account
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Name = request.Name,
-            Type = AccountType.Credit,
+            Name = request.Name ?? string.Empty,
+            Type = AccountType.CreditCard,
             InitialBalance = request.InitialBalance,
-            Currency = NormalizeCurrency(request.Currency),
-            Bank = request.Bank,
+            CurrencyCode = NormalizeCurrency(request.Currency),
+            ColorCode = NormalizeColor(request.ColorCode),
+            InstitutionName = request.InstitutionName,
             CardHolderName = request.CardHolderName,
             CardLast4Digits = request.CardLast4Digits,
-            ExpiryDate = request.ExpiryDate,
             CreditLimit = request.CreditLimit,
             BillingDate = request.BillingDate,
             PaymentDay = request.PaymentDay,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
     }
 
     private static Account CreateCashAccount(Guid userId, CreateAccountRequest request)
     {
+        var now = DateTime.UtcNow;
         return new Account
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Name = request.Name,
+            Name = request.Name ?? string.Empty,
             Type = AccountType.Cash,
             InitialBalance = request.InitialBalance,
-            Currency = NormalizeCurrency(request.Currency),
-            CreatedAt = DateTime.UtcNow
+            CurrencyCode = NormalizeCurrency(request.Currency),
+            ColorCode = NormalizeColor(request.ColorCode),
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+    }
+
+    private static Account CreateEWalletAccount(Guid userId, CreateAccountRequest request)
+    {
+        var now = DateTime.UtcNow;
+        return new Account
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Name = request.Name ?? string.Empty,
+            Type = AccountType.EWallet,
+            InitialBalance = request.InitialBalance,
+            CurrencyCode = NormalizeCurrency(request.Currency),
+            ColorCode = NormalizeColor(request.ColorCode),
+            ProviderName = request.ProviderName,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+    }
+
+    private static Account CreateSavingsAccount(Guid userId, CreateAccountRequest request)
+    {
+        var now = DateTime.UtcNow;
+        return new Account
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Name = request.Name ?? string.Empty,
+            Type = AccountType.Savings,
+            InitialBalance = request.InitialBalance,
+            CurrencyCode = NormalizeCurrency(request.Currency),
+            ColorCode = NormalizeColor(request.ColorCode),
+            CreatedAt = now,
+            UpdatedAt = now
         };
     }
 
@@ -125,11 +169,17 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             case AccountType.Cash:
                 ValidateCashAccount(request);
                 break;
-            case AccountType.Debit:
-                ValidateDebitAccount(request);
+            case AccountType.BankAccount:
+                ValidateBankAccount(request);
                 break;
-            case AccountType.Credit:
-                ValidateCreditAccount(request);
+            case AccountType.CreditCard:
+                ValidateCreditCardAccount(request);
+                break;
+            case AccountType.EWallet:
+                ValidateEWalletAccount(request);
+                break;
+            case AccountType.Savings:
+                ValidateSavingsAccount(request);
                 break;
             default:
                 throw new ArgumentException("Invalid account type.", nameof(request));
@@ -146,29 +196,42 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
 
     private static void ValidateCashAccount(CreateAccountRequest request)
     {
-        if (HasCardDetails(request) || request.CreditLimit.HasValue || request.BillingDate.HasValue || request.PaymentDay.HasValue)
+        if (HasCardOrCreditDetails(request) || !string.IsNullOrWhiteSpace(request.ProviderName))
         {
-            throw new ArgumentException("Cash accounts cannot include card or credit details.", nameof(request));
+            throw new ArgumentException("Cash accounts cannot include card, credit, or wallet details.", nameof(request));
         }
     }
 
-    private static void ValidateDebitAccount(CreateAccountRequest request)
+    private static void ValidateSavingsAccount(CreateAccountRequest request)
+    {
+        if (HasCardOrCreditDetails(request) || !string.IsNullOrWhiteSpace(request.ProviderName))
+        {
+            throw new ArgumentException("Savings accounts cannot include card, credit, or wallet details.", nameof(request));
+        }
+    }
+
+    private static void ValidateBankAccount(CreateAccountRequest request)
     {
         ValidateCardDetails(request);
 
         if (request.CreditLimit.HasValue || request.BillingDate.HasValue || request.PaymentDay.HasValue)
         {
-            throw new ArgumentException("Debit accounts cannot include credit details.", nameof(request));
+            throw new ArgumentException("Bank accounts cannot include credit billing details.", nameof(request));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ProviderName))
+        {
+            throw new ArgumentException("Bank accounts cannot include a wallet provider.", nameof(request));
         }
     }
 
-    private static void ValidateCreditAccount(CreateAccountRequest request)
+    private static void ValidateCreditCardAccount(CreateAccountRequest request)
     {
         ValidateCardDetails(request);
 
         if (!request.CreditLimit.HasValue || request.CreditLimit <= 0)
         {
-            throw new ArgumentException("Credit limit is required for credit accounts.", nameof(request));
+            throw new ArgumentException("Credit limit is required for credit card accounts.", nameof(request));
         }
 
         if (!request.BillingDate.HasValue || request.BillingDate < 1 || request.BillingDate > 31)
@@ -180,6 +243,19 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         {
             throw new ArgumentException("Payment day must be between 1 and 31.", nameof(request));
         }
+
+        if (!string.IsNullOrWhiteSpace(request.ProviderName))
+        {
+            throw new ArgumentException("Credit card accounts cannot include a wallet provider.", nameof(request));
+        }
+    }
+
+    private static void ValidateEWalletAccount(CreateAccountRequest request)
+    {
+        if (HasCardOrCreditDetails(request))
+        {
+            throw new ArgumentException("E-wallet accounts cannot include card or credit billing details.", nameof(request));
+        }
     }
 
     private static void ValidateCardDetails(CreateAccountRequest request)
@@ -190,12 +266,14 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         }
     }
 
-    private static bool HasCardDetails(CreateAccountRequest request)
+    private static bool HasCardOrCreditDetails(CreateAccountRequest request)
     {
-        return !string.IsNullOrWhiteSpace(request.Bank)
+        return !string.IsNullOrWhiteSpace(request.InstitutionName)
             || !string.IsNullOrWhiteSpace(request.CardHolderName)
             || !string.IsNullOrWhiteSpace(request.CardLast4Digits)
-            || !string.IsNullOrWhiteSpace(request.ExpiryDate);
+            || request.CreditLimit.HasValue
+            || request.BillingDate.HasValue
+            || request.PaymentDay.HasValue;
     }
 
     private static bool IsValidLast4Digits(string cardLast4Digits)
@@ -208,6 +286,16 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         return currency.Trim().ToUpperInvariant();
     }
 
+    private static string NormalizeColor(string? colorCode)
+    {
+        if (string.IsNullOrWhiteSpace(colorCode))
+        {
+            return "#000000";
+        }
+
+        return colorCode.Trim();
+    }
+
     private static AccountResponse MapToResponse(Account account)
     {
         return new AccountResponse(
@@ -216,10 +304,13 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             account.Name,
             account.Type,
             account.InitialBalance,
-            account.Currency,
-            account.Bank,
+            account.CurrencyCode,
+            account.InstitutionName,
             account.CardLast4Digits,
             account.CreditLimit,
-            account.CreatedAt);
+            account.IsActive,
+            account.ColorCode,
+            account.CreatedAt,
+            account.UpdatedAt);
     }
 }

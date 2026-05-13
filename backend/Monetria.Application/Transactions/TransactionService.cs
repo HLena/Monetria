@@ -155,7 +155,7 @@ public sealed class TransactionService(
         CreateTransactionRequest request,
         CancellationToken cancellationToken)
     {
-        if (account.Type != AccountType.Credit || request.Type != TransactionType.Expense)
+        if (account.Type != AccountType.CreditCard || request.Type != TransactionType.Expense)
         {
             return;
         }
