@@ -169,13 +169,13 @@ public sealed class ApplicationServiceTests
             Name: "Credit Card",
             Type: AccountType.CreditCard,
             InitialBalance: 0,
-            Currency: "PEN",
+            CurrencyCode: "PEN",
             InstitutionName: "Bank",
             CardHolderName: "Test User",
             CardLast4Digits: "1234",
             CreditLimit: creditLimit,
-            BillingDate: 10,
-            PaymentDay: 25,
+            StatementClosingDay: 10,
+            PaymentDueDay: 25,
             ProviderName: null,
             ColorCode: null);
     }
@@ -211,8 +211,8 @@ public sealed class ApplicationServiceTests
             InitialBalance = 0,
             CurrencyCode = "PEN",
             CreditLimit = creditLimit,
-            BillingDate = type == AccountType.CreditCard ? 10 : null,
-            PaymentDay = type == AccountType.CreditCard ? 25 : null,
+            StatementClosingDay = type == AccountType.CreditCard ? 10 : null,
+            PaymentDueDay = type == AccountType.CreditCard ? 25 : null,
             CreatedAt = now,
             UpdatedAt = now
         };

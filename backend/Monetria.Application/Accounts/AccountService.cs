@@ -35,7 +35,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         };
     }
 
-    private static Account CreateBankAccount(Guid userId, CreateAccountRequest request)
+    private static Account CreateBaseAccount(Guid userId, CreateAccountRequest request, AccountType type)
     {
         var now = DateTime.UtcNow;
         return new Account
@@ -43,89 +43,51 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             Id = Guid.NewGuid(),
             UserId = userId,
             Name = request.Name ?? string.Empty,
-            Type = AccountType.BankAccount,
+            Type = type,
             InitialBalance = request.InitialBalance,
-            CurrencyCode = NormalizeCurrency(request.Currency),
+            CurrencyCode = NormalizeCurrency(request.CurrencyCode),
             ColorCode = NormalizeColor(request.ColorCode),
-            InstitutionName = request.InstitutionName,
-            CardHolderName = request.CardHolderName,
-            CardLast4Digits = request.CardLast4Digits,
             CreatedAt = now,
             UpdatedAt = now
         };
+    }
+
+    private static Account CreateBankAccount(Guid userId, CreateAccountRequest request)
+    {
+        var account = CreateBaseAccount(userId, request, AccountType.BankAccount);
+        account.InstitutionName = request.InstitutionName;
+        account.CardHolderName = request.CardHolderName;
+        account.CardLast4Digits = request.CardLast4Digits;
+        return account;
     }
 
     private static Account CreateCreditCardAccount(Guid userId, CreateAccountRequest request)
     {
-        var now = DateTime.UtcNow;
-        return new Account
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Name = request.Name ?? string.Empty,
-            Type = AccountType.CreditCard,
-            InitialBalance = request.InitialBalance,
-            CurrencyCode = NormalizeCurrency(request.Currency),
-            ColorCode = NormalizeColor(request.ColorCode),
-            InstitutionName = request.InstitutionName,
-            CardHolderName = request.CardHolderName,
-            CardLast4Digits = request.CardLast4Digits,
-            CreditLimit = request.CreditLimit,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
+        var account = CreateBaseAccount(userId, request, AccountType.CreditCard);
+        account.InstitutionName = request.InstitutionName;
+        account.CardHolderName = request.CardHolderName;
+        account.CardLast4Digits = request.CardLast4Digits;
+        account.CreditLimit = request.CreditLimit;
+        account.StatementClosingDay = request.StatementClosingDay;
+        account.PaymentDueDay = request.PaymentDueDay;
+        return account;
     }
 
     private static Account CreateCashAccount(Guid userId, CreateAccountRequest request)
     {
-        var now = DateTime.UtcNow;
-        return new Account
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Name = request.Name ?? string.Empty,
-            Type = AccountType.Cash,
-            InitialBalance = request.InitialBalance,
-            CurrencyCode = NormalizeCurrency(request.Currency),
-            ColorCode = NormalizeColor(request.ColorCode),
-            CreatedAt = now,
-            UpdatedAt = now
-        };
+        return CreateBaseAccount(userId, request, AccountType.Cash);
     }
 
     private static Account CreateEWalletAccount(Guid userId, CreateAccountRequest request)
     {
-        var now = DateTime.UtcNow;
-        return new Account
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Name = request.Name ?? string.Empty,
-            Type = AccountType.EWallet,
-            InitialBalance = request.InitialBalance,
-            CurrencyCode = NormalizeCurrency(request.Currency),
-            ColorCode = NormalizeColor(request.ColorCode),
-            ProviderName = request.ProviderName,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
+        var account = CreateBaseAccount(userId, request, AccountType.EWallet);
+        account.ProviderName = request.ProviderName;
+        return account;
     }
 
     private static Account CreateSavingsAccount(Guid userId, CreateAccountRequest request)
     {
-        var now = DateTime.UtcNow;
-        return new Account
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Name = request.Name ?? string.Empty,
-            Type = AccountType.Savings,
-            InitialBalance = request.InitialBalance,
-            CurrencyCode = NormalizeCurrency(request.Currency),
-            ColorCode = NormalizeColor(request.ColorCode),
-            CreatedAt = now,
-            UpdatedAt = now
-        };
+        return CreateBaseAccount(userId, request, AccountType.Savings);
     }
 
     public async Task<IReadOnlyList<AccountResponse>> ListByUserIdAsync(
@@ -147,12 +109,12 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
 
     private static void ValidateCreateRequest(CreateAccountRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Currency))
+        if (string.IsNullOrWhiteSpace(request.CurrencyCode))
         {
             throw new ArgumentException("Account currency is required.", nameof(request));
         }
 
-        if (request.Currency.Trim().Length != 3)
+        if (request.CurrencyCode.Trim().Length != 3)
         {
             throw new ArgumentException("Account currency must use a three-letter code.", nameof(request));
         }
@@ -212,7 +174,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
     {
         ValidateCardDetails(request);
 
-        if (request.CreditLimit.HasValue || request.BillingDate.HasValue || request.PaymentDay.HasValue)
+        if (request.CreditLimit.HasValue || request.StatementClosingDay.HasValue || request.StatementClosingDay.HasValue)
         {
             throw new ArgumentException("Bank accounts cannot include credit billing details.", nameof(request));
         }
@@ -232,12 +194,12 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             throw new ArgumentException("Credit limit is required for credit card accounts.", nameof(request));
         }
 
-        if (!request.BillingDate.HasValue || request.BillingDate < 1 || request.BillingDate > 31)
+        if (!request.StatementClosingDay.HasValue || request.StatementClosingDay < 1 || request.StatementClosingDay > 31)
         {
             throw new ArgumentException("Billing date must be between 1 and 31.", nameof(request));
         }
 
-        if (!request.PaymentDay.HasValue || request.PaymentDay < 1 || request.PaymentDay > 31)
+        if (!request.PaymentDueDay.HasValue || request.PaymentDueDay < 1 || request.PaymentDueDay > 31)
         {
             throw new ArgumentException("Payment day must be between 1 and 31.", nameof(request));
         }
@@ -270,8 +232,8 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             || !string.IsNullOrWhiteSpace(request.CardHolderName)
             || !string.IsNullOrWhiteSpace(request.CardLast4Digits)
             || request.CreditLimit.HasValue
-            || request.BillingDate.HasValue
-            || request.PaymentDay.HasValue;
+            || request.StatementClosingDay.HasValue
+            || request.StatementClosingDay.HasValue;
     }
 
     private static bool IsValidLast4Digits(string cardLast4Digits)

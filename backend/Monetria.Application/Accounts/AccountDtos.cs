@@ -6,13 +6,13 @@ public sealed record CreateAccountRequest(
     string? Name,
     AccountType Type,
     decimal InitialBalance,
-    string Currency,
+    string CurrencyCode,
     string? InstitutionName,
     string? CardHolderName,
     string? CardLast4Digits,
     decimal? CreditLimit,
-    int? BillingDate,
-    int? PaymentDay,
+    int? StatementClosingDay,
+    int? PaymentDueDay,
     string? ProviderName,
     string? ColorCode);
 
