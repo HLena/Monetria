@@ -304,8 +304,8 @@ export function Transactions() {
                       <span
                         className="text-xs px-1.5 py-0.5 rounded-md font-medium"
                         style={{
-                          background: account ? `${account.color}20` : '#f1f5f9',
-                          color: account ? account.color : '#94a3b8',
+                          background: account ? `${account.colorCode}20` : '#f1f5f9',
+                          color: account ? account.colorCode : '#94a3b8',
                         }}
                       >
                         {account?.name || 'Cuenta eliminada'}

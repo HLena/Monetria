@@ -16,7 +16,7 @@ import {
   Legend,
 } from 'recharts';
 import { useFinance, formatCurrency, getMonthKey } from '../store/FinanceContext';
-import { CATEGORY_COLORS } from '../types/finance';
+import { CATEGORY_COLORS, AccountType } from '../types/finance';
 import { useFinanceStore } from '../store/FinanceStore';
 
 const MONTHS_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -106,8 +106,8 @@ export function Reports() {
   // Account distribution
   const accountData = accounts.map(a => ({
     name: a.name,
-    value: a.type === 'credit' ? a.initialBalance : a.initialBalance,
-    color: a.color,
+    value: a.type === AccountType.CreditCard ? a.initialBalance : a.initialBalance,
+    color: a.colorCode,
   }));
 
   // Monthly balance trend

@@ -23,7 +23,7 @@ import {
   Cell,
 } from 'recharts';
 import { useFinance, formatCurrency, getMonthKey, getCurrentMonthKey } from '../store/FinanceContext';
-import { CATEGORY_COLORS } from '../types/finance';
+import { CATEGORY_COLORS, AccountType } from '../types/finance';
 import { CreditCardVisual } from '../components/CreditCardVisual';
 import { CategoryIconCircle } from '../lib/categoryIcons';
 import { useAuthStore } from '../store/AuthStore';
@@ -65,10 +65,10 @@ export function Dashboard() {
 
   // Calculate total net worth
   const totalDebitCash = accounts
-    .filter(a => a.type !== 'credit')
+    .filter(a => a.type !== AccountType.CreditCard)
     .reduce((sum, a) => sum + a.initialBalance, 0);
   const totalCreditDebt = accounts
-    .filter(a => a.type === 'credit')
+    .filter(a => a.type === AccountType.CreditCard)
     .reduce((sum, a) => sum + a.initialBalance, 0);
   const netWorth = totalDebitCash - totalCreditDebt;
 
@@ -373,14 +373,14 @@ export function Dashboard() {
                 <Link key={account.id} to={`/accounts/${account.id}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
                   <div
                     className="w-8 h-8 rounded-lg flex-shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${account.color}cc, ${account.color}66)` }}
+                    style={{ background: `linear-gradient(135deg, ${account.colorCode}cc, ${account.colorCode}66)` }}
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-700 dark:text-slate-200 text-xs font-medium truncate">{account.name}</p>
-                    <p className="text-slate-400 dark:text-slate-500 text-xs">{account.type === 'credit' ? 'Crédito' : account.type === 'debit' ? 'Débito' : 'Efectivo'}</p>
+                    <p className="text-slate-400 dark:text-slate-500 text-xs">{account.type === AccountType.CreditCard ? 'Crédito' : account.type === AccountType.Wallet ? 'Efectivo' : 'Débito'}</p>
                   </div>
-                  <span className={`text-xs font-semibold ${account.type === 'credit' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {account.type === 'credit' ? '-' : ''}{formatCurrency(account.initialBalance)}
+                  <span className={`text-xs font-semibold ${account.type === AccountType.CreditCard ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    {account.type === AccountType.CreditCard ? '-' : ''}{formatCurrency(account.initialBalance)}
                   </span>
                 </Link>
               ))}

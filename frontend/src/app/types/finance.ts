@@ -1,25 +1,10 @@
-export type AccountType = 'credit' | 'debit' | 'cash';
+export { AccountType } from '@/app/types/enums';
+export type { Account } from '@/app/types/models';
+
 export type TransactionType = 'income' | 'expense';
 export type BudgetPeriod = 'monthly' | 'weekly';
 export type FixedExpensePeriod = 'monthly' | 'weekly' | 'yearly';
 export type DebtType = 'personal_loan' | 'credit_card' | 'mortgage' | 'auto_loan' | 'other';
-
-export interface Account {
-  id: string;
-  name: string;
-  type: AccountType;
-  cardNumber?: string; // Last 4 digits
-  cardHolder?: string;
-  expiryDate?: string; // MM/YY
-  bank?: string;
-  initialBalance: number; // credit: amount owed (positive); debit/cash: available (positive)
-  creditLimit?: number;
-  billingDate?: number; // day 1-31
-  paymentDate?: number; // day 1-31
-  color: string;
-  currency: string;
-  createdAt: string;
-}
 
 export const EXPENSE_CATEGORIES = [
   'Alimentación',

@@ -1,19 +1,20 @@
-/**
- * Wire format for GET/POST account responses (see Monetria.Application.Accounts.AccountResponse).
- * `type` is serialized as strings when JsonStringEnumConverter is enabled.
- */
-export type AccountTypeApi = 'Credit' | 'Debit' | 'Cash';
+import { AccountType } from "@/app/types/enums";
 
 export interface AccountDto {
   id: string;
   userId: string;
   name: string | null;
-  /** Serialized AccountType enum (`Credit` | `Debit` | `Cash`). */
-  type: AccountTypeApi;
+  type: AccountType;
   initialBalance: number;
-  currency: string;
-  bank?: string | null;
+  currencyCode: string;
+  colorCode: string;
+  institutionName?: string | null;
+  cardHolderName?: string | null;
   cardLast4Digits?: string | null;
   creditLimit: number | null;
+  statementClosingDay?: number | null;
+  paymentDueDay?: number | null;
   createdAt: string;
+  updatedAt: string;
+  isActive: boolean;
 }

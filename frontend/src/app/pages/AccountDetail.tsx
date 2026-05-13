@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { formatCurrency, getMonthKey } from '../store/FinanceContext';
-import { CATEGORY_COLORS } from '../types/finance';
+import { CATEGORY_COLORS, AccountType } from '../types/finance';
 import { CreditCardVisual } from '../components/CreditCardVisual';
 import { CategoryIconCircle } from '../lib/categoryIcons';
 import { useFinanceStore } from '../store/FinanceStore';
@@ -69,7 +69,7 @@ export function AccountDetail() {
   const categoryList = Object.entries(categoryBreakdown)
     .sort(([, a], [, b]) => b - a);
 
-  const isCredit = account.type === 'credit';
+  const isCredit = account.type === AccountType.CreditCard;
   const availableCredit = isCredit ? (account.creditLimit ?? 0) - account.initialBalance : 0;
   const usagePercent = isCredit && account.creditLimit ? (account.initialBalance / account.creditLimit) * 100 : 0;
 
@@ -85,7 +85,7 @@ export function AccountDetail() {
         </button>
         <div>
           <h1 className="text-slate-800 dark:text-slate-100 text-2xl font-bold">{account.name}</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">{account.bank || 'Cuenta personal'}</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">{account.institutionName || 'Cuenta personal'}</p>
         </div>
       </div>
 
@@ -97,10 +97,10 @@ export function AccountDetail() {
           {/* Account Info */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 space-y-3">
             <h3 className="text-slate-700 dark:text-slate-200 font-semibold text-sm">Información de la Cuenta</h3>
-            {account.cardHolder && (
+            {account.cardHolderName && (
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Titular</span>
-                <span className="text-slate-700 font-medium">{account.cardHolder}</span>
+                <span className="text-slate-700 font-medium">{account.cardHolderName}</span>
               </div>
             )}
             {account.expiryDate && (
@@ -109,10 +109,10 @@ export function AccountDetail() {
                 <span className="text-slate-700">{account.expiryDate}</span>
               </div>
             )}
-            {account.cardNumber && (
+            {account.cardLast4Digits && (
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Terminación</span>
-                <span className="text-slate-700">•••• {account.cardNumber}</span>
+                <span className="text-slate-700">•••• {account.cardLast4Digits}</span>
               </div>
             )}
             {isCredit && account.creditLimit && (
@@ -146,21 +146,21 @@ export function AccountDetail() {
                 </div>
               </>
             )}
-            {isCredit && account.billingDate && (
+            {isCredit && account.statementClosingDay && (
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Día de corte</span>
                 <div className="flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-slate-700">Día {account.billingDate}</span>
+                  <span className="text-slate-700">Día {account.statementClosingDay}</span>
                 </div>
               </div>
             )}
-            {isCredit && account.paymentDate && (
+            {isCredit && account.paymentDueDay && (
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Pago límite</span>
                 <div className="flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="text-slate-700">Día {account.paymentDate}</span>
+                  <span className="text-slate-700">Día {account.paymentDueDay}</span>
                 </div>
               </div>
             )}
