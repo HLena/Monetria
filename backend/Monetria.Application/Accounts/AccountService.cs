@@ -30,7 +30,6 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             AccountType.BankAccount => CreateBankAccount(userId, request),
             AccountType.CreditCard => CreateCreditCardAccount(userId, request),
             AccountType.EWallet => CreateEWalletAccount(userId, request),
-            AccountType.Savings => CreateSavingsAccount(userId, request),
             _ => throw new ArgumentException("Invalid account type.", nameof(request))
         };
     }
@@ -85,11 +84,6 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         return account;
     }
 
-    private static Account CreateSavingsAccount(Guid userId, CreateAccountRequest request)
-    {
-        return CreateBaseAccount(userId, request, AccountType.Savings);
-    }
-
     public async Task<IReadOnlyList<AccountResponse>> ListByUserIdAsync(
         Guid userId,
         AccountType? type = null,
@@ -116,7 +110,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         ValidateUserId(userId);
 
         var account = await accountRepository.GetByIdAsync(accountId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Account {accountId} not found.");
+            ?? throw new NotFoundException($"Account {accountId} not found.");
 
         if (account.UserId != userId)
             throw new UnauthorizedAccessException("Account does not belong to the current user.");
@@ -144,7 +138,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         ValidateUserId(userId);
 
         var account = await accountRepository.GetByIdAsync(accountId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Account {accountId} not found.");
+            ?? throw new NotFoundException($"Account {accountId} not found.");
 
         if (account.UserId != userId)
             throw new UnauthorizedAccessException("Account does not belong to the current user.");
@@ -184,9 +178,6 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             case AccountType.EWallet:
                 ValidateEWalletAccount(request);
                 break;
-            case AccountType.Savings:
-                ValidateSavingsAccount(request);
-                break;
             default:
                 throw new ArgumentException("Invalid account type.", nameof(request));
         }
@@ -205,14 +196,6 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         if (HasCardOrCreditDetails(request) || !string.IsNullOrWhiteSpace(request.ProviderName))
         {
             throw new ArgumentException("Cash accounts cannot include card, credit, or wallet details.", nameof(request));
-        }
-    }
-
-    private static void ValidateSavingsAccount(CreateAccountRequest request)
-    {
-        if (HasCardOrCreditDetails(request) || !string.IsNullOrWhiteSpace(request.ProviderName))
-        {
-            throw new ArgumentException("Savings accounts cannot include card, credit, or wallet details.", nameof(request));
         }
     }
 

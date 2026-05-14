@@ -51,20 +51,8 @@ public static class AccountEndpoints
         IAccountService accountService,
         CancellationToken cancellationToken)
     {
-        var userId = user.GetRequiredUserId();
-        try
-        {
-            var account = await accountService.UpdateAsync(userId, id, request, cancellationToken);
-            return Results.Ok(account);
-        }
-        catch (KeyNotFoundException)
-        {
-            return Results.NotFound();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Results.Forbid();
-        }
+        var account = await accountService.UpdateAsync(user.GetRequiredUserId(), id, request, cancellationToken);
+        return Results.Ok(account);
     }
 
     private static async Task<IResult> DeleteAccountAsync(
@@ -73,20 +61,8 @@ public static class AccountEndpoints
         IAccountService accountService,
         CancellationToken cancellationToken)
     {
-        var userId = user.GetRequiredUserId();
-        try
-        {
-            await accountService.DeleteAsync(userId, id, cancellationToken);
-            return Results.NoContent();
-        }
-        catch (KeyNotFoundException)
-        {
-            return Results.NotFound();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Results.Forbid();
-        }
+        await accountService.DeleteAsync(user.GetRequiredUserId(), id, cancellationToken);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> ListAccountsAsync(
