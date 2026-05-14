@@ -10,10 +10,12 @@ export function AccountForm({
   initial,
   onSave,
   onClose,
+  mode = 'create',
 }: {
   initial?: Account;
   onSave: (data: Omit<Account, 'id'>) => void | Promise<void>;
   onClose: () => void;
+  mode?: 'create' | 'edit';
 }) {
   const [form, setForm] = useState<Omit<Account, 'id'>>({
     name: initial?.name ?? '',
@@ -65,12 +67,12 @@ export function AccountForm({
             className={`${inputCls} bg-white`}
             value={form.type}
             onChange={e => set('type', parseInt(e.target.value) as AccountType)}
+            disabled={mode === 'edit'} 
           >
             <option value={AccountType.CreditCard}>Tarjeta de Crédito</option>
             <option value={AccountType.BankAccount}>Cuenta Bancaria</option>
             <option value={AccountType.Cash}>Efectivo</option>
             <option value={AccountType.Wallet}>Billetera</option>
-            <option value={AccountType.Savings}>Ahorros</option>
           </select>
         </div>
         <div>

@@ -300,6 +300,7 @@ export function AccountDetail() {
             await updateAccount(account.id, data);
           }}
           onClose={() => setShowEdit(false)}
+          mode='edit'
         />
       </Modal>
 
