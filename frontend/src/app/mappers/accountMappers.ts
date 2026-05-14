@@ -16,7 +16,6 @@ const BACKEND_TYPE_MAP: Record<string, AccountType> = {
   BankAccount: AccountType.BankAccount,
   CreditCard: AccountType.CreditCard,
   EWallet: AccountType.Wallet,
-  Savings: AccountType.Savings,
 };
 
 function resolveAccountType(raw: AccountType): AccountType {
@@ -59,7 +58,6 @@ const FRONTEND_TYPE_MAP: Record<number, string> = {
   [AccountType.BankAccount]: 'BankAccount',
   [AccountType.CreditCard]: 'CreditCard',
   [AccountType.Wallet]: 'EWallet',
-  [AccountType.Savings]: 'Savings',
 };
 
 export function toUpdateAccountRequestBody(a: Omit<Account, 'id'>) {

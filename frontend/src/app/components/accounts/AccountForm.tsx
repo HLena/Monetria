@@ -127,51 +127,64 @@ export function AccountForm({
 
       {/* Campos específicos de tarjeta de crédito */}
       {form.type === AccountType.CreditCard && (
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls}>Últimos 4 dígitos</label>
-            <input
-              maxLength={4}
-              className={inputCls}
-              placeholder="1234"
-              value={form.cardLast4Digits ?? ''}
-              onChange={e => set('cardLast4Digits', e.target.value.replace(/\D/g, ''))}
-            />
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Entidad financiera</label>
+              <input
+                className={inputCls}
+                placeholder="Ej: BBVA"
+                value={form.institutionName ?? ''}
+                onChange={e => set('institutionName', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Últimos 4 dígitos</label>
+              <input
+                maxLength={4}
+                className={inputCls}
+                placeholder="1234"
+                value={form.cardLast4Digits ?? ''}
+                onChange={e => set('cardLast4Digits', e.target.value.replace(/\D/g, ''))}
+              />
+            </div>
           </div>
-          <div>
-            <label className={labelCls}>Límite de crédito</label>
-            <input
-              type="number"
-              min="0"
-              className={inputCls}
-              placeholder="25000"
-              value={form.creditLimit ?? ''}
-              onChange={e => set('creditLimit', parseFloat(e.target.value) || undefined)}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Día de facturación</label>
-            <input
-              type="number"
-              min="1"
-              max="31"
-              className={inputCls}
-              placeholder="15"
-              value={form.statementClosingDay ?? ''}
-              onChange={e => set('statementClosingDay', parseInt(e.target.value) || undefined)}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Día de pago</label>
-            <input
-              type="number"
-              min="1"
-              max="31"
-              className={inputCls}
-              placeholder="5"
-              value={form.paymentDueDay ?? ''}
-              onChange={e => set('paymentDueDay', parseInt(e.target.value) || undefined)}
-            />
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className={labelCls}>Límite de crédito</label>
+              <input
+                type="number"
+                min="0"
+                className={inputCls}
+                placeholder="25000"
+                value={form.creditLimit ?? ''}
+                onChange={e => set('creditLimit', parseFloat(e.target.value) || undefined)}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Día de facturación</label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                className={inputCls}
+                placeholder="15"
+                value={form.statementClosingDay ?? ''}
+                onChange={e => set('statementClosingDay', parseInt(e.target.value) || undefined)}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Día de pago</label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                className={inputCls}
+                placeholder="5"
+                value={form.paymentDueDay ?? ''}
+                onChange={e => set('paymentDueDay', parseInt(e.target.value) || undefined)}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -179,7 +192,7 @@ export function AccountForm({
       {/* Campos específicos de billetera */}
       {form.type === AccountType.Wallet && (
         <div>
-          <label className={labelCls}>Proveedor</label>
+          <label className={labelCls}>Entidad financiera</label>
           <input
             className={inputCls}
             placeholder="Ej: PayPal"
