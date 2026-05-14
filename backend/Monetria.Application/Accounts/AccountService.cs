@@ -80,7 +80,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
     private static Account CreateEWalletAccount(Guid userId, CreateAccountRequest request)
     {
         var account = CreateBaseAccount(userId, request, AccountType.EWallet);
-        account.ProviderName = request.ProviderName;
+        account.InstitutionName = request.InstitutionName;
         return account;
     }
 
@@ -193,7 +193,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
 
     private static void ValidateCashAccount(CreateAccountRequest request)
     {
-        if (HasCardOrCreditDetails(request) || !string.IsNullOrWhiteSpace(request.ProviderName))
+        if (HasCardOrCreditDetails(request) || !string.IsNullOrWhiteSpace(request.InstitutionName))
         {
             throw new ArgumentException("Cash accounts cannot include card, credit, or wallet details.", nameof(request));
         }
@@ -203,14 +203,9 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
     {
         ValidateCardDetails(request);
 
-        if (request.CreditLimit.HasValue || request.StatementClosingDay.HasValue || request.StatementClosingDay.HasValue)
+        if (request.CreditLimit.HasValue || request.StatementClosingDay.HasValue || request.PaymentDueDay.HasValue)
         {
             throw new ArgumentException("Bank accounts cannot include credit billing details.", nameof(request));
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.ProviderName))
-        {
-            throw new ArgumentException("Bank accounts cannot include a wallet provider.", nameof(request));
         }
     }
 
@@ -232,11 +227,6 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         {
             throw new ArgumentException("Payment day must be between 1 and 31.", nameof(request));
         }
-
-        if (!string.IsNullOrWhiteSpace(request.ProviderName))
-        {
-            throw new ArgumentException("Credit card accounts cannot include a wallet provider.", nameof(request));
-        }
     }
 
     private static void ValidateEWalletAccount(CreateAccountRequest request)
@@ -257,12 +247,11 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
 
     private static bool HasCardOrCreditDetails(CreateAccountRequest request)
     {
-        return !string.IsNullOrWhiteSpace(request.InstitutionName)
-            || !string.IsNullOrWhiteSpace(request.CardHolderName)
+        return !string.IsNullOrWhiteSpace(request.CardHolderName)
             || !string.IsNullOrWhiteSpace(request.CardLast4Digits)
             || request.CreditLimit.HasValue
             || request.StatementClosingDay.HasValue
-            || request.StatementClosingDay.HasValue;
+            || request.PaymentDueDay.HasValue;
     }
 
     private static bool IsValidLast4Digits(string cardLast4Digits)
@@ -297,6 +286,9 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             account.InstitutionName,
             account.CardLast4Digits,
             account.CreditLimit,
+            account.CardHolderName,
+            account.StatementClosingDay,
+            account.PaymentDueDay,
             account.IsActive,
             account.ColorCode,
             account.CreatedAt,

@@ -54,6 +54,85 @@ public sealed class ApplicationServiceTests
     }
 
     [Fact]
+    public async Task CreateBankAccountAsync_WithInstitutionName_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "BBVA Débito",
+            Type: AccountType.BankAccount,
+            InitialBalance: 500,
+            CurrencyCode: "PEN",
+            InstitutionName: "BBVA",
+            CardHolderName: "TEST USER",
+            CardLast4Digits: "1234",
+            CreditLimit: null,
+            StatementClosingDay: null,
+            PaymentDueDay: null,
+            ColorCode: null);
+
+        var result = await service.CreateAsync(Guid.NewGuid(), request);
+
+        Assert.Equal("BBVA", result.InstitutionName);
+    }
+
+    [Fact]
+    public async Task CreateCreditCardAsync_WithInstitutionName_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = CreateCreditAccountRequest(creditLimit: 5000);
+
+        var result = await service.CreateAsync(Guid.NewGuid(), request);
+
+        Assert.Equal("Bank", result.InstitutionName);
+    }
+
+    [Fact]
+    public async Task CreateEWalletAsync_WithProviderAsInstitutionName_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "Mi PayPal",
+            Type: AccountType.EWallet,
+            InitialBalance: 0,
+            CurrencyCode: "USD",
+            InstitutionName: "PayPal",
+            CardHolderName: null,
+            CardLast4Digits: null,
+            CreditLimit: null,
+            StatementClosingDay: null,
+            PaymentDueDay: null,
+            ColorCode: null);
+
+        var result = await service.CreateAsync(Guid.NewGuid(), request);
+
+        Assert.Equal("PayPal", result.InstitutionName);
+    }
+
+    [Fact]
+    public async Task CreateCashAccountAsync_WithInstitutionName_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "Efectivo",
+            Type: AccountType.Cash,
+            InitialBalance: 100,
+            CurrencyCode: "PEN",
+            InstitutionName: "Banco",
+            CardHolderName: null,
+            CardLast4Digits: null,
+            CreditLimit: null,
+            StatementClosingDay: null,
+            PaymentDueDay: null,
+            ColorCode: null);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Guid.NewGuid(), request));
+    }
+
+    [Fact]
     public async Task CreateCategoryAsync_WhenNameExistsForUserAndType_ThrowsInvalidOperationException()
     {
         await using var dbContext = CreateDbContext();
@@ -176,7 +255,6 @@ public sealed class ApplicationServiceTests
             CreditLimit: creditLimit,
             StatementClosingDay: 10,
             PaymentDueDay: 25,
-            ProviderName: null,
             ColorCode: null);
     }
 

@@ -13,7 +13,6 @@ public sealed record CreateAccountRequest(
     decimal? CreditLimit,
     int? StatementClosingDay,
     int? PaymentDueDay,
-    string? ProviderName,
     string? ColorCode);
 
 public sealed record UpdateAccountRequest(
@@ -38,6 +37,9 @@ public sealed record AccountResponse(
     string? InstitutionName,
     string? CardLast4Digits,
     decimal? CreditLimit,
+    string? CardHolderName,
+    int? StatementClosingDay,
+    int? PaymentDueDay,
     bool IsActive,
     string ColorCode,
     DateTime CreatedAt,
