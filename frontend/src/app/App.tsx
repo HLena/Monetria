@@ -1,7 +1,7 @@
 import { ThemeProvider } from 'next-themes';
 import { RouterProvider } from 'react-router';
 import { router } from './routes';
-import { Toaster } from './components/ui/sonner';
+import { Toaster } from './components/ui/Sonner';
 
 export default function App() {
   return (
