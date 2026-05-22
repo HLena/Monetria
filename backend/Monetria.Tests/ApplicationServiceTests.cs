@@ -552,6 +552,79 @@ public sealed class ApplicationServiceTests
         return category;
     }
 
+    [Fact]
+    public async Task GetUserBalanceAsync_WithIncomeAndExpenseTransactions_ReturnsCorrectBalance()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash, creditLimit: null);
+        var incomeCategory = AddCategory(dbContext, userId, TransactionType.Income, "Salary");
+        var expenseCategory = AddCategory(dbContext, userId, TransactionType.Expense, "Food");
+        await dbContext.SaveChangesAsync();
+
+        var transactionService = CreateTransactionService(dbContext);
+        await transactionService.CreateAsync(userId, new CreateTransactionRequest(
+            account.Id, TransactionType.Income, incomeCategory.Id, 1000, "Salary", DateTime.UtcNow));
+        await transactionService.CreateAsync(userId, new CreateTransactionRequest(
+            account.Id, TransactionType.Expense, expenseCategory.Id, 200, "Groceries", DateTime.UtcNow));
+
+        var balanceService = new BalanceService(
+            new TransactionRepository(dbContext),
+            new AccountRepository(dbContext));
+        var response = await balanceService.GetUserBalanceAsync(userId);
+
+        Assert.Equal(1000, response.TotalIncome);
+        Assert.Equal(200, response.TotalExpense);
+        Assert.Equal(800, response.Balance);
+    }
+
+    [Fact]
+    public async Task GetUserBalanceAsync_WithTransfers_ExcludesTransfersFromBalance()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var sourceAccount = AddAccount(dbContext, userId, AccountType.Cash);
+        var destAccount = AddAccount(dbContext, userId, AccountType.BankAccount);
+        var incomeCategory = AddCategory(dbContext, userId, TransactionType.Income, "Bonus");
+        var expenseCategory = AddCategory(dbContext, userId, TransactionType.Expense, "Utilities");
+        await dbContext.SaveChangesAsync();
+
+        var transactionService = CreateTransactionService(dbContext);
+        await transactionService.CreateAsync(userId, new CreateTransactionRequest(
+            sourceAccount.Id, TransactionType.Income, incomeCategory.Id, 500, "Bonus", DateTime.UtcNow));
+        await transactionService.CreateAsync(userId, new CreateTransactionRequest(
+            sourceAccount.Id, TransactionType.Expense, expenseCategory.Id, 100, "Utilities", DateTime.UtcNow));
+        await transactionService.CreateAsync(userId, new CreateTransactionRequest(
+            sourceAccount.Id, TransactionType.Transfer, null, 150, "Transfer", DateTime.UtcNow, TransferAccountId: destAccount.Id));
+
+        var balanceService = new BalanceService(
+            new TransactionRepository(dbContext),
+            new AccountRepository(dbContext));
+        var response = await balanceService.GetUserBalanceAsync(userId);
+
+        Assert.Equal(500, response.TotalIncome);
+        Assert.Equal(100, response.TotalExpense);
+        Assert.Equal(400, response.Balance);
+    }
+
+    [Fact]
+    public async Task GetUserBalanceAsync_WithNoTransactions_ReturnsZeroBalance()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        await dbContext.SaveChangesAsync();
+
+        var balanceService = new BalanceService(
+            new TransactionRepository(dbContext),
+            new AccountRepository(dbContext));
+        var response = await balanceService.GetUserBalanceAsync(userId);
+
+        Assert.Equal(0, response.TotalIncome);
+        Assert.Equal(0, response.TotalExpense);
+        Assert.Equal(0, response.Balance);
+    }
+
     private sealed class TestJwtTokenGenerator : IJwtTokenGenerator
     {
         public string GenerateToken(User user)

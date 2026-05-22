@@ -100,10 +100,13 @@ public sealed class AccountService(
 
         var accounts = await accountRepository.ListByUserIdAsync(userId, type, cancellationToken);
 
-        // TODO: balance calculation temporarily disabled for debugging
-        return accounts
-            .Select(a => MapToResponse(a, a.InitialBalance))
-            .ToList();
+        var accountsWithBalance = new List<AccountResponse>();
+        foreach (var account in accounts)
+        {
+            var delta = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+            accountsWithBalance.Add(MapToResponse(account, account.InitialBalance + delta));
+        }
+        return accountsWithBalance;
     }
 
     public async Task<AccountResponse> UpdateAsync(
