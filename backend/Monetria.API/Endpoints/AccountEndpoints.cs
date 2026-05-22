@@ -29,6 +29,10 @@ public static class AccountEndpoints
             .WithName("DeleteAccount")
             .WithSummary("Delete an account");
 
+        group.MapGet("/balance/summary", GetUserBalanceAsync)
+            .WithName("GetUserBalance")
+            .WithSummary("Get user's overall balance (income - expense)");
+
         return endpoints;
     }
 
@@ -75,5 +79,16 @@ public static class AccountEndpoints
         var accounts = await accountService.ListByUserIdAsync(userId, type, cancellationToken);
 
         return Results.Ok(accounts);
+    }
+
+    private static async Task<IResult> GetUserBalanceAsync(
+        ClaimsPrincipal user,
+        IBalanceService balanceService,
+        CancellationToken cancellationToken)
+    {
+        var userId = user.GetRequiredUserId();
+        var balance = await balanceService.GetUserBalanceAsync(userId, cancellationToken);
+
+        return Results.Ok(balance);
     }
 }

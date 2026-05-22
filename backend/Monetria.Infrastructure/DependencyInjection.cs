@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IBalanceService, BalanceService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IBudgetService, BudgetService>();
         services.AddScoped<ICategoryService, CategoryService>();
