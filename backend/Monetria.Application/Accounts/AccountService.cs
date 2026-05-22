@@ -23,7 +23,25 @@ public sealed class AccountService(
         await accountRepository.AddAsync(account, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return MapToResponse(account, account.InitialBalance);
+        if (request.InitialBalance > 0)
+        {
+            var initialTransaction = new Transaction
+            {
+                Id = Guid.NewGuid(),
+                FromAccountId = account.Id,
+                Type = TransactionType.Income,
+                Amount = request.InitialBalance,
+                Description = "Initial Balance",
+                IsActive = true,
+                Date = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+            };
+            await transactionRepository.AddAsync(initialTransaction, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return MapToResponse(account, request.InitialBalance);
+        }
+
+        return MapToResponse(account, 0);
     }
 
     private static Account CreateAccount(Guid userId, CreateAccountRequest request)
@@ -47,7 +65,6 @@ public sealed class AccountService(
             UserId = userId,
             Name = request.Name ?? string.Empty,
             Type = type,
-            InitialBalance = request.InitialBalance,
             CurrencyCode = NormalizeCurrency(request.CurrencyCode),
             ColorCode = NormalizeColor(request.ColorCode),
             CreatedAt = now,
@@ -88,6 +105,23 @@ public sealed class AccountService(
         return account;
     }
 
+    public async Task<AccountResponse> GetByIdAsync(
+        Guid userId,
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(userId);
+
+        var account = await accountRepository.GetByIdAsync(accountId, cancellationToken)
+            ?? throw new NotFoundException($"Account {accountId} not found.");
+
+        if (account.UserId != userId)
+            throw new UnauthorizedAccessException("Account does not belong to the current user.");
+
+        var balance = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+        return MapToResponse(account, balance);
+    }
+
     public async Task<IReadOnlyList<AccountResponse>> ListByUserIdAsync(
         Guid userId,
         AccountType? type = null,
@@ -103,8 +137,8 @@ public sealed class AccountService(
         var accountsWithBalance = new List<AccountResponse>();
         foreach (var account in accounts)
         {
-            var delta = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
-            accountsWithBalance.Add(MapToResponse(account, account.InitialBalance + delta));
+            var balance = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+            accountsWithBalance.Add(MapToResponse(account, balance));
         }
         return accountsWithBalance;
     }
@@ -124,7 +158,6 @@ public sealed class AccountService(
             throw new UnauthorizedAccessException("Account does not belong to the current user.");
 
         account.Name = request.Name?.Trim() ?? account.Name;
-        account.InitialBalance = request.InitialBalance;
         account.CurrencyCode = NormalizeCurrency(request.CurrencyCode ?? account.CurrencyCode);
         account.ColorCode = NormalizeColor(request.ColorCode ?? account.ColorCode);
         account.InstitutionName = request.InstitutionName;
@@ -133,13 +166,15 @@ public sealed class AccountService(
         account.CreditLimit = request.CreditLimit;
         account.StatementClosingDay = request.StatementClosingDay;
         account.PaymentDueDay = request.PaymentDueDay;
+        if (request.IsActive.HasValue)
+            account.IsActive = request.IsActive.Value;
         account.UpdatedAt = DateTime.UtcNow;
 
         await accountRepository.UpdateAsync(account, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var delta = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
-        return MapToResponse(account, account.InitialBalance + delta);
+        var balance = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+        return MapToResponse(account, balance);
     }
 
     public async Task DeleteAsync(Guid userId, Guid accountId, CancellationToken cancellationToken = default)
@@ -158,20 +193,22 @@ public sealed class AccountService(
 
     private static void ValidateCreateRequest(CreateAccountRequest request)
     {
+        var name = request.Name?.Trim() ?? string.Empty;
+        if (name.Length < 2 || name.Length > 100)
+            throw new ArgumentException("Account name must be between 2 and 100 characters.", nameof(request));
+
         if (string.IsNullOrWhiteSpace(request.CurrencyCode))
-        {
             throw new ArgumentException("Account currency is required.", nameof(request));
-        }
 
         if (request.CurrencyCode.Trim().Length != 3)
-        {
             throw new ArgumentException("Account currency must use a three-letter code.", nameof(request));
-        }
+
+        var color = request.ColorCode?.Trim();
+        if (!string.IsNullOrWhiteSpace(color) && !System.Text.RegularExpressions.Regex.IsMatch(color, @"^#[0-9A-Fa-f]{6}$"))
+            throw new ArgumentException("Color code must be a valid hex color (e.g. #1A2B3C).", nameof(request));
 
         if (request.InitialBalance < 0)
-        {
-            throw new ArgumentException("Account initial balance cannot be negative.", nameof(request));
-        }
+            throw new ArgumentException("Initial balance cannot be negative.", nameof(request));
 
         switch (request.Type)
         {
@@ -290,7 +327,6 @@ public sealed class AccountService(
             account.UserId,
             account.Name,
             account.Type,
-            account.InitialBalance,
             currentBalance,
             account.CurrencyCode,
             account.InstitutionName,

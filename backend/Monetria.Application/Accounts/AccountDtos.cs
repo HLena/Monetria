@@ -17,7 +17,6 @@ public sealed record CreateAccountRequest(
 
 public sealed record UpdateAccountRequest(
     string? Name,
-    decimal InitialBalance,
     string? CurrencyCode,
     string? InstitutionName,
     string? CardHolderName,
@@ -25,14 +24,14 @@ public sealed record UpdateAccountRequest(
     decimal? CreditLimit,
     int? StatementClosingDay,
     int? PaymentDueDay,
-    string? ColorCode);
+    string? ColorCode,
+    bool? IsActive = null);
 
 public sealed record AccountResponse(
     Guid Id,
     Guid UserId,
     string? Name,
     AccountType Type,
-    decimal InitialBalance,
     decimal CurrentBalance,
     string CurrencyCode,
     string? InstitutionName,

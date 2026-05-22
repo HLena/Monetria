@@ -9,7 +9,6 @@ public class Account
 
     public string Name { get; set; } = string.Empty;
     public AccountType Type { get; set; }
-    public decimal InitialBalance { get; set; }
     public string CurrencyCode { get; set; } = "PEN";
     public bool IsActive { get; set; } = true;
     public string ColorCode { get; set; } = "#000000";
@@ -23,9 +22,6 @@ public class Account
     public int? StatementClosingDay { get; set; }
     public int? PaymentDueDay { get; set; }
 
-    // Wallet only
-    public string? ProviderName { get; set; }
-    
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

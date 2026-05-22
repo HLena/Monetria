@@ -21,6 +21,10 @@ public static class AccountEndpoints
             .WithTags("Accounts")
             .WithSummary("List accounts by user");
 
+        group.MapGet("/{id:guid}", GetAccountByIdAsync)
+            .WithName("GetAccountById")
+            .WithSummary("Get account by id");
+
         group.MapPut("/{id:guid}", UpdateAccountAsync)
             .WithName("UpdateAccount")
             .WithSummary("Update an existing account");
@@ -67,6 +71,16 @@ public static class AccountEndpoints
     {
         await accountService.DeleteAsync(user.GetRequiredUserId(), id, cancellationToken);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> GetAccountByIdAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        IAccountService accountService,
+        CancellationToken cancellationToken)
+    {
+        var account = await accountService.GetByIdAsync(user.GetRequiredUserId(), id, cancellationToken);
+        return Results.Ok(account);
     }
 
     private static async Task<IResult> ListAccountsAsync(

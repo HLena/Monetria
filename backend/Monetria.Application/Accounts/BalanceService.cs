@@ -1,4 +1,5 @@
 using Monetria.Application.Common;
+using Monetria.Application.Transactions;
 using Monetria.Domain.Enums;
 
 namespace Monetria.Application.Accounts;
