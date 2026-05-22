@@ -20,8 +20,8 @@ public sealed class TransactionService(
         ValidateUserId(userId);
         ValidateCreateRequest(request);
 
-        var account = await accountRepository.GetByIdAsync(request.AccountId, cancellationToken)
-            ?? throw new NotFoundException($"Account '{request.AccountId}' was not found.");
+        var account = await accountRepository.GetByIdAsync(request.FromAccountId, cancellationToken)
+            ?? throw new NotFoundException($"Account '{request.FromAccountId}' was not found.");
 
         if (account.UserId != userId)
         {
@@ -40,8 +40,8 @@ public sealed class TransactionService(
 
         if (request.Type == TransactionType.Transfer)
         {
-            var transferAccount = await accountRepository.GetByIdAsync(request.TransferAccountId!.Value, cancellationToken)
-                ?? throw new NotFoundException($"Transfer account '{request.TransferAccountId}' was not found.");
+            var transferAccount = await accountRepository.GetByIdAsync(request.ToAccountId!.Value, cancellationToken)
+                ?? throw new NotFoundException($"Transfer account '{request.ToAccountId}' was not found.");
 
             if (transferAccount.UserId != userId)
             {
@@ -54,12 +54,12 @@ public sealed class TransactionService(
         var transaction = new Transaction
         {
             Id = Guid.NewGuid(),
-            AccountId = request.AccountId,
+            FromAccountId = request.FromAccountId,
             Type = request.Type,
             CategoryId = request.CategoryId,
             Amount = request.Amount,
             Description = request.Description?.Trim(),
-            TransferAccountId = request.TransferAccountId,
+            ToAccountId = request.ToAccountId,
             IsActive = true,
             Date = request.Date,
             CreatedAt = DateTime.UtcNow,
@@ -82,8 +82,8 @@ public sealed class TransactionService(
         var transaction = await transactionRepository.GetByIdAsync(transactionId, cancellationToken)
             ?? throw new NotFoundException($"Transaction '{transactionId}' was not found.");
 
-        var account = await accountRepository.GetByIdAsync(transaction.AccountId, cancellationToken)
-            ?? throw new NotFoundException($"Account '{transaction.AccountId}' was not found.");
+        var account = await accountRepository.GetByIdAsync(transaction.FromAccountId, cancellationToken)
+            ?? throw new NotFoundException($"Account '{transaction.FromAccountId}' was not found.");
 
         if (account.UserId != userId)
         {
@@ -110,8 +110,8 @@ public sealed class TransactionService(
             throw new InvalidOperationException("Transaction has been deleted.");
         }
 
-        var account = await accountRepository.GetByIdAsync(transaction.AccountId, cancellationToken)
-            ?? throw new NotFoundException($"Account '{transaction.AccountId}' was not found.");
+        var account = await accountRepository.GetByIdAsync(transaction.FromAccountId, cancellationToken)
+            ?? throw new NotFoundException($"Account '{transaction.FromAccountId}' was not found.");
 
         if (account.UserId != userId)
         {
@@ -142,17 +142,17 @@ public sealed class TransactionService(
             transaction.CategoryId = request.CategoryId;
         }
 
-        if (request.AccountId != Guid.Empty && request.AccountId != transaction.AccountId)
+        if (request.FromAccountId != Guid.Empty && request.FromAccountId != transaction.FromAccountId)
         {
-            var newAccount = await accountRepository.GetByIdAsync(request.AccountId, cancellationToken)
-                ?? throw new NotFoundException($"Account '{request.AccountId}' was not found.");
+            var newAccount = await accountRepository.GetByIdAsync(request.FromAccountId, cancellationToken)
+                ?? throw new NotFoundException($"Account '{request.FromAccountId}' was not found.");
 
             if (newAccount.UserId != userId)
             {
                 throw new UnauthorizedAccessException("Account does not belong to the user.");
             }
 
-            transaction.AccountId = request.AccountId;
+            transaction.FromAccountId = request.FromAccountId;
         }
 
         transaction.Amount = request.Amount;
@@ -179,8 +179,8 @@ public sealed class TransactionService(
             throw new InvalidOperationException("Transaction has already been deleted.");
         }
 
-        var account = await accountRepository.GetByIdAsync(transaction.AccountId, cancellationToken)
-            ?? throw new NotFoundException($"Account '{transaction.AccountId}' was not found.");
+        var account = await accountRepository.GetByIdAsync(transaction.FromAccountId, cancellationToken)
+            ?? throw new NotFoundException($"Account '{transaction.FromAccountId}' was not found.");
 
         if (account.UserId != userId)
         {
@@ -233,7 +233,7 @@ public sealed class TransactionService(
             throw new UnauthorizedAccessException("Account does not belong to the user.");
         }
 
-        var accountFilter = filter with { AccountId = accountId };
+        var accountFilter = filter with { FromAccountId = accountId };
         var transactions = await transactionRepository.ListByAccountIdAsync(accountId, accountFilter, cancellationToken);
 
         return transactions
@@ -243,7 +243,7 @@ public sealed class TransactionService(
 
     private static void ValidateCreateRequest(CreateTransactionRequest request)
     {
-        if (request.AccountId == Guid.Empty)
+        if (request.FromAccountId == Guid.Empty)
         {
             throw new ArgumentException("Account id is required.", nameof(request));
         }
@@ -260,12 +260,12 @@ public sealed class TransactionService(
 
         if (request.Type == TransactionType.Transfer)
         {
-            if (!request.TransferAccountId.HasValue || request.TransferAccountId == Guid.Empty)
+            if (!request.ToAccountId.HasValue || request.ToAccountId == Guid.Empty)
             {
                 throw new ArgumentException("Transfer account is required for transfer transactions.", nameof(request));
             }
 
-            if (request.TransferAccountId == request.AccountId)
+            if (request.ToAccountId == request.FromAccountId)
             {
                 throw new ArgumentException("Transfer account must be different from the source account.", nameof(request));
             }
@@ -325,8 +325,7 @@ public sealed class TransactionService(
             return;
         }
 
-        var currentBalance = account.InitialBalance
-            + await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+        var currentBalance = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
         var projectedBalance = currentBalance - request.Amount;
         var projectedDebt = Math.Max(0, -projectedBalance);
 
@@ -346,7 +345,7 @@ public sealed class TransactionService(
 
     private static void ValidateFilter(TransactionFilterRequest filter)
     {
-        if (filter.AccountId == Guid.Empty)
+        if (filter.FromAccountId == Guid.Empty)
         {
             throw new ArgumentException("Account id filter cannot be empty.", nameof(filter));
         }
@@ -376,7 +375,7 @@ public sealed class TransactionService(
     {
         return new TransactionResponse(
             transaction.Id,
-            transaction.AccountId,
+            transaction.FromAccountId,
             transaction.Type,
             transaction.CategoryId,
             transaction.Category?.Name ?? string.Empty,
@@ -384,7 +383,7 @@ public sealed class TransactionService(
             transaction.Category?.KeyIcon,
             transaction.Amount,
             transaction.Description,
-            transaction.TransferAccountId,
+            transaction.ToAccountId,
             transaction.IsActive,
             transaction.Date,
             transaction.CreatedAt);

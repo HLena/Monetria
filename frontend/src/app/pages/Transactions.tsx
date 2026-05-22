@@ -54,7 +54,7 @@ export function Transactions() {
       .filter(t => {
         if (filterType !== 'all' && t.type !== filterType) return false;
         if (filterCategory !== 'all' && t.category !== filterCategory) return false;
-        if (filterAccount !== 'all' && t.accountId !== filterAccount) return false;
+        if (filterAccount !== 'all' && t.fromAccountId !== filterAccount) return false;
         if (filterMonth && getMonthKey(t.date) !== filterMonth) return false;
         if (
           search &&
@@ -179,7 +179,7 @@ export function Transactions() {
               <TransactionRow
                 key={tx.id}
                 transaction={tx}
-                account={accounts.find(a => a.id === tx.accountId)}
+                account={accounts.find(a => a.id === tx.fromAccountId)}
                 onEdit={setEditTx}
                 onDelete={id => void handleDelete(id)}
               />

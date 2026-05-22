@@ -68,7 +68,7 @@ export function fixedExpenseMonthlyEquivalent(amount: number, period: FixedExpen
 
 export interface Transaction {
   id: string;
-  accountId: string;
+  fromAccountId: string;
   type: TransactionType;
   category: string;
   categoryId?: string;
@@ -78,7 +78,7 @@ export interface Transaction {
   description: string;
   date: string; // ISO date string YYYY-MM-DD
   createdAt: string;
-  transferAccountId?: string;
+  toAccountId?: string;
 }
 
 export interface Budget {

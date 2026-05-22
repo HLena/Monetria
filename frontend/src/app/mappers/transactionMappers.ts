@@ -22,7 +22,7 @@ const TYPE_TO_DTO: Record<TransactionType, TransactionTypeDto> = {
 export function mapTransactionDtoToTransaction(dto: TransactionDto): Transaction {
   return {
     id: dto.id,
-    accountId: dto.accountId,
+    fromAccountId: dto.fromAccountId,
     type: TYPE_FROM_DTO[dto.type] ?? 'expense',
     category: dto.categoryName ?? 'Otros',
     categoryId: dto.categoryId ?? undefined,
@@ -32,7 +32,7 @@ export function mapTransactionDtoToTransaction(dto: TransactionDto): Transaction
     description: dto.description ?? '',
     date: dto.date.split('T')[0],
     createdAt: dto.createdAt,
-    transferAccountId: dto.transferAccountId ?? undefined,
+    toAccountId: dto.toAccountId ?? undefined,
   };
 }
 
@@ -52,13 +52,13 @@ export function toCreateTransactionRequestBody(
   categories: CategoryDto[],
 ): CreateTransactionRequestBody {
   return {
-    accountId: tx.accountId,
+    fromAccountId: tx.fromAccountId,
     type: TYPE_TO_DTO[tx.type],
     categoryId: resolveCategoryId(tx.type, tx.category, tx.categoryId, categories),
     amount: tx.amount,
     description: tx.description || null,
     date: `${tx.date}T00:00:00Z`,
-    transferAccountId: tx.transferAccountId ?? null,
+    toAccountId: tx.toAccountId ?? null,
   };
 }
 
@@ -71,6 +71,6 @@ export function toUpdateTransactionRequestBody(
     categoryId: resolveCategoryId(tx.type, tx.category, tx.categoryId, categories),
     transactionDate: `${tx.date}T00:00:00`,
     description: tx.description || null,
-    accountId: tx.accountId,
+    fromAccountId: tx.fromAccountId,
   };
 }

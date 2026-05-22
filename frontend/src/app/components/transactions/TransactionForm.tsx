@@ -23,8 +23,8 @@ export function TransactionForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(initial?.categoryId ?? '');
   const [form, setForm] = useState({
-    accountId: initial?.accountId ?? accounts[0]?.id ?? '',
-    transferAccountId: initial?.transferAccountId ?? '',
+    fromAccountId: initial?.fromAccountId ?? accounts[0]?.id ?? '',
+    toAccountId: initial?.toAccountId ?? '',
     amount: initial?.amount ?? 0,
     description: initial?.description ?? '',
     date: initial?.date ?? new Date().toISOString().split('T')[0],
@@ -32,12 +32,11 @@ export function TransactionForm({
 
   const isEditMode = Boolean(initial);
 
-  // Sync accountId when accounts load after the component mounts (race condition on first open)
   useEffect(() => {
-    if (!form.accountId && accounts.length > 0) {
-      setForm(prev => ({ ...prev, accountId: accounts[0].id }));
+    if (!form.fromAccountId && accounts.length > 0) {
+      setForm(prev => ({ ...prev, fromAccountId: accounts[0].id }));
     }
-  }, [accounts, form.accountId]);
+  }, [accounts, form.fromAccountId]);
 
   const visibleCategories: CategoryDto[] = categories.filter(
     c => c.isActive && c.type === (type === 'expense' ? 'Expense' : 'Income'),
@@ -46,7 +45,7 @@ export function TransactionForm({
   const selectedCategory =
     visibleCategories.find(c => c.id === selectedCategoryId) ?? visibleCategories[0];
 
-  const destinationAccounts = accounts.filter(a => a.id !== form.accountId);
+  const destinationAccounts = accounts.filter(a => a.id !== form.fromAccountId);
 
   const set = (key: keyof typeof form, value: unknown) =>
     setForm(prev => ({ ...prev, [key]: value }));
@@ -59,7 +58,7 @@ export function TransactionForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data: Omit<Transaction, 'id' | 'createdAt'> = {
-      accountId: form.accountId,
+      fromAccountId: form.fromAccountId,
       type,
       category: type === 'transfer' ? 'Transferencia' : (selectedCategory?.name ?? ''),
       categoryId: type === 'transfer' ? undefined : selectedCategory?.id,
@@ -68,7 +67,7 @@ export function TransactionForm({
       amount: parseFloat(form.amount.toString()) || 0,
       description: form.description,
       date: form.date,
-      ...(type === 'transfer' && { transferAccountId: form.transferAccountId }),
+      ...(type === 'transfer' && { toAccountId: form.toAccountId }),
     };
     setIsSubmitting(true);
     try {
@@ -177,8 +176,8 @@ export function TransactionForm({
           <select
             required
             className={`${inputCls} bg-white`}
-            value={form.accountId}
-            onChange={e => set('accountId', e.target.value)}
+            value={form.fromAccountId}
+            onChange={e => set('fromAccountId', e.target.value)}
           >
             {accounts.map(a => (
               <option key={a.id} value={a.id}>{a.name}</option>
@@ -192,8 +191,8 @@ export function TransactionForm({
             <select
               required
               className={`${inputCls} bg-white`}
-              value={form.transferAccountId}
-              onChange={e => set('transferAccountId', e.target.value)}
+              value={form.toAccountId}
+              onChange={e => set('toAccountId', e.target.value)}
             >
               <option value="">Selecciona cuenta destino</option>
               {destinationAccounts.map(a => (

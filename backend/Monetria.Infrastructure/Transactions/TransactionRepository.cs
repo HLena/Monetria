@@ -25,10 +25,10 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         return await dbContext.Transactions
             .AsNoTracking()
             .Where(t => t.IsActive &&
-                (t.AccountId == accountId ||
-                 (t.TransferAccountId == accountId && t.Type == TransactionType.Transfer)))
+                (t.FromAccountId == accountId ||
+                 (t.ToAccountId == accountId && t.Type == TransactionType.Transfer)))
             .SumAsync(t =>
-                t.AccountId == accountId
+                t.FromAccountId == accountId
                     ? (t.Type == TransactionType.Income ? t.Amount : -t.Amount)
                     : t.Amount,
                 cancellationToken);
@@ -46,7 +46,7 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         var query = dbContext.Transactions
             .AsNoTracking()
             .Include(transaction => transaction.Category)
-            .Where(transaction => transaction.IsActive && userAccountIds.Contains(transaction.AccountId));
+            .Where(transaction => transaction.IsActive && userAccountIds.Contains(transaction.FromAccountId));
 
         query = ApplyFilters(query, filter);
 
@@ -61,9 +61,9 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         var query = dbContext.Transactions
             .AsNoTracking()
             .Include(transaction => transaction.Category)
-            .Where(transaction => transaction.IsActive && transaction.AccountId == accountId);
+            .Where(transaction => transaction.IsActive && transaction.FromAccountId == accountId);
 
-        query = ApplyFilters(query, filter with { AccountId = null });
+        query = ApplyFilters(query, filter with { FromAccountId = null });
 
         return await OrderTransactions(query).ToListAsync(cancellationToken);
     }
@@ -90,9 +90,9 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
             query = query.Where(transaction => transaction.CategoryId == filter.CategoryId.Value);
         }
 
-        if (filter.AccountId.HasValue)
+        if (filter.FromAccountId.HasValue)
         {
-            query = query.Where(transaction => transaction.AccountId == filter.AccountId.Value);
+            query = query.Where(transaction => transaction.FromAccountId == filter.FromAccountId.Value);
         }
 
         if (filter.Month.HasValue)

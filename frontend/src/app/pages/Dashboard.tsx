@@ -66,10 +66,10 @@ export function Dashboard() {
   // Calculate total net worth
   const totalDebitCash = accounts
     .filter(a => a.type !== AccountType.CreditCard)
-    .reduce((sum, a) => sum + a.initialBalance, 0);
+    .reduce((sum, a) => sum + a.currentBalance, 0);
   const totalCreditDebt = accounts
     .filter(a => a.type === AccountType.CreditCard)
-    .reduce((sum, a) => sum + a.initialBalance, 0);
+    .reduce((sum, a) => sum + a.currentBalance, 0);
   const netWorth = totalDebitCash - totalCreditDebt;
 
   // Monthly income and expenses
@@ -282,7 +282,7 @@ export function Dashboard() {
           </div>
           <div className="space-y-3">
             {recentTransactions.map(tx => {
-              const account = accounts.find(a => a.id === tx.accountId);
+              const account = accounts.find(a => a.id === tx.fromAccountId);
               return (
                 <div key={tx.id} className="flex items-center gap-3">
                   <CategoryIconCircle category={tx.category} size="sm" />
@@ -380,7 +380,7 @@ export function Dashboard() {
                     <p className="text-slate-400 dark:text-slate-500 text-xs">{account.type === AccountType.CreditCard ? 'Crédito' : account.type === AccountType.Wallet ? 'Efectivo' : 'Débito'}</p>
                   </div>
                   <span className={`text-xs font-semibold ${account.type === AccountType.CreditCard ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {account.type === AccountType.CreditCard ? '-' : ''}{formatCurrency(account.initialBalance)}
+                    {account.type === AccountType.CreditCard ? '-' : ''}{formatCurrency(account.currentBalance)}
                   </span>
                 </Link>
               ))}

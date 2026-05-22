@@ -2,7 +2,7 @@ export type TransactionTypeDto = 'Income' | 'Expense' | 'Transfer';
 
 export interface TransactionDto {
   id: string;
-  accountId: string;
+  fromAccountId: string;
   type: TransactionTypeDto;
   categoryId: string | null;
   categoryName: string;
@@ -10,20 +10,20 @@ export interface TransactionDto {
   categoryKeyIcon: string | null;
   amount: number;
   description: string | null;
-  transferAccountId: string | null;
+  toAccountId: string | null;
   isActive: boolean;
   date: string;
   createdAt: string;
 }
 
 export interface CreateTransactionRequestBody {
-  accountId: string;
+  fromAccountId: string;
   type: TransactionTypeDto;
   categoryId: string | null;
   amount: number;
   description: string | null;
   date: string;
-  transferAccountId: string | null;
+  toAccountId: string | null;
 }
 
 export interface UpdateTransactionRequestBody {
@@ -31,5 +31,5 @@ export interface UpdateTransactionRequestBody {
   categoryId: string | null;
   transactionDate: string;
   description: string | null;
-  accountId: string;
+  fromAccountId: string;
 }

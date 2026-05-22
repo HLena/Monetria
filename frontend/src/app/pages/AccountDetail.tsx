@@ -40,15 +40,18 @@ export function AccountDetail() {
   }
 
   const accountTransactions = transactions
-    .filter(t => t.accountId === id)
+    .filter(t => t.fromAccountId === id || t.toAccountId === id)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  console.log('Movimientos de esta cuenta:', accountTransactions);
   const totalIncome = accountTransactions
-    .filter(t => t.type === 'income')
+    .filter(t => t.type === 'income' || (t.type === 'transfer' && t.toAccountId === id))
     .reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = accountTransactions
-    .filter(t => t.type === 'expense')
+    .filter(t => t.type === 'expense' || (t.type === 'transfer' && t.fromAccountId === id))
     .reduce((sum, t) => sum + t.amount, 0);
+
+
 
   // Last 6 months spending
   const now = new Date();
@@ -76,8 +79,8 @@ export function AccountDetail() {
     .sort(([, a], [, b]) => b - a);
 
   const isCredit = account.type === AccountType.CreditCard;
-  const availableCredit = isCredit ? (account.creditLimit ?? 0) - account.initialBalance : 0;
-  const usagePercent = isCredit && account.creditLimit ? (account.initialBalance / account.creditLimit) * 100 : 0;
+  const availableCredit = isCredit ? (account.creditLimit ?? 0) - account.currentBalance : 0;
+  const usagePercent = isCredit && account.creditLimit ? (account.currentBalance / account.creditLimit) * 100 : 0;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -137,10 +140,10 @@ export function AccountDetail() {
                     <span className="text-slate-700">•••• {account.cardLast4Digits}</span>
                   </div>
                 )}
-                {account.initialBalance && (
+                {account.currentBalance && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Saldo inicial</span>
-                    <span className="text-slate-700">{formatCurrency(account.initialBalance)}</span>
+                    <span className="text-slate-700">{formatCurrency(account.currentBalance)}</span>
                   </div>
                 )}
                 {isCredit && account.creditLimit && (
@@ -155,7 +158,7 @@ export function AccountDetail() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Usado</span>
-                      <span className="text-rose-600 font-medium">{formatCurrency(account.initialBalance)}</span>
+                      <span className="text-rose-600 font-medium">{formatCurrency(account.currentBalance)}</span>
                     </div>
                     <div>
                       <div className="flex justify-between text-xs mb-1">

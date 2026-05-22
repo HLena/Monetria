@@ -47,9 +47,8 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
         modelBuilder.Entity<Account>(entity =>
         {
             entity.HasKey(account => account.Id);
-            entity.Property(account => account.Name).HasMaxLength(120);
+            entity.Property(account => account.Name).HasMaxLength(100).IsRequired();
             entity.Property(account => account.Type).HasConversion<string>().HasMaxLength(30).IsRequired();
-            entity.Property(account => account.InitialBalance).HasPrecision(18, 2);
             entity.Property(account => account.CurrencyCode).HasMaxLength(3).IsRequired();
             entity.Property(account => account.ColorCode).HasMaxLength(20).IsRequired();
             entity.Property(account => account.IsActive).IsRequired();
@@ -57,7 +56,6 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(account => account.CardHolderName).HasMaxLength(160);
             entity.Property(account => account.CardLast4Digits).HasMaxLength(4);
             entity.Property(account => account.CreditLimit).HasPrecision(18, 2);
-            entity.Property(account => account.ProviderName).HasMaxLength(120);
             entity.Property(account => account.CreatedAt).IsRequired();
             entity.Property(account => account.UpdatedAt).IsRequired();
             entity.HasOne<User>()
@@ -76,10 +74,10 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(transaction => transaction.Amount).HasPrecision(18, 2);
             entity.Property(transaction => transaction.Description).HasMaxLength(500);
             entity.Property(transaction => transaction.IsActive).IsRequired();
-            entity.Property(transaction => transaction.TransferAccountId);
+            entity.Property(transaction => transaction.ToAccountId);
             entity.HasOne<Account>()
                 .WithMany(account => account.Transactions)
-                .HasForeignKey(transaction => transaction.AccountId)
+                .HasForeignKey(transaction => transaction.FromAccountId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(transaction => transaction.Category)
                 .WithMany(category => category.Transactions)
@@ -88,7 +86,7 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Account>()
                 .WithMany()
-                .HasForeignKey(transaction => transaction.TransferAccountId)
+                .HasForeignKey(transaction => transaction.ToAccountId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
         });

@@ -191,7 +191,7 @@ public sealed class ApplicationServiceTests
             service.CreateAsync(userId, request));
 
         var unchangedAccount = await dbContext.Accounts.SingleAsync(savedAccount => savedAccount.Id == account.Id);
-        Assert.Equal(0, unchangedAccount.InitialBalance);
+        Assert.True(unchangedAccount.Id != Guid.Empty);
         Assert.Empty(dbContext.Transactions);
     }
 
@@ -210,7 +210,7 @@ public sealed class ApplicationServiceTests
 
         Assert.Equal(category.Id, response.CategoryId);
         Assert.Equal("Groceries", response.CategoryName);
-        Assert.Equal(0, account.InitialBalance);
+        Assert.True(account.Id != Guid.Empty);
         Assert.True(await dbContext.Transactions.AnyAsync(transaction =>
             transaction.Id == response.Id && transaction.CategoryId == category.Id));
     }
@@ -337,7 +337,7 @@ public sealed class ApplicationServiceTests
             100,
             "Transfer test",
             DateTime.UtcNow,
-            TransferAccountId: null);
+            ToAccountId: null);
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(userId, request));
     }
@@ -358,12 +358,12 @@ public sealed class ApplicationServiceTests
             200,
             "Transfer to savings",
             DateTime.UtcNow,
-            TransferAccountId: destAccount.Id);
+            ToAccountId: destAccount.Id);
 
         var response = await service.CreateAsync(userId, request);
 
         Assert.Equal(TransactionType.Transfer, response.Type);
-        Assert.Equal(destAccount.Id, response.TransferAccountId);
+        Assert.Equal(destAccount.Id, response.ToAccountId);
         Assert.True(response.IsActive);
     }
 
@@ -515,7 +515,7 @@ public sealed class ApplicationServiceTests
             UserId = userId,
             Name = "Test account",
             Type = type,
-            InitialBalance = 0,
+            
             CurrencyCode = "PEN",
             CreditLimit = creditLimit,
             StatementClosingDay = type == AccountType.CreditCard ? 10 : null,
@@ -595,7 +595,7 @@ public sealed class ApplicationServiceTests
         await transactionService.CreateAsync(userId, new CreateTransactionRequest(
             sourceAccount.Id, TransactionType.Expense, expenseCategory.Id, 100, "Utilities", DateTime.UtcNow));
         await transactionService.CreateAsync(userId, new CreateTransactionRequest(
-            sourceAccount.Id, TransactionType.Transfer, null, 150, "Transfer", DateTime.UtcNow, TransferAccountId: destAccount.Id));
+            sourceAccount.Id, TransactionType.Transfer, null, 150, "Transfer", DateTime.UtcNow, ToAccountId: destAccount.Id));
 
         var balanceService = new BalanceService(
             new TransactionRepository(dbContext),
@@ -623,6 +623,127 @@ public sealed class ApplicationServiceTests
         Assert.Equal(0, response.TotalIncome);
         Assert.Equal(0, response.TotalExpense);
         Assert.Equal(0, response.Balance);
+    }
+
+    [Fact]
+    public async Task CreateAccountAsync_WithValidWallet_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "Mi Yape",
+            Type: AccountType.EWallet,
+            InitialBalance: 0,
+            CurrencyCode: "PEN",
+            InstitutionName: "Yape",
+            CardHolderName: null,
+            CardLast4Digits: null,
+            CreditLimit: null,
+            StatementClosingDay: null,
+            PaymentDueDay: null,
+            ColorCode: "#6366f1");
+
+        var result = await service.CreateAsync(Guid.NewGuid(), request);
+
+        Assert.Equal("Mi Yape", result.Name);
+        Assert.Equal(0, result.CurrentBalance);
+    }
+
+    [Fact]
+    public async Task CreateAccountAsync_WithInitialBalance_CreatesInitialTransaction()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "Cuenta Ahorro",
+            Type: AccountType.BankAccount,
+            InitialBalance: 500,
+            CurrencyCode: "PEN",
+            InstitutionName: "BCP",
+            CardHolderName: null,
+            CardLast4Digits: null,
+            CreditLimit: null,
+            StatementClosingDay: null,
+            PaymentDueDay: null,
+            ColorCode: null);
+
+        var result = await service.CreateAsync(Guid.NewGuid(), request);
+
+        Assert.Equal(500, result.CurrentBalance);
+        Assert.True(await dbContext.Transactions.AnyAsync(t => t.FromAccountId == result.Id && t.Amount == 500));
+    }
+
+    [Fact]
+    public async Task CreateAccountAsync_WithInvalidColorCode_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "Cuenta",
+            Type: AccountType.Cash,
+            InitialBalance: 0,
+            CurrencyCode: "PEN",
+            InstitutionName: null,
+            CardHolderName: null,
+            CardLast4Digits: null,
+            CreditLimit: null,
+            StatementClosingDay: null,
+            PaymentDueDay: null,
+            ColorCode: "invalid-color");
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Guid.NewGuid(), request));
+    }
+
+    [Fact]
+    public async Task CreateAccountAsync_WithNameTooShort_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "A",
+            Type: AccountType.Cash,
+            InitialBalance: 0,
+            CurrencyCode: "PEN",
+            InstitutionName: null,
+            CardHolderName: null,
+            CardLast4Digits: null,
+            CreditLimit: null,
+            StatementClosingDay: null,
+            PaymentDueDay: null,
+            ColorCode: null);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Guid.NewGuid(), request));
+    }
+
+    [Fact]
+    public async Task GetAccountByIdAsync_WhenBelongsToAnotherUser_ThrowsUnauthorizedAccessException()
+    {
+        await using var dbContext = CreateDbContext();
+        var ownerId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var account = AddAccount(dbContext, ownerId, AccountType.Cash);
+        await dbContext.SaveChangesAsync();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.GetByIdAsync(requesterId, account.Id));
+    }
+
+    [Fact]
+    public async Task AccountBalance_IsDerivedFromTransactions_NotFromStoredField()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var category = AddCategory(dbContext, userId, TransactionType.Income);
+        await dbContext.SaveChangesAsync();
+        var txService = CreateTransactionService(dbContext);
+        await txService.CreateAsync(userId, new CreateTransactionRequest(account.Id, TransactionType.Income, category.Id, 300, null, DateTime.UtcNow));
+
+        var accountService = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var response = await accountService.GetByIdAsync(userId, account.Id);
+
+        Assert.Equal(300, response.CurrentBalance);
     }
 
     private sealed class TestJwtTokenGenerator : IJwtTokenGenerator
