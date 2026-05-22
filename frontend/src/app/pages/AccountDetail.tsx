@@ -137,6 +137,12 @@ export function AccountDetail() {
                     <span className="text-slate-700">•••• {account.cardLast4Digits}</span>
                   </div>
                 )}
+                {account.initialBalance && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Saldo inicial</span>
+                    <span className="text-slate-700">{formatCurrency(account.initialBalance)}</span>
+                  </div>
+                )}
                 {isCredit && account.creditLimit && (
                   <>
                     <div className="flex justify-between text-sm">

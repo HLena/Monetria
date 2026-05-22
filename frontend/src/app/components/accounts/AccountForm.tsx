@@ -77,7 +77,7 @@ export function AccountForm({
         </div>
         <div>
           <label className={labelCls}>
-            {form.type === AccountType.CreditCard ? 'Saldo actual (deuda)' : 'Saldo disponible'} *
+            {form.type === AccountType.CreditCard ? 'Saldo actual (deuda)' : 'Saldo Inicial'} *
           </label>
           <input
             required

@@ -19,3 +19,10 @@ export interface AccountDto {
   updatedAt: string;
   isActive: boolean;
 }
+
+export interface UserBalanceDto {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  currencyCode: string;
+}

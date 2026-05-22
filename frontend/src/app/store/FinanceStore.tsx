@@ -2,9 +2,10 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Account, Budget, Debt, FixedExpense, SavingsGoal, Transaction } from '../types/finance';
 import type { CategoryDto } from '../types/api/categories';
+import type { UserBalanceDto } from '../types/api/accounts';
 import { api, getAuthToken } from '../lib/apiClient';
 import { useAuthStore } from './AuthStore';
-import { listAccounts, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi } from '../api/accounts';
+import { listAccounts, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi, getUserBalance as getUserBalanceApi } from '../api/accounts';
 import { listCategories as listCategoriesApi } from '../api/categories';
 import {
   listTransactions as listTransactionsApi,
@@ -33,6 +34,7 @@ interface FinanceStoreState {
   fixedExpenses: FixedExpense[];
   savingsGoals: SavingsGoal[];
   debts: Debt[];
+  userBalance: UserBalanceDto | null;
   addAccount: (account: Omit<Account, 'id'>, userId: string) => Promise<void>;
   updateAccount: (id: string, account: Omit<Account, 'id'>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
@@ -40,6 +42,7 @@ interface FinanceStoreState {
   loadAccounts: (userId: string) => Promise<void>;
   loadCategories: () => Promise<void>;
   loadTransactions: () => Promise<void>;
+  loadUserBalance: () => Promise<void>;
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
   updateTransaction: (id: string, tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -57,6 +60,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
       fixedExpenses: [],
       savingsGoals: [],
       debts: [],
+      userBalance: null,
 
       addAccount: async (account: Omit<Account, 'id'>, userId: string) => {
         set({ isLoading: true, error: null });
@@ -165,6 +169,19 @@ export const useFinanceStore = create<FinanceStoreState>()(
         }
       },
 
+      loadUserBalance: async () => {
+        if (!getAuthToken()) {
+          set({ userBalance: null });
+          return;
+        }
+        try {
+          const balance = await getUserBalanceApi();
+          set({ userBalance: balance });
+        } catch {
+          // non-critical — balance display is optional
+        }
+      },
+
       addTransaction: async (tx: Omit<Transaction, 'id' | 'createdAt'>) => {
         set({ isLoading: true, error: null });
         try {
@@ -177,6 +194,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
             error: null,
           }));
           void get().loadAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
+          void get().loadUserBalance().catch(() => undefined);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo crear la transacción';
           set({ error: msg, isLoading: false });
@@ -212,6 +230,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
             error: null,
           }));
           void get().loadAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
+          void get().loadUserBalance().catch(() => undefined);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo eliminar la transacción';
           set({ error: msg, isLoading: false });
@@ -232,7 +251,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
           return currentState;
         }
         const p = persistedState as Partial<FinanceStoreState>;
-        const { accounts: _a, transactions: _t, categories: _c, ...rest } = p;
+        const { accounts: _a, transactions: _t, categories: _c, userBalance: _ub, ...rest } = p;
         return { ...currentState, ...rest };
       },
     },
