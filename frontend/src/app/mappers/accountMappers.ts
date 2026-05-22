@@ -30,7 +30,7 @@ export function mapAccountDtoToFinanceAccount(dto: AccountDto): Account {
     id: dto.id,
     name: dto.name?.trim() ? dto.name.trim() : '',
     type,
-    initialBalance: dto.currentBalance,
+    currentBalance: dto.currentBalance,
     currencyCode: dto.currencyCode,
     colorCode: dto.colorCode || '#000000',
     institutionName: dto.institutionName?.trim() || undefined,
@@ -63,7 +63,6 @@ const FRONTEND_TYPE_MAP: Record<number, string> = {
 export function toUpdateAccountRequestBody(a: Omit<Account, 'id'>) {
   return {
     name: a.name,
-    initialBalance: a.initialBalance,
     currencyCode: a.currencyCode || 'USD',
     institutionName: a.institutionName ?? null,
     cardHolderName: a.cardHolderName ?? null,
@@ -79,7 +78,7 @@ export function toCreateAccountRequestBody(a: Omit<Account, 'id'>) {
   return {
     name: a.name,
     type: FRONTEND_TYPE_MAP[a.type] ?? 'Cash',
-    initialBalance: a.initialBalance,
+    initialBalance: a.initialBalance ?? 0,
     currencyCode: a.currencyCode || 'USD',
     institutionName: a.institutionName ?? '',
     cardLast4Digits: a.cardLast4Digits ?? '',

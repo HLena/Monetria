@@ -5,7 +5,6 @@ export interface AccountDto {
   userId: string;
   name: string | null;
   type: AccountType;
-  initialBalance: number;
   currentBalance: number;
   currencyCode: string;
   colorCode: string;

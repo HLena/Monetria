@@ -36,10 +36,10 @@ export function Accounts() {
 
   const totalAvailable = accounts
     .filter(a => a.type !== AccountType.CreditCard)
-    .reduce((sum, a) => sum + a.initialBalance, 0);
+    .reduce((sum, a) => sum + a.currentBalance, 0);
   const totalDebt = accounts
     .filter(a => a.type === AccountType.CreditCard)
-    .reduce((sum, a) => sum + a.initialBalance, 0);
+    .reduce((sum, a) => sum + a.currentBalance, 0);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

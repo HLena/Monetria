@@ -8,7 +8,7 @@ import { usageColor } from '../../constants/accountColors';
 
 export function AccountCardGrid({ accounts }: { accounts: Account[] }) {
   const netWorth = accounts.reduce(
-    (sum, a) => sum + (a.type === AccountType.CreditCard ? -a.initialBalance : a.initialBalance),
+    (sum, a) => sum + (a.type === AccountType.CreditCard ? -a.currentBalance : a.currentBalance),
     0,
   );
 
@@ -17,7 +17,7 @@ export function AccountCardGrid({ accounts }: { accounts: Account[] }) {
       {accounts.map(account => {
         const isCredit = account.type === AccountType.CreditCard;
         const ratio = isCredit && account.creditLimit
-          ? account.initialBalance / account.creditLimit
+          ? account.currentBalance / account.creditLimit
           : null;
 
         return (
@@ -37,7 +37,7 @@ export function AccountCardGrid({ accounts }: { accounts: Account[] }) {
             </div>
             <div>
               <p className={`font-bold text-base ${isCredit ? 'text-rose-400' : 'text-emerald-400'}`}>
-                {isCredit ? '-' : ''}{formatCurrency(account.initialBalance)}
+                {isCredit ? '-' : ''}{formatCurrency(account.currentBalance)}
               </p>
               {ratio !== null && (
                 <div className="mt-1.5">

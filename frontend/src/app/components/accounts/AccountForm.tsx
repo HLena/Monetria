@@ -17,6 +17,8 @@ export function AccountForm({
   onClose: () => void;
   mode?: 'create' | 'edit';
 }) {
+  const isCreateMode = mode === 'create';
+  const [initialBalance, setInitialBalance] = useState(0);
   const [form, setForm] = useState<Omit<Account, 'id'>>({
     name: initial?.name ?? '',
     type: initial?.type ?? AccountType.Cash,
@@ -24,7 +26,8 @@ export function AccountForm({
     cardHolderName: initial?.cardHolderName ?? '',
     expiryDate: initial?.expiryDate ?? '',
     institutionName: initial?.institutionName ?? '',
-    initialBalance: initial?.initialBalance ?? 0,
+    currentBalance: initial?.currentBalance ?? 0,
+    initialBalance: undefined,
     creditLimit: initial?.creditLimit,
     statementClosingDay: initial?.statementClosingDay,
     paymentDueDay: initial?.paymentDueDay,
@@ -39,7 +42,7 @@ export function AccountForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await onSave(form);
+      await onSave(isCreateMode ? { ...form, initialBalance } : form);
       onClose();
     } catch {
       /* el store guarda el error */
@@ -75,20 +78,20 @@ export function AccountForm({
             <option value={AccountType.Wallet}>Billetera</option>
           </select>
         </div>
-        <div>
-          <label className={labelCls}>
-            {form.type === AccountType.CreditCard ? 'Saldo actual (deuda)' : 'Saldo Inicial'} *
-          </label>
-          <input
-            required
-            type="number"
-            min="0"
-            step="0.01"
-            className={inputCls}
-            value={form.initialBalance}
-            onChange={e => set('initialBalance', parseFloat(e.target.value) || 0)}
-          />
-        </div>
+        {isCreateMode && (
+          <div>
+            <label className={labelCls}>Saldo inicial</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              className={inputCls}
+              placeholder="0.00"
+              value={initialBalance || ''}
+              onChange={e => setInitialBalance(parseFloat(e.target.value) || 0)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Campos específicos de cuenta bancaria */}

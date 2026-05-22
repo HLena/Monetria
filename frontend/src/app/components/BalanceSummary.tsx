@@ -1,5 +1,5 @@
-import { useFinanceStore } from '../../store/FinanceStore';
-import { SummaryCard } from '../ui/SummaryCard';
+import { useFinanceStore } from '../store/FinanceStore';
+import { SummaryCard } from './ui/SummaryCard';
 
 export function BalanceSummary() {
   const userBalance = useFinanceStore(state => state.userBalance);

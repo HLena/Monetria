@@ -113,13 +113,13 @@ Return response
 
 # Backend
 
-- Actualiza la entidad de transaction en el backend y considera la sgt:
-    - accountId
+- Actualiza la entidad de transaction en el backend y considera los siguientes campos:
+    - fromAccountId
     - type
     - categoryId
     - amount
     - description
-    - transferAccountId
+    - toAccountId
     - createdAt
     - date
     - isActive: false means deleted transaccion and true that it is not deleted

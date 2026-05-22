@@ -106,7 +106,7 @@ export function Reports() {
   // Account distribution
   const accountData = accounts.map(a => ({
     name: a.name,
-    value: a.type === AccountType.CreditCard ? a.initialBalance : a.initialBalance,
+    value: a.type === AccountType.CreditCard ? a.currentBalance : a.currentBalance,
     color: a.colorCode,
   }));
 

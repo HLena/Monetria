@@ -13,11 +13,11 @@ export function CreditCardVisual({ account, compact = false }: CreditCardVisualP
   const isCash = account.type === AccountType.Wallet;
 
   const availableCredit = isCredit
-    ? (account.creditLimit ?? 0) - account.initialBalance
-    : account.initialBalance;
+    ? (account.creditLimit ?? 0) - account.currentBalance
+    : account.currentBalance;
 
   const usagePercent = isCredit && account.creditLimit
-    ? (account.initialBalance / account.creditLimit) * 100
+    ? (account.currentBalance / account.creditLimit) * 100
     : 0;
 
   if (compact) {
@@ -35,7 +35,7 @@ export function CreditCardVisual({ account, compact = false }: CreditCardVisualP
         </div>
         <div className="mt-1">
           <p className="text-xs opacity-70">{isCredit ? 'Saldo' : 'Disponible'}</p>
-          <p className="text-lg font-bold">{formatCurrency(account.initialBalance)}</p>
+          <p className="text-lg font-bold">{formatCurrency(account.currentBalance)}</p>
         </div>
         {account.cardLast4Digits && (
           <p className="text-xs opacity-60 mt-1">•••• {account.cardLast4Digits}</p>
@@ -115,7 +115,7 @@ export function CreditCardVisual({ account, compact = false }: CreditCardVisualP
           {isCredit ? (
             <>
               <p className="text-xs opacity-60">Saldo actual</p>
-              <p className="text-xl font-bold">{formatCurrency(account.initialBalance)}</p>
+              <p className="text-xl font-bold">{formatCurrency(account.currentBalance)}</p>
               <p className="text-xs opacity-60">
                 Disponible: {formatCurrency(availableCredit)}
               </p>
@@ -123,7 +123,7 @@ export function CreditCardVisual({ account, compact = false }: CreditCardVisualP
           ) : (
             <>
               <p className="text-xs opacity-60">Disponible</p>
-              <p className="text-xl font-bold">{formatCurrency(account.initialBalance)}</p>
+              <p className="text-xl font-bold">{formatCurrency(account.currentBalance)}</p>
             </>
           )}
         </div>
