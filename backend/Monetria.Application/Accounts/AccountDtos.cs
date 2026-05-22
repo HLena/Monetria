@@ -33,6 +33,7 @@ public sealed record AccountResponse(
     string? Name,
     AccountType Type,
     decimal InitialBalance,
+    decimal CurrentBalance,
     string CurrencyCode,
     string? InstitutionName,
     string? CardLast4Digits,

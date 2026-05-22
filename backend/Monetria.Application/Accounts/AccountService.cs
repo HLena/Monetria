@@ -1,10 +1,14 @@
 using Monetria.Application.Common;
+using Monetria.Application.Transactions;
 using Monetria.Domain.Entities;
 using Monetria.Domain.Enums;
 
 namespace Monetria.Application.Accounts;
 
-public sealed class AccountService(IAccountRepository accountRepository, IUnitOfWork unitOfWork) : IAccountService
+public sealed class AccountService(
+    IAccountRepository accountRepository,
+    ITransactionRepository transactionRepository,
+    IUnitOfWork unitOfWork) : IAccountService
 {
     public async Task<AccountResponse> CreateAsync(
         Guid userId,
@@ -19,7 +23,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         await accountRepository.AddAsync(account, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return MapToResponse(account);
+        return MapToResponse(account, account.InitialBalance);
     }
 
     private static Account CreateAccount(Guid userId, CreateAccountRequest request)
@@ -96,8 +100,9 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
 
         var accounts = await accountRepository.ListByUserIdAsync(userId, type, cancellationToken);
 
+        // TODO: balance calculation temporarily disabled for debugging
         return accounts
-            .Select(MapToResponse)
+            .Select(a => MapToResponse(a, a.InitialBalance))
             .ToList();
     }
 
@@ -130,7 +135,8 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         await accountRepository.UpdateAsync(account, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return MapToResponse(account);
+        var delta = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+        return MapToResponse(account, account.InitialBalance + delta);
     }
 
     public async Task DeleteAsync(Guid userId, Guid accountId, CancellationToken cancellationToken = default)
@@ -274,7 +280,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
         return colorCode.Trim();
     }
 
-    private static AccountResponse MapToResponse(Account account)
+    private static AccountResponse MapToResponse(Account account, decimal currentBalance)
     {
         return new AccountResponse(
             account.Id,
@@ -282,6 +288,7 @@ public sealed class AccountService(IAccountRepository accountRepository, IUnitOf
             account.Name,
             account.Type,
             account.InitialBalance,
+            currentBalance,
             account.CurrencyCode,
             account.InstitutionName,
             account.CardLast4Digits,
