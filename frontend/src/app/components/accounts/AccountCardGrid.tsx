@@ -17,7 +17,7 @@ export function AccountCardGrid({ accounts }: { accounts: Account[] }) {
       {accounts.map(account => {
         const isCredit = account.type === AccountType.CreditCard;
         const ratio = isCredit && account.creditLimit
-          ? account.currentBalance / account.creditLimit
+          ? (account.currentBalance < 0 ? account.currentBalance *-1 : account.currentBalance) / account.creditLimit
           : null;
 
         return (
@@ -37,7 +37,7 @@ export function AccountCardGrid({ accounts }: { accounts: Account[] }) {
             </div>
             <div>
               <p className={`font-bold text-base ${isCredit ? 'text-rose-400' : 'text-emerald-400'}`}>
-                {isCredit ? '-' : ''}{formatCurrency(account.currentBalance)}
+                {formatCurrency(account.currentBalance)}
               </p>
               {ratio !== null && (
                 <div className="mt-1.5">

@@ -43,7 +43,6 @@ export function AccountDetail() {
     .filter(t => t.fromAccountId === id || t.toAccountId === id)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  console.log('Movimientos de esta cuenta:', accountTransactions);
   const totalIncome = accountTransactions
     .filter(t => t.type === 'income' || (t.type === 'transfer' && t.toAccountId === id))
     .reduce((sum, t) => sum + t.amount, 0);
@@ -79,8 +78,8 @@ export function AccountDetail() {
     .sort(([, a], [, b]) => b - a);
 
   const isCredit = account.type === AccountType.CreditCard;
-  const availableCredit = isCredit ? (account.creditLimit ?? 0) - account.currentBalance : 0;
-  const usagePercent = isCredit && account.creditLimit ? (account.currentBalance / account.creditLimit) * 100 : 0;
+  const availableCredit = isCredit ? (account.creditLimit ?? 0) + account.currentBalance : 0;
+  const usagePercent = isCredit && account.creditLimit ? (account.currentBalance < 0 ? account.currentBalance *-1 : account.currentBalance) / account.creditLimit * 100 : 0;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -140,12 +139,6 @@ export function AccountDetail() {
                     <span className="text-slate-700">•••• {account.cardLast4Digits}</span>
                   </div>
                 )}
-                {account.currentBalance && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Saldo inicial</span>
-                    <span className="text-slate-700">{formatCurrency(account.currentBalance)}</span>
-                  </div>
-                )}
                 {isCredit && account.creditLimit && (
                   <>
                     <div className="flex justify-between text-sm">
@@ -157,7 +150,7 @@ export function AccountDetail() {
                       <span className="text-emerald-600 font-medium">{formatCurrency(availableCredit)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Usado</span>
+                      <span className="text-slate-400">Consumido</span>
                       <span className="text-rose-600 font-medium">{formatCurrency(account.currentBalance)}</span>
                     </div>
                     <div>
@@ -290,14 +283,14 @@ export function AccountDetail() {
                       <p className="text-slate-700 dark:text-slate-200 text-sm font-medium truncate">{tx.description}</p>
                       <p className="text-slate-400 dark:text-slate-500 text-xs">{tx.category} · {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                     </div>
-                    <span className={`text-sm font-semibold flex-shrink-0 ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                    <span className={`text-sm font-semibold flex-shrink-0 ${tx.type === 'income'  || tx.type === 'transfer' && tx.toAccountId === account.id ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      {tx.type === 'income' || tx.type === 'transfer' && tx.toAccountId === account.id ? '+' : '-'}{formatCurrency(tx.amount)}
                     </span>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </div> 
         </div>
       </div>
 

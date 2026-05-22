@@ -291,8 +291,8 @@ export function Dashboard() {
                     <p className="text-slate-400 dark:text-slate-500 text-xs">{tx.category} · {account?.name}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className={`text-sm font-semibold ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                    <p className={`text-sm font-semibold ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : tx.type === 'transfer' ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                      {tx.type === 'income' ? '+' : tx.type === 'transfer' ? '⇄' : '-'}{formatCurrency(tx.amount)}
                     </p>
                     <p className="text-slate-400 dark:text-slate-500 text-xs">
                       {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
@@ -380,7 +380,7 @@ export function Dashboard() {
                     <p className="text-slate-400 dark:text-slate-500 text-xs">{account.type === AccountType.CreditCard ? 'Crédito' : account.type === AccountType.Wallet ? 'Efectivo' : 'Débito'}</p>
                   </div>
                   <span className={`text-xs font-semibold ${account.type === AccountType.CreditCard ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {account.type === AccountType.CreditCard ? '-' : ''}{formatCurrency(account.currentBalance)}
+                    {formatCurrency(account.currentBalance)}
                   </span>
                 </Link>
               ))}

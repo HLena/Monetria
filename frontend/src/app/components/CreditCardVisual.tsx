@@ -16,9 +16,8 @@ export function CreditCardVisual({ account, compact = false }: CreditCardVisualP
     ? (account.creditLimit ?? 0) - account.currentBalance
     : account.currentBalance;
 
-  const usagePercent = isCredit && account.creditLimit
-    ? (account.currentBalance / account.creditLimit) * 100
-    : 0;
+  const usagePercent = isCredit && account.creditLimit ? (account.currentBalance < 0 ? account.currentBalance *-1 : account.currentBalance) / account.creditLimit * 100 : 0;
+  
 
   if (compact) {
     return (
