@@ -31,6 +31,7 @@ public sealed class CategoryService(
             Name = name,
             Type = request.Type,
             Color = NormalizeColor(request.Color),
+            KeyIcon = NormalizeKeyIcon(request.KeyIcon),
             IsDefault = false,
             IsActive = true,
             CreatedAt = now,
@@ -83,6 +84,7 @@ public sealed class CategoryService(
 
         category.Name = name;
         category.Color = NormalizeColor(request.Color);
+        category.KeyIcon = NormalizeKeyIcon(request.KeyIcon);
         category.UpdatedAt = DateTime.UtcNow;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -179,6 +181,11 @@ public sealed class CategoryService(
         return string.IsNullOrWhiteSpace(color) ? null : color.Trim();
     }
 
+    private static string? NormalizeKeyIcon(string? keyIcon)
+    {
+        return string.IsNullOrWhiteSpace(keyIcon) ? null : keyIcon.Trim();
+    }
+
     private static CategoryResponse MapToResponse(Category category)
     {
         return new CategoryResponse(
@@ -189,6 +196,7 @@ public sealed class CategoryService(
             category.IsDefault,
             category.IsActive,
             category.Color,
+            category.KeyIcon,
             category.CreatedAt,
             category.UpdatedAt);
     }

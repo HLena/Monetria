@@ -41,11 +41,11 @@ public static class CategoryEndpoints
     }
 
     private static async Task<IResult> ListCategoriesAsync(
-        TransactionType? type,
-        bool includeInactive,
         ClaimsPrincipal user,
         ICategoryService categoryService,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TransactionType? type = null,
+        bool includeInactive = false)
     {
         var userId = user.GetRequiredUserId();
         var categories = await categoryService.ListByUserIdAsync(userId, type, includeInactive, cancellationToken);
