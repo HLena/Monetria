@@ -1,7 +1,7 @@
 export { AccountType } from '@/app/types/enums';
 export type { Account } from '@/app/types/models';
 
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'transfer';
 export type BudgetPeriod = 'monthly' | 'weekly';
 export type FixedExpensePeriod = 'monthly' | 'weekly' | 'yearly';
 export type DebtType = 'personal_loan' | 'credit_card' | 'mortgage' | 'auto_loan' | 'other';
@@ -71,10 +71,14 @@ export interface Transaction {
   accountId: string;
   type: TransactionType;
   category: string;
+  categoryId?: string;
+  categoryColor?: string;
+  categoryKeyIcon?: string;
   amount: number; // Always positive
   description: string;
   date: string; // ISO date string YYYY-MM-DD
   createdAt: string;
+  transferAccountId?: string;
 }
 
 export interface Budget {

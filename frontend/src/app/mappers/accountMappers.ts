@@ -30,7 +30,7 @@ export function mapAccountDtoToFinanceAccount(dto: AccountDto): Account {
     id: dto.id,
     name: dto.name?.trim() ? dto.name.trim() : '',
     type,
-    initialBalance: dto.initialBalance,
+    initialBalance: dto.currentBalance,
     currencyCode: dto.currencyCode,
     colorCode: dto.colorCode || '#000000',
     institutionName: dto.institutionName?.trim() || undefined,
