@@ -4,6 +4,7 @@ import { useFinance, formatCurrency } from '../store/FinanceContext';
 import { SavingsGoal } from '../types/finance';
 import { Modal } from '../components/Modal';
 import { useFinanceStore } from '../store/FinanceStore';
+import { PageContainer, HeaderPage } from '../components/shared';
 
 const GOAL_COLORS = [
   '#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
@@ -327,20 +328,20 @@ export function Savings() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-slate-800 dark:text-slate-100 text-2xl font-bold">Metas de Ahorro</h1>
-          <p className="text-slate-500 text-sm mt-1">{savingsGoals.length} metas activas</p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200"
-        >
-          <Plus className="w-4 h-4" />
-          Nueva Meta
-        </button>
-      </div>
+    <PageContainer>
+      <HeaderPage
+        title="Metas de Ahorro"
+        subtitle={`${savingsGoals.length} metas activas`}
+        actions={
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200"
+          >
+            <Plus className="w-4 h-4" />
+            Nueva Meta
+          </button>
+        }
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4 mb-6">
@@ -500,6 +501,6 @@ export function Savings() {
           />
         )}
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

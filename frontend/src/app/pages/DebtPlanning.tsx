@@ -14,6 +14,7 @@ import {
   Cell,
 } from 'recharts';
 import { useFinanceStore } from '../store/FinanceStore';
+import { PageContainer, HeaderPage } from '../components/shared';
 
 const DEBT_COLORS = [
   '#e63946', '#2563eb', '#7c3aed', '#d97706', '#059669',
@@ -309,20 +310,20 @@ export function DebtPlanning() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-slate-800 dark:text-slate-100 text-2xl font-bold">Planificación de Deudas</h1>
-          <p className="text-slate-500 text-sm mt-1">{debts.length} deudas registradas</p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200"
-        >
-          <Plus className="w-4 h-4" />
-          Nueva Deuda
-        </button>
-      </div>
+    <PageContainer>
+      <HeaderPage
+        title="Planificación de Deudas"
+        subtitle={`${debts.length} deudas registradas`}
+        actions={
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200"
+          >
+            <Plus className="w-4 h-4" />
+            Nueva Deuda
+          </button>
+        }
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
@@ -506,6 +507,6 @@ export function DebtPlanning() {
           />
         )}
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

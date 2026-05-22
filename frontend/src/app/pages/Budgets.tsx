@@ -5,6 +5,7 @@ import { Budget, EXPENSE_CATEGORIES, CATEGORY_COLORS, BudgetPeriod } from '../ty
 import { Modal } from '../components/Modal';
 import { CategoryIconCircle } from '../lib/categoryIcons';
 import { useFinanceStore } from '../store/FinanceStore';
+import { PageContainer, HeaderPage } from '../components/shared';
 
 const BUDGET_COLORS = [
   '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#6366f1',
@@ -146,20 +147,20 @@ export function Budgets() {
   const overBudgetCount = budgetsWithSpent.filter(b => b.isOver).length;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-slate-800 dark:text-slate-100 text-2xl font-bold">Presupuestos</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Control de gastos por categoría</p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-        >
-          <Plus className="w-4 h-4" />
-          Nuevo Presupuesto
-        </button>
-      </div>
+    <PageContainer>
+      <HeaderPage
+        title="Presupuestos"
+        subtitle="Control de gastos por categoría"
+        actions={
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
+          >
+            <Plus className="w-4 h-4" />
+            Nuevo Presupuesto
+          </button>
+        }
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -298,6 +299,6 @@ export function Budgets() {
           />
         )}
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

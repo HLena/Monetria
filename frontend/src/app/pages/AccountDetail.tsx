@@ -17,6 +17,7 @@ import { CategoryIconCircle } from '../lib/categoryIcons';
 import { useFinanceStore } from '../store/FinanceStore';
 import { Modal } from '../components/Modal';
 import { AccountForm } from '../components/accounts/AccountForm';
+import { PageContainer } from '../components/shared';
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -82,7 +83,7 @@ export function AccountDetail() {
   const usagePercent = isCredit && account.creditLimit ? (account.currentBalance < 0 ? account.currentBalance *-1 : account.currentBalance) / account.creditLimit * 100 : 0;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <PageContainer>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -343,6 +344,6 @@ export function AccountDetail() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageContainer>
   );
 }

@@ -18,6 +18,7 @@ import {
 import { useFinance, formatCurrency, getMonthKey } from '../store/FinanceContext';
 import { CATEGORY_COLORS, AccountType } from '../types/finance';
 import { useFinanceStore } from '../store/FinanceStore';
+import { PageContainer, HeaderPage } from '../components/shared';
 
 const MONTHS_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const MONTHS_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -137,20 +138,20 @@ export function Reports() {
   const currentMonthLabel = MONTHS_ES[now.getMonth()];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-slate-800 dark:text-slate-100 text-2xl font-bold">Reportes y Analytics</h1>
-          <p className="text-slate-500 text-sm mt-1">Análisis detallado de tus finanzas</p>
-        </div>
-        <select
-          className="border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-          value={selectedYear}
-          onChange={e => setSelectedYear(parseInt(e.target.value))}
-        >
-          {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-      </div>
+    <PageContainer>
+      <HeaderPage
+        title="Reportes y Analytics"
+        subtitle="Análisis detallado de tus finanzas"
+        actions={
+          <select
+            className="border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+            value={selectedYear}
+            onChange={e => setSelectedYear(parseInt(e.target.value))}
+          >
+            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        }
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
@@ -398,6 +399,6 @@ export function Reports() {
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

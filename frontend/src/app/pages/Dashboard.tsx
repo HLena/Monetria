@@ -28,6 +28,7 @@ import { CreditCardVisual } from '../components/CreditCardVisual';
 import { CategoryIconCircle } from '../lib/categoryIcons';
 import { useAuthStore } from '../store/AuthStore';
 import { useFinanceStore } from '../store/FinanceStore';
+import { PageContainer } from '../components/shared';
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -128,7 +129,7 @@ export function Dashboard() {
     .replace(/^\w/, c => c.toUpperCase());
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <PageContainer>
       <div className="mb-6">
         <h1 className="text-slate-800 dark:text-slate-100 text-2xl font-bold">
           Buenos días, {user ? `${user.firstName} ${user.lastName}` : 'bienvenido'} 👋
@@ -388,6 +389,6 @@ export function Dashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }
