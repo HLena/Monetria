@@ -8,29 +8,13 @@ public class Transaction
     public Guid AccountId { get; set; }
 
     public TransactionType Type { get; set; }
-    public Guid CategoryId { get; set; }
+    public Guid? CategoryId { get; set; }
+    public Category? Category { get; set; }
     public decimal Amount { get; set; }
     public string? Description { get; set; }
+    public Guid? TransferAccountId { get; set; }
+    public bool IsActive { get; set; } = true;
 
     public DateTime Date { get; set; }
     public DateTime CreatedAt { get; set; }
-
-    public Category? Category { get; set; }
-
-    public void Validate()
-    {
-        if (string.IsNullOrEmpty(Description))
-        {
-            throw new InvalidOperationException("Transaction description is required.");
-        }
-        if (Amount <= 0)
-        {
-            throw new InvalidOperationException("Transaction amount must be greater than 0.");
-        }
-    }
-
-    public void SetId()
-    {
-        Id = Guid.NewGuid();
-    }
 }

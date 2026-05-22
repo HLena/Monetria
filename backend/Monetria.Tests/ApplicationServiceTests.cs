@@ -47,7 +47,7 @@ public sealed class ApplicationServiceTests
     public async Task CreateAccountAsync_WhenCreditLimitIsMissing_ThrowsArgumentException()
     {
         await using var dbContext = CreateDbContext();
-        var service = new AccountService(new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
         var request = CreateCreditAccountRequest(creditLimit: null);
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Guid.NewGuid(), request));
@@ -57,7 +57,7 @@ public sealed class ApplicationServiceTests
     public async Task CreateBankAccountAsync_WithInstitutionName_Succeeds()
     {
         await using var dbContext = CreateDbContext();
-        var service = new AccountService(new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
         var request = new CreateAccountRequest(
             Name: "BBVA Débito",
             Type: AccountType.BankAccount,
@@ -80,7 +80,7 @@ public sealed class ApplicationServiceTests
     public async Task CreateCreditCardAsync_WithInstitutionName_Succeeds()
     {
         await using var dbContext = CreateDbContext();
-        var service = new AccountService(new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
         var request = CreateCreditAccountRequest(creditLimit: 5000);
 
         var result = await service.CreateAsync(Guid.NewGuid(), request);
@@ -92,7 +92,7 @@ public sealed class ApplicationServiceTests
     public async Task CreateEWalletAsync_WithProviderAsInstitutionName_Succeeds()
     {
         await using var dbContext = CreateDbContext();
-        var service = new AccountService(new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
         var request = new CreateAccountRequest(
             Name: "Mi PayPal",
             Type: AccountType.EWallet,
@@ -115,7 +115,7 @@ public sealed class ApplicationServiceTests
     public async Task CreateCashAccountAsync_WithInstitutionName_ThrowsArgumentException()
     {
         await using var dbContext = CreateDbContext();
-        var service = new AccountService(new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
         var request = new CreateAccountRequest(
             Name: "Efectivo",
             Type: AccountType.Cash,
@@ -256,6 +256,235 @@ public sealed class ApplicationServiceTests
             StatementClosingDay: 10,
             PaymentDueDay: 25,
             ColorCode: null);
+    }
+
+    [Fact]
+    public async Task CreateTransactionAsync_WithValidExpense_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var category = AddCategory(dbContext, userId, TransactionType.Expense, name: "Food");
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var request = CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense, amount: 50);
+
+        var response = await service.CreateAsync(userId, request);
+
+        Assert.Equal(TransactionType.Expense, response.Type);
+        Assert.Equal(50, response.Amount);
+        Assert.True(response.IsActive);
+    }
+
+    [Fact]
+    public async Task CreateTransactionAsync_WithValidIncome_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var category = AddCategory(dbContext, userId, TransactionType.Income, name: "Salary");
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var request = CreateTransactionRequest(account.Id, category.Id, TransactionType.Income, amount: 1000);
+
+        var response = await service.CreateAsync(userId, request);
+
+        Assert.Equal(TransactionType.Income, response.Type);
+        Assert.Equal(1000, response.Amount);
+    }
+
+    [Fact]
+    public async Task CreateTransactionAsync_WithNegativeAmount_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var category = AddCategory(dbContext, userId, TransactionType.Expense);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var request = CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense, amount: -10);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(userId, request));
+    }
+
+    [Fact]
+    public async Task CreateTransactionAsync_WithInactiveCategory_ThrowsInvalidOperationException()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var category = AddCategory(dbContext, userId, TransactionType.Expense);
+        category.IsActive = false;
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var request = CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(userId, request));
+    }
+
+    [Fact]
+    public async Task CreateTransactionAsync_WithTransferMissingTransferAccountId_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var request = new CreateTransactionRequest(
+            account.Id,
+            TransactionType.Transfer,
+            null,
+            100,
+            "Transfer test",
+            DateTime.UtcNow,
+            TransferAccountId: null);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(userId, request));
+    }
+
+    [Fact]
+    public async Task CreateTransactionAsync_WithValidTransfer_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var sourceAccount = AddAccount(dbContext, userId, AccountType.Cash);
+        var destAccount = AddAccount(dbContext, userId, AccountType.BankAccount);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var request = new CreateTransactionRequest(
+            sourceAccount.Id,
+            TransactionType.Transfer,
+            null,
+            200,
+            "Transfer to savings",
+            DateTime.UtcNow,
+            TransferAccountId: destAccount.Id);
+
+        var response = await service.CreateAsync(userId, request);
+
+        Assert.Equal(TransactionType.Transfer, response.Type);
+        Assert.Equal(destAccount.Id, response.TransferAccountId);
+        Assert.True(response.IsActive);
+    }
+
+    [Fact]
+    public async Task DeleteTransactionAsync_SetsIsActiveToFalse()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var category = AddCategory(dbContext, userId, TransactionType.Expense);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var created = await service.CreateAsync(userId,
+            CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense));
+
+        await service.DeleteAsync(userId, created.Id);
+
+        var transaction = await dbContext.Transactions.FindAsync(created.Id);
+        Assert.NotNull(transaction);
+        Assert.False(transaction!.IsActive);
+    }
+
+    [Fact]
+    public async Task GetTransactionAsync_WhenBelongsToUser_ReturnsResponse()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var category = AddCategory(dbContext, userId, TransactionType.Expense);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var created = await service.CreateAsync(userId, CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense));
+
+        var response = await service.GetByIdAsync(userId, created.Id);
+
+        Assert.Equal(created.Id, response.Id);
+    }
+
+    [Fact]
+    public async Task GetTransactionAsync_WhenBelongsToAnotherUser_ThrowsUnauthorizedAccessException()
+    {
+        await using var dbContext = CreateDbContext();
+        var ownerId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var account = AddAccount(dbContext, ownerId, AccountType.Cash);
+        var category = AddCategory(dbContext, ownerId, TransactionType.Expense);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var created = await service.CreateAsync(ownerId, CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.GetByIdAsync(requesterId, created.Id));
+    }
+
+    [Fact]
+    public async Task UpdateTransactionAsync_WithValidFields_UpdatesCorrectly()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var category = AddCategory(dbContext, userId, TransactionType.Expense);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var created = await service.CreateAsync(userId, CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense, amount: 10));
+
+        var updateRequest = new UpdateTransactionRequest(99, category.Id, DateTime.UtcNow, "Updated", account.Id);
+        var updated = await service.UpdateAsync(userId, created.Id, updateRequest);
+
+        Assert.Equal(99, updated.Amount);
+        Assert.Equal("Updated", updated.Description);
+    }
+
+    [Fact]
+    public async Task UpdateTransactionAsync_WhenBelongsToAnotherUser_ThrowsUnauthorizedAccessException()
+    {
+        await using var dbContext = CreateDbContext();
+        var ownerId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var account = AddAccount(dbContext, ownerId, AccountType.Cash);
+        var category = AddCategory(dbContext, ownerId, TransactionType.Expense);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var created = await service.CreateAsync(ownerId, CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense));
+
+        var updateRequest = new UpdateTransactionRequest(50, category.Id, DateTime.UtcNow, null, account.Id);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.UpdateAsync(requesterId, created.Id, updateRequest));
+    }
+
+    [Fact]
+    public async Task DeleteTransactionAsync_WhenBelongsToAnotherUser_ThrowsUnauthorizedAccessException()
+    {
+        await using var dbContext = CreateDbContext();
+        var ownerId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var account = AddAccount(dbContext, ownerId, AccountType.Cash);
+        var category = AddCategory(dbContext, ownerId, TransactionType.Expense);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var created = await service.CreateAsync(ownerId, CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.DeleteAsync(requesterId, created.Id));
+    }
+
+    [Fact]
+    public async Task ListTransactionsAsync_DoesNotReturnDeletedTransactions()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var category = AddCategory(dbContext, userId, TransactionType.Expense);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var created = await service.CreateAsync(userId, CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense));
+        await service.DeleteAsync(userId, created.Id);
+
+        var list = await service.ListByUserIdAsync(userId, new TransactionFilterRequest());
+
+        Assert.Empty(list);
     }
 
     private static CreateTransactionRequest CreateTransactionRequest(

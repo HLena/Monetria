@@ -75,6 +75,8 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(transaction => transaction.Type).HasConversion<string>().HasMaxLength(30).IsRequired();
             entity.Property(transaction => transaction.Amount).HasPrecision(18, 2);
             entity.Property(transaction => transaction.Description).HasMaxLength(500);
+            entity.Property(transaction => transaction.IsActive).IsRequired();
+            entity.Property(transaction => transaction.TransferAccountId);
             entity.HasOne<Account>()
                 .WithMany(account => account.Transactions)
                 .HasForeignKey(transaction => transaction.AccountId)
@@ -82,6 +84,12 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.HasOne(transaction => transaction.Category)
                 .WithMany(category => category.Transactions)
                 .HasForeignKey(transaction => transaction.CategoryId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Account>()
+                .WithMany()
+                .HasForeignKey(transaction => transaction.TransferAccountId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
@@ -110,6 +118,7 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(category => category.Name).HasMaxLength(120).IsRequired();
             entity.Property(category => category.Type).HasConversion<string>().HasMaxLength(30).IsRequired();
             entity.Property(category => category.Color).HasMaxLength(20);
+            entity.Property(category => category.KeyIcon).HasMaxLength(60);
             entity.Property(category => category.IsDefault).IsRequired();
             entity.Property(category => category.IsActive).IsRequired();
             entity.Property(category => category.CreatedAt).IsRequired();
@@ -191,23 +200,40 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
 
     private static readonly Category[] DefaultCategories =
     [
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111111", "Alimentación", TransactionType.Expense, "#F97316"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111112", "Transporte", TransactionType.Expense, "#3B82F6"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111113", "Vivienda", TransactionType.Expense, "#14B8A6"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111114", "Salud", TransactionType.Expense, "#EF4444"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111115", "Entretenimiento", TransactionType.Expense, "#A855F7"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111116", "Educación", TransactionType.Expense, "#6366F1"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111117", "Ahorro", TransactionType.Expense, "#22C55E"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111118", "Otros", TransactionType.Expense, "#64748B"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111119", "Ingresos", TransactionType.Income, "#10B981"),
-        CreateDefaultCategory("11111111-1111-1111-1111-111111111120", "Otros", TransactionType.Income, "#64748B")
+        // Expense — active
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111111", "Alimentación", TransactionType.Expense, "#f59e0b", "ShoppingCart"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111112", "Transporte",   TransactionType.Expense, "#3b82f6", "Car"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111114", "Salud",         TransactionType.Expense, "#10b981", "Heart"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111115", "Entretenimiento", TransactionType.Expense, "#8b5cf6", "Clapperboard"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111116", "Educación",    TransactionType.Expense, "#06b6d4", "GraduationCap"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111118", "Otros",         TransactionType.Expense, "#94a3b8", "CircleDot"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111122", "Servicios",     TransactionType.Expense, "#6366f1", "Zap"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111123", "Tecnología",    TransactionType.Expense, "#ec4899", "Laptop"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111124", "Ropa",          TransactionType.Expense, "#f97316", "Shirt"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111125", "Hogar",         TransactionType.Expense, "#84cc16", "Home"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111126", "Viajes",        TransactionType.Expense, "#14b8a6", "Plane"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111127", "Restaurantes",  TransactionType.Expense, "#ef4444", "UtensilsCrossed"),
+        // Expense — deactivated (legacy, kept to preserve FK integrity)
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111113", "Vivienda", TransactionType.Expense, "#14b8a6", null, isActive: false),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111117", "Ahorro",   TransactionType.Expense, "#22c55e", null, isActive: false),
+        // Income — active
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111120", "Otros",       TransactionType.Income, "#94a3b8", "CircleDot"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111128", "Salario",     TransactionType.Income, "#10b981", "Briefcase"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111129", "Freelance",   TransactionType.Income, "#6366f1", "Code2"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111130", "Inversiones", TransactionType.Income, "#f59e0b", "TrendingUp"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111131", "Ventas",      TransactionType.Income, "#3b82f6", "Store"),
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111132", "Bonos",       TransactionType.Income, "#8b5cf6", "Gift"),
+        // Income — deactivated (legacy)
+        CreateDefaultCategory("11111111-1111-1111-1111-111111111119", "Ingresos", TransactionType.Income, "#10b981", null, isActive: false),
     ];
 
     private static Category CreateDefaultCategory(
         string id,
         string name,
         TransactionType type,
-        string color)
+        string color,
+        string? keyIcon,
+        bool isActive = true)
     {
         return new Category
         {
@@ -215,8 +241,9 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             Name = name,
             Type = type,
             Color = color,
+            KeyIcon = keyIcon,
             IsDefault = true,
-            IsActive = true,
+            IsActive = isActive,
             CreatedAt = DefaultCategoryTimestamp,
             UpdatedAt = DefaultCategoryTimestamp
         };

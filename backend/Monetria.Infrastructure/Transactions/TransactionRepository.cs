@@ -13,17 +13,24 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         await dbContext.Transactions.AddAsync(transaction, cancellationToken);
     }
 
-    public Task<decimal> GetAccountBalanceDeltaAsync(Guid accountId, CancellationToken cancellationToken = default)
+    public async Task<Transaction?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return dbContext.Transactions
+        return await dbContext.Transactions
+            .Include(transaction => transaction.Category)
+            .FirstOrDefaultAsync(transaction => transaction.Id == id && transaction.IsActive, cancellationToken);
+    }
+
+    public async Task<decimal> GetAccountBalanceDeltaAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Transactions
             .AsNoTracking()
-            .Where(transaction => transaction.AccountId == accountId)
-            .SumAsync(transaction =>
-                transaction.Type == TransactionType.Income
-                    ? transaction.Amount
-                    : transaction.Type == TransactionType.Expense
-                        ? -transaction.Amount
-                        : 0,
+            .Where(t => t.IsActive &&
+                (t.AccountId == accountId ||
+                 (t.TransferAccountId == accountId && t.Type == TransactionType.Transfer)))
+            .SumAsync(t =>
+                t.AccountId == accountId
+                    ? (t.Type == TransactionType.Income ? t.Amount : -t.Amount)
+                    : t.Amount,
                 cancellationToken);
     }
 
@@ -32,12 +39,14 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default)
     {
+        var userAccountIds = dbContext.Accounts
+            .Where(a => a.UserId == userId)
+            .Select(a => a.Id);
+
         var query = dbContext.Transactions
             .AsNoTracking()
             .Include(transaction => transaction.Category)
-            .Where(transaction => dbContext.Accounts.Any(account =>
-                account.Id == transaction.AccountId &&
-                account.UserId == userId));
+            .Where(transaction => transaction.IsActive && userAccountIds.Contains(transaction.AccountId));
 
         query = ApplyFilters(query, filter);
 
@@ -52,7 +61,7 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         var query = dbContext.Transactions
             .AsNoTracking()
             .Include(transaction => transaction.Category)
-            .Where(transaction => transaction.AccountId == accountId);
+            .Where(transaction => transaction.IsActive && transaction.AccountId == accountId);
 
         query = ApplyFilters(query, filter with { AccountId = null });
 

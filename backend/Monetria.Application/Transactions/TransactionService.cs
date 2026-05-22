@@ -28,10 +28,27 @@ public sealed class TransactionService(
             throw new UnauthorizedAccessException("Account does not belong to the user.");
         }
 
-        var category = await categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken)
-            ?? throw new NotFoundException($"Category '{request.CategoryId}' was not found.");
+        Category? category = null;
 
-        ValidateCategory(userId, request, category);
+        if (request.Type != TransactionType.Transfer)
+        {
+            category = await categoryRepository.GetByIdAsync(request.CategoryId!.Value, cancellationToken)
+                ?? throw new NotFoundException($"Category '{request.CategoryId}' was not found.");
+
+            ValidateCategory(userId, request, category);
+        }
+
+        if (request.Type == TransactionType.Transfer)
+        {
+            var transferAccount = await accountRepository.GetByIdAsync(request.TransferAccountId!.Value, cancellationToken)
+                ?? throw new NotFoundException($"Transfer account '{request.TransferAccountId}' was not found.");
+
+            if (transferAccount.UserId != userId)
+            {
+                throw new UnauthorizedAccessException("Transfer account does not belong to the user.");
+            }
+        }
+
         await ValidateCreditLimitAsync(account, request, cancellationToken);
 
         var transaction = new Transaction
@@ -41,18 +58,138 @@ public sealed class TransactionService(
             Type = request.Type,
             CategoryId = request.CategoryId,
             Amount = request.Amount,
-            Description = request.Description.Trim(),
+            Description = request.Description?.Trim(),
+            TransferAccountId = request.TransferAccountId,
+            IsActive = true,
             Date = request.Date,
             CreatedAt = DateTime.UtcNow,
             Category = category
         };
 
-        transaction.Validate();
-
         await transactionRepository.AddAsync(transaction, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return MapToResponse(transaction);
+    }
+
+    public async Task<TransactionResponse> GetByIdAsync(
+        Guid userId,
+        Guid transactionId,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(userId);
+
+        var transaction = await transactionRepository.GetByIdAsync(transactionId, cancellationToken)
+            ?? throw new NotFoundException($"Transaction '{transactionId}' was not found.");
+
+        var account = await accountRepository.GetByIdAsync(transaction.AccountId, cancellationToken)
+            ?? throw new NotFoundException($"Account '{transaction.AccountId}' was not found.");
+
+        if (account.UserId != userId)
+        {
+            throw new UnauthorizedAccessException("Transaction does not belong to the user.");
+        }
+
+        return MapToResponse(transaction);
+    }
+
+    public async Task<TransactionResponse> UpdateAsync(
+        Guid userId,
+        Guid transactionId,
+        UpdateTransactionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(userId);
+        ValidateUpdateRequest(request);
+
+        var transaction = await transactionRepository.GetByIdAsync(transactionId, cancellationToken)
+            ?? throw new NotFoundException($"Transaction '{transactionId}' was not found.");
+
+        if (!transaction.IsActive)
+        {
+            throw new InvalidOperationException("Transaction has been deleted.");
+        }
+
+        var account = await accountRepository.GetByIdAsync(transaction.AccountId, cancellationToken)
+            ?? throw new NotFoundException($"Account '{transaction.AccountId}' was not found.");
+
+        if (account.UserId != userId)
+        {
+            throw new UnauthorizedAccessException("Transaction does not belong to the user.");
+        }
+
+        if (request.CategoryId.HasValue)
+        {
+            var category = await categoryRepository.GetByIdAsync(request.CategoryId.Value, cancellationToken)
+                ?? throw new NotFoundException($"Category '{request.CategoryId}' was not found.");
+
+            if (!category.IsActive)
+            {
+                throw new InvalidOperationException("Transaction category is inactive.");
+            }
+
+            if (category.UserId.HasValue && category.UserId.Value != userId)
+            {
+                throw new UnauthorizedAccessException("Category does not belong to the user.");
+            }
+
+            if (category.Type != transaction.Type)
+            {
+                throw new InvalidOperationException("Transaction type must match the category type.");
+            }
+
+            transaction.Category = category;
+            transaction.CategoryId = request.CategoryId;
+        }
+
+        if (request.AccountId != Guid.Empty && request.AccountId != transaction.AccountId)
+        {
+            var newAccount = await accountRepository.GetByIdAsync(request.AccountId, cancellationToken)
+                ?? throw new NotFoundException($"Account '{request.AccountId}' was not found.");
+
+            if (newAccount.UserId != userId)
+            {
+                throw new UnauthorizedAccessException("Account does not belong to the user.");
+            }
+
+            transaction.AccountId = request.AccountId;
+        }
+
+        transaction.Amount = request.Amount;
+        transaction.Description = request.Description?.Trim();
+        transaction.Date = request.TransactionDate;
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return MapToResponse(transaction);
+    }
+
+    public async Task DeleteAsync(
+        Guid userId,
+        Guid transactionId,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(userId);
+
+        var transaction = await transactionRepository.GetByIdAsync(transactionId, cancellationToken)
+            ?? throw new NotFoundException($"Transaction '{transactionId}' was not found.");
+
+        if (!transaction.IsActive)
+        {
+            throw new InvalidOperationException("Transaction has already been deleted.");
+        }
+
+        var account = await accountRepository.GetByIdAsync(transaction.AccountId, cancellationToken)
+            ?? throw new NotFoundException($"Account '{transaction.AccountId}' was not found.");
+
+        if (account.UserId != userId)
+        {
+            throw new UnauthorizedAccessException("Transaction does not belong to the user.");
+        }
+
+        transaction.IsActive = false;
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<TransactionResponse>> ListByUserIdAsync(
@@ -111,24 +248,52 @@ public sealed class TransactionService(
             throw new ArgumentException("Account id is required.", nameof(request));
         }
 
-        if (request.CategoryId == Guid.Empty)
-        {
-            throw new ArgumentException("Transaction category is required.", nameof(request));
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Description))
-        {
-            throw new ArgumentException("Transaction description is required.", nameof(request));
-        }
-
         if (request.Amount <= 0)
         {
             throw new ArgumentException("Transaction amount must be greater than 0.", nameof(request));
         }
 
+        if (request.Description != null && request.Description.Length > 500)
+        {
+            throw new ArgumentException("Transaction description must not exceed 500 characters.", nameof(request));
+        }
+
+        if (request.Type == TransactionType.Transfer)
+        {
+            if (!request.TransferAccountId.HasValue || request.TransferAccountId == Guid.Empty)
+            {
+                throw new ArgumentException("Transfer account is required for transfer transactions.", nameof(request));
+            }
+
+            if (request.TransferAccountId == request.AccountId)
+            {
+                throw new ArgumentException("Transfer account must be different from the source account.", nameof(request));
+            }
+
+            return;
+        }
+
         if (request.Type is not (TransactionType.Income or TransactionType.Expense))
         {
-            throw new ArgumentException("Transaction type must be Income or Expense.", nameof(request));
+            throw new ArgumentException("Transaction type must be Income, Expense, or Transfer.", nameof(request));
+        }
+
+        if (request.Type == TransactionType.Expense && (!request.CategoryId.HasValue || request.CategoryId == Guid.Empty))
+        {
+            throw new ArgumentException("Category is required for expense transactions.", nameof(request));
+        }
+    }
+
+    private static void ValidateUpdateRequest(UpdateTransactionRequest request)
+    {
+        if (request.Amount <= 0)
+        {
+            throw new ArgumentException("Transaction amount must be greater than 0.", nameof(request));
+        }
+
+        if (request.Description != null && request.Description.Length > 500)
+        {
+            throw new ArgumentException("Transaction description must not exceed 500 characters.", nameof(request));
         }
     }
 
@@ -216,8 +381,11 @@ public sealed class TransactionService(
             transaction.CategoryId,
             transaction.Category?.Name ?? string.Empty,
             transaction.Category?.Color,
+            transaction.Category?.KeyIcon,
             transaction.Amount,
             transaction.Description,
+            transaction.TransferAccountId,
+            transaction.IsActive,
             transaction.Date,
             transaction.CreatedAt);
     }

@@ -14,14 +14,22 @@ public static class TransactionEndpoints
         group.MapPost("/", CreateTransactionAsync)
             .WithName("CreateTransaction");
 
+        group.MapGet("/", ListTransactionsAsync)
+            .WithName("ListTransactionsByUser");
+
+        group.MapGet("/{id:guid}", GetTransactionByIdAsync)
+            .WithName("GetTransactionById");
+
+        group.MapPut("/{id:guid}", UpdateTransactionAsync)
+            .WithName("UpdateTransaction");
+
+        group.MapDelete("/{id:guid}", DeleteTransactionAsync)
+            .WithName("DeleteTransaction");
+
         endpoints.MapGet("/accounts/{accountId:guid}/transactions", ListTransactionsByAccountAsync)
             .WithName("ListTransactionsByAccount")
             .WithTags("Transactions")
             .RequireAuthorization();
-
-        group.MapGet("/", ListTransactionsAsync)
-            .WithName("ListTransactionsByUser")
-            .WithTags("Transactions");
 
         return endpoints;
     }
@@ -36,6 +44,43 @@ public static class TransactionEndpoints
         var transaction = await transactionService.CreateAsync(userId, request, cancellationToken);
 
         return Results.Created($"/transactions/{transaction.Id}", transaction);
+    }
+
+    private static async Task<IResult> GetTransactionByIdAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ITransactionService transactionService,
+        CancellationToken cancellationToken)
+    {
+        var userId = user.GetRequiredUserId();
+        var transaction = await transactionService.GetByIdAsync(userId, id, cancellationToken);
+
+        return Results.Ok(transaction);
+    }
+
+    private static async Task<IResult> UpdateTransactionAsync(
+        Guid id,
+        UpdateTransactionRequest request,
+        ClaimsPrincipal user,
+        ITransactionService transactionService,
+        CancellationToken cancellationToken)
+    {
+        var userId = user.GetRequiredUserId();
+        var transaction = await transactionService.UpdateAsync(userId, id, request, cancellationToken);
+
+        return Results.Ok(transaction);
+    }
+
+    private static async Task<IResult> DeleteTransactionAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ITransactionService transactionService,
+        CancellationToken cancellationToken)
+    {
+        var userId = user.GetRequiredUserId();
+        await transactionService.DeleteAsync(userId, id, cancellationToken);
+
+        return Results.NoContent();
     }
 
     private static async Task<IResult> ListTransactionsByAccountAsync(
