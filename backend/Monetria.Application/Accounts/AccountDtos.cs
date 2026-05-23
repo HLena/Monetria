@@ -27,7 +27,23 @@ public sealed record UpdateAccountRequest(
     string? ColorCode,
     bool? IsActive = null);
 
-public sealed record AccountResponse(
+// Returned by GET /accounts (list) — only fields needed for the list view
+public sealed record AccountSummaryResponse(
+    Guid Id,
+    Guid UserId,
+    string? Name,
+    AccountType Type,
+    decimal CurrentBalance,
+    string CurrencyCode,
+    string? InstitutionName,
+    decimal? CreditLimit,
+    bool IsActive,
+    string ColorCode,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+
+// Returned by GET /accounts/{id}, POST /accounts, PUT /accounts/{id}
+public sealed record AccountDetailResponse(
     Guid Id,
     Guid UserId,
     string? Name,

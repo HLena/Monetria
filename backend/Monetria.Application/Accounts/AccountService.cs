@@ -10,7 +10,7 @@ public sealed class AccountService(
     ITransactionRepository transactionRepository,
     IUnitOfWork unitOfWork) : IAccountService
 {
-    public async Task<AccountResponse> CreateAsync(
+    public async Task<AccountDetailResponse> CreateAsync(
         Guid userId,
         CreateAccountRequest request,
         CancellationToken cancellationToken = default)
@@ -38,10 +38,10 @@ public sealed class AccountService(
             };
             await transactionRepository.AddAsync(initialTransaction, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
-            return MapToResponse(account, request.InitialBalance);
+            return MapToDetailResponse(account, request.InitialBalance);
         }
 
-        return MapToResponse(account, 0);
+        return MapToDetailResponse(account, 0);
     }
 
     private static Account CreateAccount(Guid userId, CreateAccountRequest request)
@@ -105,7 +105,7 @@ public sealed class AccountService(
         return account;
     }
 
-    public async Task<AccountResponse> GetByIdAsync(
+    public async Task<AccountDetailResponse> GetByIdAsync(
         Guid userId,
         Guid accountId,
         CancellationToken cancellationToken = default)
@@ -119,10 +119,10 @@ public sealed class AccountService(
             throw new UnauthorizedAccessException("Account does not belong to the current user.");
 
         var balance = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
-        return MapToResponse(account, balance);
+        return MapToDetailResponse(account, balance);
     }
 
-    public async Task<IReadOnlyList<AccountResponse>> ListByUserIdAsync(
+    public async Task<IReadOnlyList<AccountSummaryResponse>> ListByUserIdAsync(
         Guid userId,
         AccountType? type = null,
         CancellationToken cancellationToken = default)
@@ -134,16 +134,16 @@ public sealed class AccountService(
 
         var accounts = await accountRepository.ListByUserIdAsync(userId, type, cancellationToken);
 
-        var accountsWithBalance = new List<AccountResponse>();
+        var accountsWithBalance = new List<AccountSummaryResponse>();
         foreach (var account in accounts)
         {
             var balance = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
-            accountsWithBalance.Add(MapToResponse(account, balance));
+            accountsWithBalance.Add(MapToSummaryResponse(account, balance));
         }
         return accountsWithBalance;
     }
 
-    public async Task<AccountResponse> UpdateAsync(
+    public async Task<AccountDetailResponse> UpdateAsync(
         Guid userId,
         Guid accountId,
         UpdateAccountRequest request,
@@ -174,7 +174,7 @@ public sealed class AccountService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var balance = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
-        return MapToResponse(account, balance);
+        return MapToDetailResponse(account, balance);
     }
 
     public async Task DeleteAsync(Guid userId, Guid accountId, CancellationToken cancellationToken = default)
@@ -187,7 +187,9 @@ public sealed class AccountService(
         if (account.UserId != userId)
             throw new UnauthorizedAccessException("Account does not belong to the current user.");
 
-        await accountRepository.DeleteAsync(accountId, cancellationToken);
+        account.IsActive = false;
+        account.UpdatedAt = DateTime.UtcNow;
+        await accountRepository.UpdateAsync(account, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
@@ -320,9 +322,26 @@ public sealed class AccountService(
         return colorCode.Trim();
     }
 
-    private static AccountResponse MapToResponse(Account account, decimal currentBalance)
+    private static AccountSummaryResponse MapToSummaryResponse(Account account, decimal currentBalance)
     {
-        return new AccountResponse(
+        return new AccountSummaryResponse(
+            account.Id,
+            account.UserId,
+            account.Name,
+            account.Type,
+            currentBalance,
+            account.CurrencyCode,
+            account.InstitutionName,
+            account.CreditLimit,
+            account.IsActive,
+            account.ColorCode,
+            account.CreatedAt,
+            account.UpdatedAt);
+    }
+
+    private static AccountDetailResponse MapToDetailResponse(Account account, decimal currentBalance)
+    {
+        return new AccountDetailResponse(
             account.Id,
             account.UserId,
             account.Name,

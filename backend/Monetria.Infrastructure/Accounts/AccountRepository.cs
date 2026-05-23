@@ -47,6 +47,9 @@ public sealed class AccountRepository(MonetriaDbContext dbContext) : IAccountRep
 
     public Task UpdateAsync(Account account, CancellationToken cancellationToken = default)
     {
+        var tracked = dbContext.Accounts.Local.FirstOrDefault(a => a.Id == account.Id);
+        if (tracked is not null && !ReferenceEquals(tracked, account))
+            dbContext.Entry(tracked).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
         dbContext.Accounts.Update(account);
         return Task.CompletedTask;
     }

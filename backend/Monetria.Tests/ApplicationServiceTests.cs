@@ -746,6 +746,95 @@ public sealed class ApplicationServiceTests
         Assert.Equal(300, response.CurrentBalance);
     }
 
+    [Fact]
+    public async Task CreateCreditCardAsync_WithNegativeCreditLimit_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = CreateCreditAccountRequest(creditLimit: -100);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Guid.NewGuid(), request));
+    }
+
+    [Fact]
+    public async Task CreateCreditCardAsync_WithInvalidStatementDay_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "Visa",
+            Type: AccountType.CreditCard,
+            InitialBalance: 0,
+            CurrencyCode: "PEN",
+            InstitutionName: "Bank",
+            CardHolderName: "Test",
+            CardLast4Digits: "1234",
+            CreditLimit: 5000,
+            StatementClosingDay: 32,
+            PaymentDueDay: 10,
+            ColorCode: null);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Guid.NewGuid(), request));
+    }
+
+    [Fact]
+    public async Task CreateCreditCardAsync_WithInvalidPaymentDueDay_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "Visa",
+            Type: AccountType.CreditCard,
+            InitialBalance: 0,
+            CurrencyCode: "PEN",
+            InstitutionName: "Bank",
+            CardHolderName: "Test",
+            CardLast4Digits: "1234",
+            CreditLimit: 5000,
+            StatementClosingDay: 15,
+            PaymentDueDay: 0,
+            ColorCode: null);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Guid.NewGuid(), request));
+    }
+
+    [Fact]
+    public async Task CreateAccountAsync_WithNegativeInitialBalance_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var request = new CreateAccountRequest(
+            Name: "Efectivo",
+            Type: AccountType.Cash,
+            InitialBalance: -50,
+            CurrencyCode: "PEN",
+            InstitutionName: null,
+            CardHolderName: null,
+            CardLast4Digits: null,
+            CreditLimit: null,
+            StatementClosingDay: null,
+            PaymentDueDay: null,
+            ColorCode: null);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(Guid.NewGuid(), request));
+    }
+
+    [Fact]
+    public async Task DeleteAccountAsync_SetsIsActiveToFalse()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        await dbContext.SaveChangesAsync();
+        var service = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+
+        await service.DeleteAsync(userId, account.Id);
+
+        var updated = await dbContext.Accounts.FindAsync(account.Id);
+        Assert.NotNull(updated);
+        Assert.False(updated!.IsActive);
+    }
+
     private sealed class TestJwtTokenGenerator : IJwtTokenGenerator
     {
         public string GenerateToken(User user)
