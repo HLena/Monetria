@@ -127,28 +127,6 @@ export function CreditCardVisual({ account, compact = false }: CreditCardVisualP
           )}
         </div>
       </div>
-
-      {/* Credit usage bar */}
-      {isCredit && account.creditLimit && (
-        <div className="mt-4 relative z-10">
-          <div className="flex justify-between text-xs opacity-60 mb-1">
-            <span>Uso de crédito</span>
-            <span>{usagePercent.toFixed(0)}%</span>
-          </div>
-          <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{
-                width: `${Math.min(usagePercent, 100)}%`,
-                background: usagePercent > 80 ? '#ef4444' : usagePercent > 60 ? '#f59e0b' : 'rgba(255,255,255,0.7)',
-              }}
-            />
-          </div>
-          <p className="text-xs opacity-50 mt-1">
-            Límite: {formatCurrency(account.creditLimit)}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

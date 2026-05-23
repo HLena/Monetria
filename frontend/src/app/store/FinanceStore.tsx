@@ -5,7 +5,7 @@ import type { CategoryDto } from '../types/api/categories';
 import type { UserBalanceDto } from '../types/api/accounts';
 import { api, getAuthToken } from '../lib/apiClient';
 import { useAuthStore } from './AuthStore';
-import { listAccounts, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi, getUserBalance as getUserBalanceApi } from '../api/accounts';
+import { listAccounts, getAccountById, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi, getUserBalance as getUserBalanceApi } from '../api/accounts';
 import { listCategories as listCategoriesApi } from '../api/categories';
 import {
   listTransactions as listTransactionsApi,
@@ -28,6 +28,7 @@ interface FinanceStoreState {
   isLoading: boolean;
   error: string | null;
   accounts: Account[];
+  account: Account | null;
   categories: CategoryDto[];
   transactions: Transaction[];
   budgets: Budget[];
@@ -39,7 +40,8 @@ interface FinanceStoreState {
   updateAccount: (id: string, account: Omit<Account, 'id'>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
   /** Requires non-blank userId and a valid token; otherwise leaves accounts empty and does not call the API. */
-  loadAccounts: (userId: string) => Promise<void>;
+  listAccounts: (userId: string) => Promise<void>;
+  getAccountById: (id: string) => Promise<void>;
   loadCategories: () => Promise<void>;
   loadTransactions: () => Promise<void>;
   loadUserBalance: () => Promise<void>;
@@ -54,6 +56,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
       isLoading: false,
       error: null,
       accounts: [],
+      account: null,
       categories: [],
       transactions: [],
       budgets: [],
@@ -77,7 +80,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
         }
         try {
           await api.post('/accounts', toCreateAccountRequestBody(account));
-          await get().loadAccounts(uid);
+          await get().listAccounts(uid);
           set({ isLoading: false, error: null });
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo crear la cuenta';
@@ -119,7 +122,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
         }
       },
 
-      loadAccounts: async (userId: string) => {
+      listAccounts: async (userId: string) => {
         set({ isLoading: true, error: null });
         const hasToken = Boolean(getAuthToken());
         const uid = userId?.trim() ?? '';
@@ -138,6 +141,27 @@ export const useFinanceStore = create<FinanceStoreState>()(
           set({ accounts: mapped, isLoading: false, error: null });
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudieron cargar las cuentas';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      getAccountById: async (id: string) => {
+        set({ isLoading: true, error: null });
+        if (!getAuthToken()) {
+          set({ isLoading: false, error: 'Debes iniciar sesión para ver la cuenta' });
+          return;
+        }
+        try {
+          const dto = await getAccountById(id);
+          const mapped = mapAccountDtoToFinanceAccount(dto);
+          set({
+            account: mapped,
+            isLoading: false,
+            error: null,
+          });
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo cargar la cuenta';
           set({ error: msg, isLoading: false });
           throw caught;
         }
@@ -193,7 +217,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
             isLoading: false,
             error: null,
           }));
-          void get().loadAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
+          void get().listAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
           void get().loadUserBalance().catch(() => undefined);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo crear la transacción';
@@ -229,7 +253,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
             isLoading: false,
             error: null,
           }));
-          void get().loadAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
+          void get().listAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
           void get().loadUserBalance().catch(() => undefined);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo eliminar la transacción';

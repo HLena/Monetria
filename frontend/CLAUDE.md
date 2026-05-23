@@ -142,3 +142,5 @@ TransactionsPage.tsx → fetch()
 
 Good:
 useTransactions()
+
+# Paginas

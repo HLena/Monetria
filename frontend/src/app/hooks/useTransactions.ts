@@ -9,7 +9,7 @@ export function useTransactions() {
     categories,
     isLoading,
     error,
-    loadAccounts,
+    listAccounts,
     loadTransactions,
     loadCategories,
     addTransaction,
@@ -21,13 +21,13 @@ export function useTransactions() {
     const load = () => {
       if (!useAuthStore.persist.hasHydrated()) return;
       const userId = useAuthStore.getState().user?.userId ?? '';
-      void loadAccounts(userId);
+      void listAccounts(userId);
       void loadCategories();
       void loadTransactions();
     };
     if (useAuthStore.persist.hasHydrated()) load();
     return useAuthStore.persist.onFinishHydration(load);
-  }, [loadAccounts, loadCategories, loadTransactions]);
+  }, [listAccounts, loadCategories, loadTransactions]);
 
   return {
     accounts,
