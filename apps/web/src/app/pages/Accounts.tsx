@@ -4,7 +4,7 @@ import { formatCurrency } from '../store/FinanceContext';
 import { Modal } from '../components/Modal';
 import { useAuthStore } from '../store/AuthStore';
 import { useFinanceStore } from '../store/FinanceStore';
-import { AccountType } from '../types/enums';
+import { AccountType } from '@monetria/enums';
 import { AccountCardGrid } from '../components/accounts/AccountCardGrid';
 import { AccountForm } from '../components/accounts/AccountForm';
 import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard } from '../components/shared';

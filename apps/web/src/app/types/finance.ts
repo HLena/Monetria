@@ -1,4 +1,4 @@
-export { AccountType } from '@/app/types/enums';
+export { AccountType } from '@monetria/enums';
 export type { Account } from '@/app/types/models';
 
 export type TransactionType = 'income' | 'expense' | 'transfer';

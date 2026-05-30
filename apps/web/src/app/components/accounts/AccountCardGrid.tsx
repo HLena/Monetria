@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency } from '../../store/FinanceContext';
 import { Account } from '../../types/models';
-import { AccountType } from '../../types/enums';
+import { AccountType } from '@monetria/enums';
 import { AccountTypeIcon } from '../icons/AccountTypeIcon';
 import { usageColor } from '../../constants/accountColors';
 

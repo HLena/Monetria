@@ -1,4 +1,4 @@
-import { AccountType } from '@/app/types/enums';
+import { AccountType } from '@monetria/enums';
 
 export interface Account {
   id: string;

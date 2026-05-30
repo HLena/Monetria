@@ -1,6 +1,6 @@
 import type { AccountDto } from '../types/api/accounts';
 import type { Account } from '@/app/types/models';
-import { AccountType } from '@/app/types/enums';
+import { AccountType } from '@monetria/enums';
 
 export type AccountsListPayload = unknown;
 

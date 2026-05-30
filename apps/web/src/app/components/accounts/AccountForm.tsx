@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Account } from '../../types/models';
-import { AccountType } from '../../types/enums';
+import { AccountType } from '@monetria/enums';
 import { CARD_COLORS } from '../../constants/accountColors';
 
 const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-300';

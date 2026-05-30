@@ -1,4 +1,4 @@
-import { AccountType } from "@/app/types/enums";
+import { AccountType } from "@monetria/enums";
 
 // Returned by GET /accounts (list)
 export interface AccountSummaryDto {
