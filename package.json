@@ -1,0 +1,21 @@
+{
+  "name": "monetria",
+  "private": true,
+  "packageManager": "npm@10.0.0",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "turbo dev --filter=web",
+    "dev:api": "dotnet run --project apps/api/Monetria.API",
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "lint": "turbo lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "concurrently": "^9.0.0"
+  }
+}

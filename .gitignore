@@ -1,13 +1,27 @@
-bin/
-obj/
+#Node
+node_modules/
+.turbo/
 
-.DS_Store
 
+# Vite
+.vite/
+
+# .NET
+**/bin/
+**/obj/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 *.lscache
+
+# Env
+.env
+.env.local
+.env*.local
+
+
+.DS_Store
 
 .vs/
 .vscode/
