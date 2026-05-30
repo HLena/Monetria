@@ -19,27 +19,10 @@ public sealed class AccountService(
         ValidateCreateRequest(request);
 
         var account = CreateAccount(userId, request);
+        account.InitialBalance = request.InitialBalance > 0 ? request.InitialBalance : 0;
 
         await accountRepository.AddAsync(account, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        if (request.InitialBalance > 0)
-        {
-            var initialTransaction = new Transaction
-            {
-                Id = Guid.NewGuid(),
-                FromAccountId = account.Id,
-                Type = TransactionType.Income,
-                Amount = request.InitialBalance,
-                Description = "Initial Balance",
-                IsActive = true,
-                Date = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-            };
-            await transactionRepository.AddAsync(initialTransaction, cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            return MapToDetailResponse(account, request.InitialBalance);
-        }
 
         return MapToDetailResponse(account, 0);
     }
@@ -118,7 +101,8 @@ public sealed class AccountService(
         if (account.UserId != userId)
             throw new UnauthorizedAccessException("Account does not belong to the current user.");
 
-        var balance = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+        var delta = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+        var balance = account.InitialBalance.GetValueOrDefault(0) + delta;
         return MapToDetailResponse(account, balance);
     }
 
@@ -137,7 +121,8 @@ public sealed class AccountService(
         var accountsWithBalance = new List<AccountSummaryResponse>();
         foreach (var account in accounts)
         {
-            var balance = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+            var delta = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
+            var balance = account.InitialBalance.GetValueOrDefault(0) + delta;
             accountsWithBalance.Add(MapToSummaryResponse(account, balance));
         }
         return accountsWithBalance;
@@ -329,6 +314,7 @@ public sealed class AccountService(
             account.UserId,
             account.Name,
             account.Type,
+            account.InitialBalance.GetValueOrDefault(0),
             currentBalance,
             account.CurrencyCode,
             account.InstitutionName,
@@ -346,6 +332,7 @@ public sealed class AccountService(
             account.UserId,
             account.Name,
             account.Type,
+            account.InitialBalance.GetValueOrDefault(0),
             currentBalance,
             account.CurrencyCode,
             account.InstitutionName,

@@ -12,6 +12,7 @@ public class Account
     public string CurrencyCode { get; set; } = "PEN";
     public bool IsActive { get; set; } = true;
     public string ColorCode { get; set; } = "#000000";
+    public decimal? InitialBalance { get; set; } = 0;
 
     // Visual / institution metadata
     public string? InstitutionName { get; set; }

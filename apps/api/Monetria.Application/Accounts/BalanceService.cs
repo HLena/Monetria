@@ -1,5 +1,6 @@
 using Monetria.Application.Common;
 using Monetria.Application.Transactions;
+using Monetria.Domain.Entities;
 using Monetria.Domain.Enums;
 
 namespace Monetria.Application.Accounts;
@@ -14,6 +15,14 @@ public sealed class BalanceService(
     {
         ValidateUserId(userId);
 
+        var accounts = await accountRepository.ListByUserIdAsync(userId, null, cancellationToken);
+        var activeAccounts = accounts.Where(a => a.IsActive).ToList();
+
+        var accountBalances = await Task.WhenAll(activeAccounts.Select(account => GetAccountBalanceAsync(account, cancellationToken)));
+
+        var totalBalance = accountBalances.Sum();
+
+        // Ingresos y gastos globales (para el resumen)
         var incomeFilter = new TransactionFilterRequest(Type: TransactionType.Income);
         var incomeTransactions = await transactionRepository.ListByUserIdAsync(
             userId, incomeFilter, cancellationToken);
@@ -24,17 +33,25 @@ public sealed class BalanceService(
 
         var totalIncome = incomeTransactions.Sum(t => t.Amount);
         var totalExpense = expenseTransactions.Sum(t => t.Amount);
-        var balance = totalIncome - totalExpense;
 
-        var currencyCode = await GetUserCurrencyAsync(userId, cancellationToken);
+        var currencyCode = activeAccounts.FirstOrDefault()?.CurrencyCode ?? "PEN";
 
-        return new UserBalanceResponse(totalIncome, totalExpense, balance, currencyCode);
+        return new UserBalanceResponse(totalIncome, totalExpense, totalBalance, currencyCode);
     }
 
-    private async Task<string> GetUserCurrencyAsync(Guid userId, CancellationToken cancellationToken)
+    public async Task<decimal> GetAccountBalanceAsync(
+        Account account,
+        CancellationToken cancellationToken = default)
     {
-        var userAccounts = await accountRepository.ListByUserIdAsync(userId, null, cancellationToken);
-        return userAccounts.FirstOrDefault()?.CurrencyCode ?? "PEN";
+        var incomeFilter = new TransactionFilterRequest(Type: TransactionType.Income, FromAccountId: account.Id);
+        var incomes = await transactionRepository.ListByUserIdAsync(
+            account.UserId, incomeFilter, cancellationToken);
+
+        var expenseFilter = new TransactionFilterRequest(Type: TransactionType.Expense, FromAccountId: account.Id);
+        var expenses = await transactionRepository.ListByUserIdAsync(
+            account.UserId, expenseFilter, cancellationToken);
+
+        return account.InitialBalance.GetValueOrDefault(0) + incomes.Sum(t => t.Amount) - expenses.Sum(t => t.Amount);
     }
 
     private static void ValidateUserId(Guid userId)
