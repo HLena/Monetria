@@ -35,3 +35,23 @@ Use `InstitutionName` as the single field for institution/provider name across a
 
 **Frontend (`accountMappers.ts`)**
 - Removed stale `Savings` entries from `BACKEND_TYPE_MAP` and `FRONTEND_TYPE_MAP` (the Savings type was removed in a prior commit).
+
+
+
+## 2026-05-30 — Restore InitialBalance
+
+**Change:** Restored InitialBalance field to Account entity.
+
+**Reason:** Removed in migration 20260522041029 but needed to represent
+historical balance before the user started using the app. Without it,
+all accounts start at zero even if the user had existing money.
+
+**Approach:** Field added directly to Account entity (not as a Transaction)
+to avoid contaminating income/expense reports with opening balance entries.
+
+**Affected files:**
+- Monetria.Domain/Entities/Account.cs — added InitialBalance
+- Monetria.Application/Accounts/AccountDtos.cs — added to responses
+- Monetria.Application/Accounts/AccountService.cs — removed opening Transaction, assign to entity
+- Monetria.Application/Accounts/BalanceService.cs — balance = InitialBalance + delta
+- Migration: RestoreInitialBalance

@@ -316,3 +316,26 @@ Transaction.ToAccountId ──> Account   (solo en transferencias)
 ```
 
 **Precisión monetaria:** `decimal(18, 2)` para montos; `decimal(9, 4)` para tasas de interés.
+
+## Monorepo Structure (updated 2026-05-30)
+- Restructured to Turborepo monorepo
+- apps/web ← React frontend
+- apps/api ← .NET backend
+- packages/enums ← @monetria/enums shared package
+
+## Completed Changes
+- [x] Monorepo setup with Turborepo + npm workspaces
+- [x] @monetria/enums package extracted
+- [x] InitialBalance restored to Account entity
+- [x] BalanceService updated to include InitialBalance
+
+## Pending Changes (in order)
+- [ ] Fix transfers — 2 atomic Transaction rows with TransferPairId
+- [ ] Rename FixedExpense → Recurring + RecurringOccurrence entity
+- [ ] Fix Budget — CategoryId FK + Month/Year + calculated SpentAmount
+- [ ] Fix SavingsGoal — LinkedAccountId + IsCompleted
+- [ ] Fix Debt — AccountId + CategoryId + POST /debts/{id}/pay
+- [ ] GET /dashboard endpoint
+- [ ] Pagination for GET /transactions
+- [ ] orval setup in packages/types
+- [ ] apps/mobile with Expo
