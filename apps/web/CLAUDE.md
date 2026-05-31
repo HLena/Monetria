@@ -1,146 +1,55 @@
-# Frontend Rules
+# Web — React Frontend
 
 ## Stack
-
-- React
-- TypeScript
+- React 18 + TypeScript (strict, no any)
 - Vite
+- Tailwind CSS v4
+- Zustand (global state)
+- React Hook Form (forms)
+- Recharts (charts)
+- Lucide React (icons)
+- Radix UI (primitives)
 
----
+## Structure
 
-## Architecture
+src/
+├── app/
+│   ├── pages/       ← one file per route
+│   ├── components/  ← shared/ + feature components
+│   ├── hooks/       ← data hooks (useAccounts, useTransactions...)
+│   ├── store/       ← AuthStore, FinanceStore (Zustand)
+│   ├── api/         ← HTTP fetch functions
+│   ├── mappers/     ← DTO → UI model
+│   └── types/       ← api/ (DTOs), models/ (UI)
+└── lib/
+├── apiClient.ts      ← HTTP client, injects JWT
+└── categoryIcons.tsx ← Lucide icon map
 
-Use feature-based structure.
+## Conventions
+- Functional components only
+- No API calls inside components — use hooks
+- Enums: import from @monetria/enums
+- Every async screen handles: loading / empty / error / success
 
-Shared UI goes into reusable components.
+## Reusable Components (check before creating new ones)
+HeaderPage, PageContainer, SectionCard, EmptyState, LoadingState,
+ConfirmDialog, FormField, CurrencyInput, PageActions
 
-Avoid duplication.
-
----
-
-## Reusability Rules
-
-Before creating a new UI block:
-
-1. Check if reusable component exists.
-2. If repeated more than 2 times → extract component.
-3. Prefer composition over duplication.
-
-Examples of reusable components:
-
-- HeaderPage
-- PageContainer
-- SectionCard
-- EmptyState
-- LoadingState
-- ConfirmDialog
-- FormField
-- CurrencyInput
-- PageActions
-
----
-
-## HeaderPage Standard
-
-Pages must use reusable `HeaderPage` component.
-
-Purpose:
-Provide consistent page headers.
-
-Should support:
-
-- title
-- subtitle
-- actions
-- breadcrumbs (future)
-
-Example usage:
-
-```tsx
-<HeaderPage
-  title="Transactions"
-  subtitle="Manage incomes and expenses"
-  actions={<Button>Add Transaction</Button>}
-/>
-```
-
-Do NOT duplicate page header markup.
-
----
-
-## Component Rules
-
-Reusable components go in:
-
-src/components/shared/
-
-Feature-specific components go in:
-
-src/app/[feature]/components/
-
-Example:
-
-shared:
-- HeaderPage
-- Modal
-- Button
-- PageCard
-
-feature:
-- TransactionFilters
-- BudgetProgress
-- DebtSummaryCard
-
----
-
-## UI Consistency Rules
-
-Pages should follow same layout:
-
+## Page Layout Standard
 HeaderPage
 ↓
-filters/actions
+filters / actions
 ↓
 content
 ↓
 empty state
 
-Spacing:
-- consistent margins
-- no arbitrary spacing
+## Component Locations
+- Shared: src/app/components/shared/
+- Feature-specific: src/app/components/<feature>/
 
-Avoid:
-- duplicated layouts
-- hardcoded styles
-- repeated typography patterns
-
----
-
-## Async State Rules
-
-Every async screen must handle:
-
-- loading
-- empty
-- error
-- success
-
-No blank screens allowed.
-
----
-
-## API Rules
-
-Do not call API directly inside UI components.
-
-Use hooks/services.
-
-Example:
-
-Bad:
-TransactionsPage.tsx → fetch()
-
-Good:
-useTransactions()
-
-# Paginas
+## Rules
+- Extract component if used 3+ times
+- No hardcoded styles
+- No blank screens — always show loading/empty/error state
+- Backend first, frontend after API is stable
