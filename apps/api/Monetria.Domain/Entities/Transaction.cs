@@ -13,6 +13,7 @@ public class Transaction
     public decimal Amount { get; set; }
     public string? Description { get; set; }
     public Guid? ToAccountId { get; set; }
+    public Guid? TransferPairId { get; set; }
     public bool IsActive { get; set; } = true;
 
     public DateTime Date { get; set; }

@@ -24,13 +24,11 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
     {
         return await dbContext.Transactions
             .AsNoTracking()
-            .Where(t => t.IsActive &&
-                (t.FromAccountId == accountId ||
-                 (t.ToAccountId == accountId && t.Type == TransactionType.Transfer)))
+            .Where(t => t.IsActive && t.FromAccountId == accountId)
             .SumAsync(t =>
-                t.FromAccountId == accountId
-                    ? (t.Type == TransactionType.Income ? t.Amount : -t.Amount)
-                    : t.Amount,
+                t.Type == TransactionType.Income ? t.Amount :
+                t.Type == TransactionType.Expense ? -t.Amount :
+                t.ToAccountId.HasValue ? -t.Amount : t.Amount,
                 cancellationToken);
     }
 
@@ -109,6 +107,12 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         }
 
         return query;
+    }
+
+    public async Task<Transaction?> GetTransferPairAsync(Guid transactionId, Guid transferPairId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Transactions
+            .FirstOrDefaultAsync(t => t.TransferPairId == transferPairId && t.Id != transactionId, cancellationToken);
     }
 
     private static IOrderedQueryable<Transaction> OrderTransactions(IQueryable<Transaction> query)

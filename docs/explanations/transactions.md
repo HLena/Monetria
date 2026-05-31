@@ -1,5 +1,33 @@
 # Transactions — Implementation Log
 
+## Update: 2026-05-31
+
+### Fix transfers — 2 atomic Transaction rows with TransferPairId
+
+**Problem:** Transfer created one row with `ToAccountId` set; balance was computed by a special query that also joined on `ToAccountId`. This violated the domain rule and added query complexity.
+
+**New design:** A transfer from Account A → B creates two rows sharing a `TransferPairId`:
+- Row 1 (outflow): `FromAccountId=A, ToAccountId=B, TransferPairId=pairId` — subtracts from A
+- Row 2 (inflow): `FromAccountId=B, ToAccountId=null, TransferPairId=pairId` — adds to B
+
+Direction is encoded by `ToAccountId` presence on the outflow row; no new enum or flag needed.
+
+**Backend**
+
+- `Transaction.cs`: added `Guid? TransferPairId`
+- `TransactionDtos.cs`: `TransactionResponse` includes `Guid? TransferPairId`
+- `ITransactionRepository.cs`: added `GetTransferPairAsync(transactionId, transferPairId)`
+- `TransactionService.cs`:
+  - `CreateAsync`: when Type=Transfer, creates both rows atomically in one `SaveChanges`; returns outflow row
+  - `DeleteAsync`: soft-deletes both rows when deleting a Transfer
+  - `MapToResponse`: exposes `TransferPairId`
+- `TransactionRepository.cs`:
+  - `GetAccountBalanceDeltaAsync`: simplified — queries only `WHERE FromAccountId = accountId`; direction from `ToAccountId` presence (null = inflow = add, set = outflow = subtract)
+  - Added `GetTransferPairAsync`
+- Migration `AddTransferPairId`: adds `TransferPairId uuid nullable` column; data migration CTE converts existing single-row transfers into 2-row pairs atomically
+
+---
+
 ## Update: 2026-05-21
 
 ### Balance actual de cuentas calculado desde transacciones

@@ -51,6 +51,46 @@ public sealed class TransactionService(
 
         await ValidateCreditLimitAsync(account, request, cancellationToken);
 
+        if (request.Type == TransactionType.Transfer)
+        {
+            var pairId = Guid.NewGuid();
+            var now = DateTime.UtcNow;
+
+            var outflow = new Transaction
+            {
+                Id = Guid.NewGuid(),
+                FromAccountId = request.FromAccountId,
+                Type = TransactionType.Transfer,
+                Amount = request.Amount,
+                Description = request.Description?.Trim(),
+                ToAccountId = request.ToAccountId,
+                TransferPairId = pairId,
+                IsActive = true,
+                Date = request.Date,
+                CreatedAt = now
+            };
+
+            var inflow = new Transaction
+            {
+                Id = Guid.NewGuid(),
+                FromAccountId = request.ToAccountId!.Value,
+                Type = TransactionType.Transfer,
+                Amount = request.Amount,
+                Description = request.Description?.Trim(),
+                ToAccountId = null,
+                TransferPairId = pairId,
+                IsActive = true,
+                Date = request.Date,
+                CreatedAt = now
+            };
+
+            await transactionRepository.AddAsync(outflow, cancellationToken);
+            await transactionRepository.AddAsync(inflow, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return MapToResponse(outflow);
+        }
+
         var transaction = new Transaction
         {
             Id = Guid.NewGuid(),
@@ -59,7 +99,6 @@ public sealed class TransactionService(
             CategoryId = request.CategoryId,
             Amount = request.Amount,
             Description = request.Description?.Trim(),
-            ToAccountId = request.ToAccountId,
             IsActive = true,
             Date = request.Date,
             CreatedAt = DateTime.UtcNow,
@@ -188,6 +227,15 @@ public sealed class TransactionService(
         }
 
         transaction.IsActive = false;
+
+        if (transaction.Type == TransactionType.Transfer && transaction.TransferPairId.HasValue)
+        {
+            var pair = await transactionRepository.GetTransferPairAsync(transaction.Id, transaction.TransferPairId.Value, cancellationToken);
+            if (pair != null)
+            {
+                pair.IsActive = false;
+            }
+        }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
@@ -384,6 +432,7 @@ public sealed class TransactionService(
             transaction.Amount,
             transaction.Description,
             transaction.ToAccountId,
+            transaction.TransferPairId,
             transaction.IsActive,
             transaction.Date,
             transaction.CreatedAt);

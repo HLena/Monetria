@@ -29,6 +29,7 @@ public sealed record TransactionResponse(
     decimal Amount,
     string? Description,
     Guid? ToAccountId,
+    Guid? TransferPairId,
     bool IsActive,
     DateTime Date,
     DateTime CreatedAt);

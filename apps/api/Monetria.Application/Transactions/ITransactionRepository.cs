@@ -19,4 +19,6 @@ public interface ITransactionRepository
         Guid accountId,
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default);
+
+    Task<Transaction?> GetTransferPairAsync(Guid transactionId, Guid transferPairId, CancellationToken cancellationToken = default);
 }

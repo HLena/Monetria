@@ -330,7 +330,7 @@ Transaction.ToAccountId ──> Account   (solo en transferencias)
 - [x] BalanceService updated to include InitialBalance
 
 ## Pending Changes (in order)
-- [ ] Fix transfers — 2 atomic Transaction rows with TransferPairId
+- [x] Fix transfers — 2 atomic Transaction rows with TransferPairId
 - [ ] Rename FixedExpense → Recurring + RecurringOccurrence entity
 - [ ] Fix Budget — CategoryId FK + Month/Year + calculated SpentAmount
 - [ ] Fix SavingsGoal — LinkedAccountId + IsCompleted

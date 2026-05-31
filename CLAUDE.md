@@ -79,7 +79,7 @@ dotnet ef database update --project apps/api/Monetria.Infrastructure --startup-p
 10. All monetary amounts: decimal(18,2) — never float or double
 
 ## Pending Changes (do these in order)
-- [ ] Fix transfers — currently 1 row, must be 2 atomic rows with TransferPairId
+- [x] Fix transfers — 2 atomic rows with TransferPairId (migration + data backfill applied)
 - [ ] Rename FixedExpense → Recurring + new fields + RecurringOccurrence entity
 - [ ] Fix Budget — CategoryId FK + Month/Year fields + BudgetService calculates SpentAmount
 - [ ] Fix SavingsGoal — add LinkedAccountId + IsCompleted
