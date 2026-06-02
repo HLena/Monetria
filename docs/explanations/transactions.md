@@ -1,5 +1,51 @@
 # Transactions — Implementation Log
 
+## Update: 2026-06-02
+
+### Rename FixedExpense → Recurring + RecurringOccurrence entity
+
+**Motivation:** The original `FixedExpense` only modeled fixed monthly expenses. The new `Recurring` entity covers income, expenses, and transfers across any frequency, with three amount modes and an occurrence tracking model.
+
+**Domain — deleted**
+- `Domain/Entities/FixedExpense.cs`
+- `Domain/Enums/ExpensePeriod.cs`
+
+**Domain — created**
+- `Domain/Entities/Recurring.cs`: `Id, UserId, AccountId, ToAccountId?, CategoryId?, Name, Type (TransactionType), AmountType (RecurringAmountType), Amount?, EstimatedAmount?, Frequency (RecurringFrequency), StartDate (DateOnly), EndDate? (DateOnly), NextDueDate (DateOnly), IsActive`
+- `Domain/Entities/RecurringOccurrence.cs`: `Id, RecurringId (FK), ScheduledDate (DateOnly), Status (RecurringOccurrenceStatus), SuggestedAmount?, RealAmount?, TransactionId?, ConfirmedAt?`
+- `Domain/Enums/RecurringFrequency.cs`: `Daily, Weekly, Biweekly, Monthly, Yearly`
+- `Domain/Enums/RecurringAmountType.cs`: `Fixed, Estimated, VariableFree`
+- `Domain/Enums/RecurringOccurrenceStatus.cs`: `Pending, Confirmed, Skipped, AutoRegistered`
+
+**Application — deleted** `Application/FixedExpenses/`
+
+**Application — created** `Application/Recurrings/`
+- `RecurringDtos.cs`: `CreateRecurringRequest`, `UpdateRecurringRequest`, `RecurringResponse`
+- `IRecurringRepository.cs`, `IRecurringService.cs`, `RecurringService.cs`
+- Amount validation by AmountType: Fixed requires `Amount > 0`; Estimated requires `EstimatedAmount > 0`; VariableFree requires neither
+
+**Infrastructure — deleted** `Infrastructure/FixedExpenses/`
+
+**Infrastructure — created** `Infrastructure/Recurrings/RecurringRepository.cs`
+- Includes `Category` navigation on all queries
+- Orders by `NextDueDate, Name`
+
+**Infrastructure — modified**
+- `MonetriaDbContext.cs`: replaced `DbSet<FixedExpense>` with `DbSet<Recurring>` + `DbSet<RecurringOccurrence>`; replaced `ConfigureFixedExpense` with `ConfigureRecurring` + `ConfigureRecurringOccurrence`
+- `DependencyInjection.cs`: `IFixedExpenseRepository/Service` → `IRecurringRepository/Service`
+
+**API — deleted** `API/Endpoints/FixedExpenseEndpoints.cs`
+
+**API — created** `API/Endpoints/RecurringEndpoints.cs`
+- `POST   /recurrings`
+- `GET    /recurrings?includeInactive=bool`
+- `PUT    /recurrings/{id}`
+- `PATCH  /recurrings/{id}/deactivate`
+
+**Migration** `RenameFixedExpenseToRecurring`: drops `FixedExpenses`, creates `Recurrings` and `RecurringOccurrences` tables.
+
+---
+
 ## Update: 2026-05-31
 
 ### Fix transfers — 2 atomic Transaction rows with TransferPairId

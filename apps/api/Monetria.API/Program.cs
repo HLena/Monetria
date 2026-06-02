@@ -89,7 +89,7 @@ app.MapAccountEndpoints();
 app.MapBudgetEndpoints();
 app.MapCategoryEndpoints();
 app.MapDebtEndpoints();
-app.MapFixedExpenseEndpoints();
+app.MapRecurringEndpoints();
 app.MapSavingsGoalEndpoints();
 app.MapTransactionEndpoints();
 

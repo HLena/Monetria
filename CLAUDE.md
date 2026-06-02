@@ -82,7 +82,7 @@ dotnet ef database update --project apps/api/Monetria.Infrastructure --startup-p
 
 ## Pending Changes (do these in order)
 - [x] Fix transfers — 2 atomic rows with TransferPairId (migration + data backfill applied)
-- [ ] Rename FixedExpense → Recurring + new fields + RecurringOccurrence entity
+- [x] Rename FixedExpense → Recurring + new fields + RecurringOccurrence entity
 - [ ] Fix Budget — CategoryId FK + Month/Year fields + BudgetService calculates SpentAmount
 - [ ] Fix SavingsGoal — add LinkedAccountId + IsCompleted
 - [ ] Fix Debt — add AccountId + CategoryId + POST /debts/{id}/pay endpoint

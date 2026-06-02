@@ -10,7 +10,8 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Debt> Debts => Set<Debt>();
-    public DbSet<FixedExpense> FixedExpenses => Set<FixedExpense>();
+    public DbSet<Recurring> Recurrings => Set<Recurring>();
+    public DbSet<RecurringOccurrence> RecurringOccurrences => Set<RecurringOccurrence>();
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<User> Users => Set<User>();
@@ -25,7 +26,8 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
         ConfigureBudget(modelBuilder);
         ConfigureCategory(modelBuilder);
         ConfigureDebt(modelBuilder);
-        ConfigureFixedExpense(modelBuilder);
+        ConfigureRecurring(modelBuilder);
+        ConfigureRecurringOccurrence(modelBuilder);
         ConfigureSavingsGoal(modelBuilder);
     }
 
@@ -155,24 +157,50 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
         });
     }
 
-    private static void ConfigureFixedExpense(ModelBuilder modelBuilder)
+    private static void ConfigureRecurring(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<FixedExpense>(entity =>
+        modelBuilder.Entity<Recurring>(entity =>
         {
-            entity.HasKey(expense => expense.Id);
-            entity.Property(expense => expense.Name).HasMaxLength(120).IsRequired();
-            entity.Property(expense => expense.Amount).HasPrecision(18, 2);
-            entity.Property(expense => expense.Category).HasMaxLength(120).IsRequired();
-            entity.Property(expense => expense.Period).HasConversion<string>().HasMaxLength(30).IsRequired();
-            entity.Property(expense => expense.Notes).HasMaxLength(500);
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.Name).HasMaxLength(120).IsRequired();
+            entity.Property(r => r.Type).HasConversion<string>().HasMaxLength(30).IsRequired();
+            entity.Property(r => r.AmountType).HasConversion<string>().HasMaxLength(30).IsRequired();
+            entity.Property(r => r.Amount).HasPrecision(18, 2);
+            entity.Property(r => r.EstimatedAmount).HasPrecision(18, 2);
+            entity.Property(r => r.Frequency).HasConversion<string>().HasMaxLength(30).IsRequired();
             entity.HasOne<User>()
                 .WithMany()
-                .HasForeignKey(expense => expense.UserId)
+                .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<Account>()
                 .WithMany()
-                .HasForeignKey(expense => expense.AccountId)
+                .HasForeignKey(r => r.AccountId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Account>()
+                .WithMany()
+                .HasForeignKey(r => r.ToAccountId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r => r.Category)
+                .WithMany()
+                .HasForeignKey(r => r.CategoryId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigureRecurringOccurrence(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<RecurringOccurrence>(entity =>
+        {
+            entity.HasKey(o => o.Id);
+            entity.Property(o => o.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
+            entity.Property(o => o.SuggestedAmount).HasPrecision(18, 2);
+            entity.Property(o => o.RealAmount).HasPrecision(18, 2);
+            entity.HasOne(o => o.Recurring)
+                .WithMany(r => r.Occurrences)
+                .HasForeignKey(o => o.RecurringId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 
