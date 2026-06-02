@@ -122,3 +122,25 @@ Never:
 - Break existing APIs
 - Use float/double for money
 - Hard delete financial records
+
+## API and State Conventions
+
+### Post-then-fetch pattern
+After any mutating operation (POST, PUT, PATCH, DELETE), always call
+the corresponding GET endpoint to refresh local state.
+Never update state manually with the mutation response.
+
+// ✅ Correct
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ['transactions'] })
+}
+
+// ❌ Incorrect
+onSuccess: (newTransaction) => {
+  queryClient.setQueryData(['transactions'], prev => [...prev, newTransaction])
+}
+
+### Examples
+- Create transaction → POST /transactions → GET /transactions
+- Edit budget       → PUT /budgets/:id   → GET /budgets
+- Delete account    → DELETE /accounts/:id → GET /accounts

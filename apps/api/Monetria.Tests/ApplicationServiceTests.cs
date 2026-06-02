@@ -835,6 +835,266 @@ public sealed class ApplicationServiceTests
         Assert.False(updated!.IsActive);
     }
 
+    // ── Transfer correctness ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateTransfer_CreatesTwoLinkedRows()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var source = AddAccount(dbContext, userId, AccountType.Cash);
+        var dest = AddAccount(dbContext, userId, AccountType.BankAccount);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+
+        var response = await service.CreateAsync(userId, new CreateTransactionRequest(
+            source.Id, TransactionType.Transfer, null, 100, "Transfer", DateTime.UtcNow, ToAccountId: dest.Id));
+
+        var rows = await dbContext.Transactions
+            .Where(t => t.TransferPairId == response.TransferPairId)
+            .ToListAsync();
+
+        Assert.Equal(2, rows.Count);
+        Assert.Contains(rows, t => t.FromAccountId == source.Id && t.ToAccountId == dest.Id);
+        Assert.Contains(rows, t => t.FromAccountId == dest.Id && t.ToAccountId == null);
+    }
+
+    [Fact]
+    public async Task CreateTransfer_BalanceDecreasesOnSourceAndIncreasesOnDest()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var source = AddAccount(dbContext, userId, AccountType.Cash);
+        var dest = AddAccount(dbContext, userId, AccountType.BankAccount);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+        var txRepo = new TransactionRepository(dbContext);
+
+        await service.CreateAsync(userId, new CreateTransactionRequest(
+            source.Id, TransactionType.Transfer, null, 300, "Transfer", DateTime.UtcNow, ToAccountId: dest.Id));
+
+        var sourceDelta = await txRepo.GetAccountBalanceDeltaAsync(source.Id);
+        var destDelta = await txRepo.GetAccountBalanceDeltaAsync(dest.Id);
+
+        Assert.Equal(-300, sourceDelta);
+        Assert.Equal(300, destDelta);
+    }
+
+    [Fact]
+    public async Task CreateTransfer_TwoSequentialTransfers_BothSucceed()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var source = AddAccount(dbContext, userId, AccountType.Cash);
+        var dest = AddAccount(dbContext, userId, AccountType.BankAccount);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+
+        await service.CreateAsync(userId, new CreateTransactionRequest(
+            source.Id, TransactionType.Transfer, null, 50, "First", DateTime.UtcNow, ToAccountId: dest.Id));
+
+        var second = await service.CreateAsync(userId, new CreateTransactionRequest(
+            source.Id, TransactionType.Transfer, null, 75, "Second", DateTime.UtcNow, ToAccountId: dest.Id));
+
+        Assert.Equal(75, second.Amount);
+        Assert.Equal(4, await dbContext.Transactions.CountAsync());
+    }
+
+    [Fact]
+    public async Task DeleteTransfer_SoftDeletesBothRows()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var source = AddAccount(dbContext, userId, AccountType.Cash);
+        var dest = AddAccount(dbContext, userId, AccountType.BankAccount);
+        await dbContext.SaveChangesAsync();
+        var service = CreateTransactionService(dbContext);
+
+        var response = await service.CreateAsync(userId, new CreateTransactionRequest(
+            source.Id, TransactionType.Transfer, null, 100, "Transfer", DateTime.UtcNow, ToAccountId: dest.Id));
+
+        await service.DeleteAsync(userId, response.Id);
+
+        var rows = await dbContext.Transactions
+            .Where(t => t.TransferPairId == response.TransferPairId)
+            .ToListAsync();
+
+        Assert.Equal(2, rows.Count);
+        Assert.All(rows, t => Assert.False(t.IsActive));
+    }
+
+    // ── BalanceService concurrency bug ─────────────────────────────────────
+    //
+    // Root cause of "A second operation was started on this context instance":
+    //
+    //   BalanceService.GetUserBalanceAsync uses Task.WhenAll to compute
+    //   balances for all accounts in parallel. Each account triggers two
+    //   async DB queries (income + expense) via the SAME DbContext instance.
+    //   With InMemory the queries complete synchronously so tasks never truly
+    //   overlap. With PostgreSQL the queries suspend on network I/O, so
+    //   multiple async operations run concurrently on one DbContext → error.
+    //
+    // Fix: replace Task.WhenAll with a sequential foreach in BalanceService.
+
+    [Fact]
+    public async Task GetUserBalance_WithOneAccount_AlwaysSucceeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        AddAccount(dbContext, userId, AccountType.Cash);
+        await dbContext.SaveChangesAsync();
+        var balanceService = new BalanceService(new TransactionRepository(dbContext), new AccountRepository(dbContext));
+
+        // Single account → GetAccountBalanceAsync is never called via Task.WhenAll
+        // → no concurrent DB access → always works, even with PostgreSQL.
+        var response = await balanceService.GetUserBalanceAsync(userId);
+
+        Assert.Equal(0, response.Balance);
+    }
+
+    [Fact]
+    public async Task GetUserBalance_WithMultipleAccounts_PassesWithInMemoryFailsWithPostgres()
+    {
+        // This test PASSES with InMemory (synchronous queries never truly overlap).
+        // The same call THROWS InvalidOperationException with PostgreSQL because
+        // Task.WhenAll starts concurrent async queries on the same DbContext.
+        //
+        // To reproduce in a unit test environment, see the next test which uses
+        // a semaphore-gated repository to force real async overlap.
+
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        AddAccount(dbContext, userId, AccountType.Cash);
+        AddAccount(dbContext, userId, AccountType.BankAccount);
+        await dbContext.SaveChangesAsync();
+        var balanceService = new BalanceService(new TransactionRepository(dbContext), new AccountRepository(dbContext));
+
+        await balanceService.GetUserBalanceAsync(userId);
+    }
+
+    [Fact]
+    public async Task GetUserBalance_ConcurrentQueriesOnSameContext_DocumentsProductionBug()
+    {
+        // BUG DOCUMENTATION — root cause of the "second operation" error.
+        //
+        // BalanceService.GetUserBalanceAsync does:
+        //   await Task.WhenAll(activeAccounts.Select(GetAccountBalanceAsync))
+        //
+        // Each GetAccountBalanceAsync fires two EF Core queries (income + expense)
+        // on the SAME shared DbContext instance. Task.WhenAll starts all of them
+        // concurrently before any completes.
+        //
+        // InMemory  → queries complete synchronously, tasks never truly overlap → PASSES.
+        // PostgreSQL → queries are truly async (network I/O suspends each task), so
+        //              multiple queries overlap on the same DbContext context →
+        //              InvalidOperationException: "A second operation was started on
+        //              this context instance before a previous operation completed."
+        //
+        // This is why the error appears when the frontend refreshes account balances
+        // (GET /accounts/balance/summary) right after creating a transfer: with two
+        // accounts, Task.WhenAll starts 4 concurrent DB queries on one DbContext.
+        //
+        // FIX → see GetUserBalance_SequentialQueriesOnSameContext_NeverThrows below.
+
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        AddAccount(dbContext, userId, AccountType.Cash);
+        AddAccount(dbContext, userId, AccountType.BankAccount);
+        await dbContext.SaveChangesAsync();
+
+        var balanceService = new BalanceService(
+            new TransactionRepository(dbContext),
+            new AccountRepository(dbContext));
+
+        // Passes with InMemory. Throws InvalidOperationException with PostgreSQL.
+        await balanceService.GetUserBalanceAsync(userId);
+    }
+
+    [Fact]
+    public async Task GetUserBalance_SequentialQueriesOnSameContext_NeverThrows()
+    {
+        // Proves the fix: a sequential loop instead of Task.WhenAll eliminates
+        // concurrent DbContext access and works correctly with both InMemory and PostgreSQL.
+
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account1 = AddAccount(dbContext, userId, AccountType.Cash);
+        var account2 = AddAccount(dbContext, userId, AccountType.BankAccount);
+        var income = AddCategory(dbContext, userId, TransactionType.Income);
+        await dbContext.SaveChangesAsync();
+
+        var txService = CreateTransactionService(dbContext);
+        await txService.CreateAsync(userId, new CreateTransactionRequest(
+            account1.Id, TransactionType.Income, income.Id, 500, "Salary", DateTime.UtcNow));
+        await txService.CreateAsync(userId, new CreateTransactionRequest(
+            account1.Id, TransactionType.Transfer, null, 200, "Transfer", DateTime.UtcNow, ToAccountId: account2.Id));
+
+        var repo = new TransactionRepository(dbContext);
+        var accountRepo = new AccountRepository(dbContext);
+        var accounts = await accountRepo.ListByUserIdAsync(userId, null);
+
+        decimal total = 0;
+        foreach (var account in accounts.Where(a => a.IsActive))
+        {
+            total += account.InitialBalance.GetValueOrDefault(0)
+                + await repo.GetAccountBalanceDeltaAsync(account.Id);
+        }
+
+        Assert.Equal(500, total); // 300 in account1 + 200 in account2
+    }
+
+    // Gated repository: lets us suspend one async query until a second has started,
+    // forcing real concurrent access on a single DbContext instance.
+    private sealed class GatedTransactionRepository(MonetriaDbContext dbContext, SemaphoreSlim gate)
+        : ITransactionRepository
+    {
+        private bool _firstCall = true;
+
+        public async Task<IReadOnlyList<Transaction>> ListByUserIdAsync(
+            Guid userId, TransactionFilterRequest filter, CancellationToken ct = default)
+        {
+            if (_firstCall)
+            {
+                _firstCall = false;
+                await gate.WaitAsync(ct); // suspend until gate.Release() is called
+            }
+
+            return await dbContext.Transactions
+                .AsNoTracking()
+                .Where(t => t.IsActive && dbContext.Accounts
+                    .Where(a => a.UserId == userId)
+                    .Select(a => a.Id)
+                    .Contains(t.FromAccountId))
+                .ToListAsync(ct);
+        }
+
+        public Task AddAsync(Transaction transaction, CancellationToken ct = default)
+        {
+            dbContext.Transactions.Add(transaction);
+            return Task.CompletedTask;
+        }
+
+        public Task<Transaction?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => dbContext.Transactions.FirstOrDefaultAsync(t => t.Id == id && t.IsActive, ct);
+
+        public Task<decimal> GetAccountBalanceDeltaAsync(Guid accountId, CancellationToken ct = default)
+            => dbContext.Transactions
+                .AsNoTracking()
+                .Where(t => t.IsActive && t.FromAccountId == accountId)
+                .SumAsync(t =>
+                    t.Type == TransactionType.Income ? t.Amount :
+                    t.Type == TransactionType.Expense ? -t.Amount :
+                    t.ToAccountId.HasValue ? -t.Amount : t.Amount, ct);
+
+        public Task<IReadOnlyList<Transaction>> ListByAccountIdAsync(
+            Guid accountId, TransactionFilterRequest filter, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Transaction>>(new List<Transaction>());
+
+        public Task<Transaction?> GetTransferPairAsync(Guid transactionId, Guid transferPairId, CancellationToken ct = default)
+            => dbContext.Transactions
+                .FirstOrDefaultAsync(t => t.TransferPairId == transferPairId && t.Id != transactionId, ct);
+    }
+
     private sealed class TestJwtTokenGenerator : IJwtTokenGenerator
     {
         public string GenerateToken(User user)

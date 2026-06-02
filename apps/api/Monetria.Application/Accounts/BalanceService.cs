@@ -18,9 +18,11 @@ public sealed class BalanceService(
         var accounts = await accountRepository.ListByUserIdAsync(userId, null, cancellationToken);
         var activeAccounts = accounts.Where(a => a.IsActive).ToList();
 
-        var accountBalances = await Task.WhenAll(activeAccounts.Select(account => GetAccountBalanceAsync(account, cancellationToken)));
-
-        var totalBalance = accountBalances.Sum();
+        var totalBalance = 0m;
+        foreach (var account in activeAccounts)
+        {
+            totalBalance += await GetAccountBalanceAsync(account, cancellationToken);
+        }
 
         // Ingresos y gastos globales (para el resumen)
         var incomeFilter = new TransactionFilterRequest(Type: TransactionType.Income);

@@ -8,9 +8,10 @@ namespace Monetria.Infrastructure.Transactions;
 
 public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransactionRepository
 {
-    public async Task AddAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    public Task AddAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
-        await dbContext.Transactions.AddAsync(transaction, cancellationToken);
+        dbContext.Transactions.Add(transaction);
+        return Task.CompletedTask;
     }
 
     public async Task<Transaction?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
