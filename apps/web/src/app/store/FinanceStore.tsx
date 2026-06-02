@@ -92,13 +92,8 @@ export const useFinanceStore = create<FinanceStoreState>()(
       updateAccount: async (id: string, account: Omit<Account, 'id'>) => {
         set({ isLoading: true, error: null });
         try {
-          const dto = await updateAccountApi(id, account);
-          const updated = mapAccountDtoToFinanceAccount(dto);
-          set(state => ({
-            accounts: state.accounts.map(a => a.id === id ? updated : a),
-            isLoading: false,
-            error: null,
-          }));
+          await updateAccountApi(id, account);
+          await get().listAccounts(useAuthStore.getState().user?.userId ?? '');
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo actualizar la cuenta';
           set({ error: msg, isLoading: false });
@@ -110,11 +105,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
         set({ isLoading: true, error: null });
         try {
           await deleteAccountApi(id);
-          set(state => ({
-            accounts: state.accounts.filter(a => a.id !== id),
-            isLoading: false,
-            error: null,
-          }));
+          await get().listAccounts(useAuthStore.getState().user?.userId ?? '');
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo eliminar la cuenta';
           set({ error: msg, isLoading: false });
@@ -210,13 +201,8 @@ export const useFinanceStore = create<FinanceStoreState>()(
         set({ isLoading: true, error: null });
         try {
           const body = toCreateTransactionRequestBody(tx, get().categories);
-          const dto = await createTransactionApi(body);
-          const created = mapTransactionDtoToTransaction(dto);
-          set(state => ({
-            transactions: [created, ...state.transactions],
-            isLoading: false,
-            error: null,
-          }));
+          await createTransactionApi(body);
+          await get().loadTransactions();
           void get().listAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
           void get().loadUserBalance().catch(() => undefined);
         } catch (caught) {
@@ -230,13 +216,10 @@ export const useFinanceStore = create<FinanceStoreState>()(
         set({ isLoading: true, error: null });
         try {
           const body = toUpdateTransactionRequestBody(tx, get().categories);
-          const dto = await updateTransactionApi(id, body);
-          const updated = mapTransactionDtoToTransaction(dto);
-          set(state => ({
-            transactions: state.transactions.map(t => t.id === id ? updated : t),
-            isLoading: false,
-            error: null,
-          }));
+          await updateTransactionApi(id, body);
+          await get().loadTransactions();
+          void get().listAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
+          void get().loadUserBalance().catch(() => undefined);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo actualizar la transacción';
           set({ error: msg, isLoading: false });
@@ -248,11 +231,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
         set({ isLoading: true, error: null });
         try {
           await deleteTransactionApi(id);
-          set(state => ({
-            transactions: state.transactions.filter(t => t.id !== id),
-            isLoading: false,
-            error: null,
-          }));
+          await get().loadTransactions();
           void get().listAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
           void get().loadUserBalance().catch(() => undefined);
         } catch (caught) {

@@ -44,6 +44,8 @@ dotnet ef database update --project apps/api/Monetria.Infrastructure --startup-p
 ### Transaction
 - Fields: Id, AccountId (FK), Type (Income/Expense/Transfer), CategoryId (FK nullable), Amount, Description, TransferPairId (nullable), IsActive, Date, CreatedAt
 - ⚠️ Transfer = always 2 rows linked by TransferPairId inside one UnitOfWork
+- Transfer outflow row: ToAccountId = destino (resta del saldo origen)
+- Transfer inflow row: ToAccountId = null (suma al saldo destino)
 
 ### Category
 - Fields: Id, UserId (nullable = system), Name, Type, IsDefault, IsActive, Color, KeyIcon
@@ -94,11 +96,14 @@ dotnet ef database update --project apps/api/Monetria.Infrastructure --startup-p
 - [x] @monetria/enums package with AccountType
 - [x] InitialBalance restored to Account entity
 - [x] BalanceService updated to include InitialBalance
+- [x] BalanceService concurrent DbContext fix — Task.WhenAll → sequential foreach (PostgreSQL safe)
 - [x] Clean Architecture (Domain/Application/Infrastructure/API)
 - [x] JWT + BCrypt auth
 - [x] Soft delete on Transaction and Category
 - [x] decimal(18,2) for all monetary amounts
 - [x] Swagger active
+- [x] Frontend: getMonthKey timezone fix — date-only strings parsed directly, no UTC conversion
+- [x] Frontend: transfer rows show red/- (outflow, toAccountId set) and green/+ (inflow, toAccountId null)
 
 ## Workflow
 Before coding:
