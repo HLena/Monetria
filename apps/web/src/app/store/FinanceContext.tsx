@@ -184,8 +184,11 @@ export function formatCurrency(amount: number, currency = 'MXN') {
 }
 
 export function getMonthKey(date: string | Date) {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  if (typeof date === 'string') {
+    const [year, month] = date.split('T')[0].split('-');
+    return `${year}-${month}`;
+  }
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
 export function getCurrentMonthKey() {

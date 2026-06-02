@@ -41,13 +41,11 @@ export function TransactionRow({
 
       <div className="text-right flex-shrink-0">
         <p className={`text-sm font-semibold ${
-          tx.type === 'income'
+          tx.type === 'income' || (tx.type === 'transfer' && !tx.toAccountId)
             ? 'text-emerald-600 dark:text-emerald-400'
-            : tx.type === 'transfer'
-            ? 'text-indigo-600 dark:text-indigo-400'
             : 'text-rose-600 dark:text-rose-400'
         }`}>
-          {tx.type === 'income' ? '+' : tx.type === 'transfer' ? '⇄' : '-'}
+          {tx.type === 'income' || (tx.type === 'transfer' && !tx.toAccountId) ? '+' : '-'}
           {formatCurrency(tx.amount)}
         </p>
         <p className="text-slate-400 dark:text-slate-500 text-xs">
