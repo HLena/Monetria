@@ -21,7 +21,7 @@ const PERIOD_LABEL: Record<FixedExpensePeriod, string> = {
   yearly: 'Anual',
 };
 
-function FixedExpenseForm({
+function RecurringForm({
   initial,
   accounts,
   onSave,
@@ -190,7 +190,7 @@ function FixedExpenseForm({
   );
 }
 
-export function FixedExpenses() {
+export function Recurrings() {
   const {
     accounts,
     fixedExpenses,
@@ -210,7 +210,7 @@ export function FixedExpenses() {
   return (
     <PageContainer>
       <HeaderPage
-        title="Gastos fijos"
+        title="Recurrentes"
         subtitle="Compromisos recurrentes (equivalente mensual estimado)"
         actions={
           <button
@@ -219,7 +219,7 @@ export function FixedExpenses() {
             className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
           >
             <Plus className="w-4 h-4" />
-            Nuevo gasto fijo
+            Nuevo recurrente
           </button>
         }
       />
@@ -240,7 +240,7 @@ export function FixedExpenses() {
       {fixedExpenses.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center shadow-sm border border-slate-100 dark:border-slate-800">
           <CalendarClock className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-          <p className="text-slate-500 dark:text-slate-400">No hay gastos fijos</p>
+          <p className="text-slate-500 dark:text-slate-400">No hay recurrentes</p>
           <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">Agrega renta, servicios o suscripciones</p>
           <button
             type="button"
@@ -309,16 +309,16 @@ export function FixedExpenses() {
         </div>
       )}
 
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Nuevo gasto fijo">
-        <FixedExpenseForm
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Nuevo recurrente">
+        <RecurringForm
           accounts={accounts}
           onSave={() => {}}
           onClose={() => setShowForm(false)}
         />
       </Modal>
-      <Modal isOpen={!!editItem} onClose={() => setEditItem(null)} title="Editar gasto fijo">
+      <Modal isOpen={!!editItem} onClose={() => setEditItem(null)} title="Editar recurrente">
         {editItem && (
-          <FixedExpenseForm
+          <RecurringForm
             initial={editItem}
             accounts={accounts}
             onSave={() => {}}

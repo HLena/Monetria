@@ -4,9 +4,9 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Accounts } from './pages/Accounts';
 import { AccountDetail } from './pages/AccountDetail';
-import { Transactions } from './pages/Transactions';
+import { Movements } from './pages/Movements';
 import { Budgets } from './pages/Budgets';
-import { FixedExpenses } from './pages/FixedExpenses';
+import { Recurrings } from './pages/Recurrings';
 import { Savings } from './pages/Savings';
 import { DebtPlanning } from './pages/DebtPlanning';
 import { Reports } from './pages/Reports';
@@ -21,8 +21,8 @@ export const router = createBrowserRouter([
       { index: true, Component: Dashboard },
       { path: 'accounts', Component: Accounts },
       { path: 'accounts/:id', Component: AccountDetail },
-      { path: 'transactions', Component: Transactions },
-      { path: 'fixed-expenses', Component: FixedExpenses },
+      { path: 'movements', Component: Movements },
+      { path: 'recurrings', Component: Recurrings },
       { path: 'budgets', Component: Budgets },
       { path: 'savings', Component: Savings },
       { path: 'debts', Component: DebtPlanning },

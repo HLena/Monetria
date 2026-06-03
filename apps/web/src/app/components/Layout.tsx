@@ -21,8 +21,8 @@ import { useAuthStore } from '../store/AuthStore';
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { path: '/accounts', label: 'Cuentas', icon: CreditCard },
-  { path: '/transactions', label: 'Transacciones', icon: ArrowLeftRight },
-  { path: '/fixed-expenses', label: 'Gastos fijos', icon: Repeat },
+  { path: '/movements', label: 'Movimientos', icon: ArrowLeftRight },
+  { path: '/recurrings', label: 'Recurrentes', icon: Repeat },
   { path: '/budgets', label: 'Presupuestos', icon: Target },
   { path: '/savings', label: 'Ahorros', icon: PiggyBank },
   { path: '/debts', label: 'Deudas', icon: TrendingDown },

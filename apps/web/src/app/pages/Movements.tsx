@@ -10,7 +10,7 @@ import { TransactionRow } from '../components/transactions/TransactionRow';
 import { Select, Input } from '@/app/components/ui';
 import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard } from '../components/shared';
 
-export function Transactions() {
+export function Movements() {
   const { accounts, transactions, isLoading, error, addTransaction, updateTransaction, deleteTransaction } =
     useTransactions();
 
@@ -57,7 +57,7 @@ export function Transactions() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar esta transacción?')) return;
+    if (!confirm('¿Eliminar este movimiento?')) return;
     await deleteTransaction(id);
   };
 
@@ -71,7 +71,7 @@ export function Transactions() {
       )}
 
       <HeaderPage
-        title="Transacciones"
+        title="Movimientos"
         subtitle={isLoading ? 'Cargando…' : `${filtered.length} movimientos`}
         actions={
           <button
@@ -79,7 +79,7 @@ export function Transactions() {
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
           >
             <Plus className="w-4 h-4" />
-            Nueva Transacción
+            Nuevo movimiento
           </button>
         }
       />
@@ -124,9 +124,9 @@ export function Transactions() {
       {/* Content */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
         {isLoading ? (
-          <LoadingState message="Cargando transacciones…" />
+          <LoadingState message="Cargando movimientos…" />
         ) : filtered.length === 0 ? (
-          <EmptyState icon={Filter} message="No hay transacciones con estos filtros" />
+          <EmptyState icon={Filter} message="No hay movimientos con estos filtros" />
         ) : (
           <div className="divide-y divide-slate-50 dark:divide-slate-800">
             {filtered.map(tx => (
@@ -142,11 +142,11 @@ export function Transactions() {
         )}
       </div>
 
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Nueva Transacción">
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Nuevo movimiento">
         <TransactionForm onSave={async data => { await addTransaction(data); }} onClose={() => setShowForm(false)} />
       </Modal>
 
-      <Modal isOpen={!!editTx} onClose={() => setEditTx(null)} title="Editar Transacción">
+      <Modal isOpen={!!editTx} onClose={() => setEditTx(null)} title="Editar movimiento">
         {editTx && (
           <TransactionForm
             initial={editTx}
