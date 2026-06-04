@@ -84,6 +84,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapAuthEndpoints();
+app.MapDashboardEndpoints();
 app.MapUserEndpoints();
 app.MapAccountEndpoints();
 app.MapBudgetEndpoints();

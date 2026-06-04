@@ -49,7 +49,10 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
 
         query = ApplyFilters(query, filter);
 
-        return await OrderTransactions(query).ToListAsync(cancellationToken);
+        var ordered = OrderTransactions(query);
+        return filter.Limit.HasValue
+            ? await ordered.Take(filter.Limit.Value).ToListAsync(cancellationToken)
+            : await ordered.ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<Transaction>> ListByAccountIdAsync(
@@ -64,7 +67,10 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
 
         query = ApplyFilters(query, filter with { FromAccountId = null });
 
-        return await OrderTransactions(query).ToListAsync(cancellationToken);
+        var ordered = OrderTransactions(query);
+        return filter.Limit.HasValue
+            ? await ordered.Take(filter.Limit.Value).ToListAsync(cancellationToken)
+            : await ordered.ToListAsync(cancellationToken);
     }
 
     private static IQueryable<Transaction> ApplyFilters(

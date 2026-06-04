@@ -6,6 +6,7 @@ using Monetria.Application.Auth;
 using Monetria.Application.Budgets;
 using Monetria.Application.Categories;
 using Monetria.Application.Common;
+using Monetria.Application.Dashboard;
 using Monetria.Application.Debts;
 using Monetria.Application.Recurrings;
 using Monetria.Application.SavingsGoals;
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IBalanceService, BalanceService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IBudgetService, BudgetService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IDebtService, DebtService>();

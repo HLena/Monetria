@@ -40,4 +40,5 @@ public sealed record TransactionFilterRequest(
     Guid? CategoryId = null,
     int? Month = null,
     int? Year = null,
-    Guid? FromAccountId = null);
+    Guid? FromAccountId = null,
+    int? Limit = null);

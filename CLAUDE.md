@@ -86,7 +86,7 @@ dotnet ef database update --project apps/api/Monetria.Infrastructure --startup-p
 - [x] Fix Budget — CategoryId FK + Month/Year fields + BudgetService calculates SpentAmount
 - [x] Fix SavingsGoal — add LinkedAccountId + IsCompleted
 - [x] Fix Debt — add AccountId + CategoryId + POST /debts/{id}/pay endpoint
-- [ ] Add GET /dashboard endpoint
+- [x] Add GET /dashboard endpoint
 - [ ] Add pagination to GET /transactions
 - [ ] Setup orval in packages/types for TypeScript type generation from Swagger
 - [ ] Create apps/mobile with Expo
