@@ -8,7 +8,9 @@ public sealed record CreateDebtRequest(
     decimal InterestRate,
     decimal MinimumPayment,
     DateTime? NextPaymentDate,
-    string? Type);
+    string? Type,
+    Guid? AccountId = null,
+    Guid? CategoryId = null);
 
 public sealed record UpdateDebtRequest(
     string Name,
@@ -18,11 +20,17 @@ public sealed record UpdateDebtRequest(
     decimal InterestRate,
     decimal MinimumPayment,
     DateTime? NextPaymentDate,
-    string? Type);
+    string? Type,
+    Guid? AccountId = null,
+    Guid? CategoryId = null);
+
+public sealed record PayDebtRequest(decimal Amount);
 
 public sealed record DebtResponse(
     Guid Id,
     Guid UserId,
+    Guid? AccountId,
+    Guid? CategoryId,
     string Name,
     string? Creditor,
     decimal OriginalAmount,
@@ -30,4 +38,5 @@ public sealed record DebtResponse(
     decimal InterestRate,
     decimal MinimumPayment,
     DateTime? NextPaymentDate,
-    string? Type);
+    string? Type,
+    bool IsActive);

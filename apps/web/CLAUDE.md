@@ -53,3 +53,7 @@ empty state
 - No hardcoded styles
 - No blank screens — always show loading/empty/error state
 - Backend first, frontend after API is stable
+
+## Type Sync Rule
+After any backend DTO change, update types in src/types/api/ first,
+then fix the hook, then fix the component. Never the reverse order.

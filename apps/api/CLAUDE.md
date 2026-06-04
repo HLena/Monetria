@@ -40,3 +40,11 @@ dotnet ef database update --project apps/api/Monetria.Infrastructure --startup-p
 - Budget CategoryId must be real FK to Category table — never string/enum
 - Debt payment must create Transaction + reduce RemainingAmount in one UnitOfWork
 - Account balance is always calculated — never stored as column
+
+## Entity Change Checklist
+1. Domain entity updated
+2. EF configuration updated (HasOne, HasForeignKey, HasIndex)
+3. Migration generated and reviewed
+4. Service/DTOs updated to match
+5. Endpoints return new fields
+Never store computed values (Balance, SpentAmount, CurrentAmount) as columns.

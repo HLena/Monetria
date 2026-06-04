@@ -1,21 +1,26 @@
-using Monetria.Domain.Enums;
-
 namespace Monetria.Application.Budgets;
 
 public sealed record CreateBudgetRequest(
-    string Category,
+    Guid CategoryId,
     decimal LimitAmount,
-    BudgetPeriod Period);
+    int Month,
+    int Year,
+    bool RolloverUnused = false);
 
 public sealed record UpdateBudgetRequest(
-    string Category,
+    Guid CategoryId,
     decimal LimitAmount,
-    BudgetPeriod Period);
+    int Month,
+    int Year,
+    bool RolloverUnused = false);
 
 public sealed record BudgetResponse(
     Guid Id,
     Guid UserId,
-    string Category,
+    Guid CategoryId,
     decimal LimitAmount,
-    BudgetPeriod Period,
+    int Month,
+    int Year,
+    bool RolloverUnused,
+    decimal SpentAmount,
     DateTime CreatedAt);

@@ -99,13 +99,20 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
         modelBuilder.Entity<Budget>(entity =>
         {
             entity.HasKey(budget => budget.Id);
-            entity.Property(budget => budget.Category).HasMaxLength(120).IsRequired();
             entity.Property(budget => budget.LimitAmount).HasPrecision(18, 2);
-            entity.Property(budget => budget.Period).HasConversion<string>().HasMaxLength(30).IsRequired();
+            entity.Property(budget => budget.Month).IsRequired();
+            entity.Property(budget => budget.Year).IsRequired();
+            entity.Property(budget => budget.RolloverUnused).IsRequired();
             entity.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(budget => budget.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Category>()
+                .WithMany()
+                .HasForeignKey(budget => budget.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(budget => new { budget.UserId, budget.CategoryId, budget.Month, budget.Year })
+                .IsUnique();
         });
     }
 
@@ -150,10 +157,21 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(debt => debt.InterestRate).HasPrecision(9, 4);
             entity.Property(debt => debt.MinimumPayment).HasPrecision(18, 2);
             entity.Property(debt => debt.Type).HasMaxLength(80);
+            entity.Property(debt => debt.IsActive).IsRequired();
             entity.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(debt => debt.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Account>()
+                .WithMany()
+                .HasForeignKey(debt => debt.AccountId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Category>()
+                .WithMany()
+                .HasForeignKey(debt => debt.CategoryId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 
@@ -212,6 +230,7 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(goal => goal.Name).HasMaxLength(120).IsRequired();
             entity.Property(goal => goal.TargetAmount).HasPrecision(18, 2);
             entity.Property(goal => goal.CurrentAmount).HasPrecision(18, 2);
+            entity.Property(goal => goal.IsCompleted).IsRequired();
             entity.Property(goal => goal.Category).HasMaxLength(120);
             entity.Property(goal => goal.Color).HasMaxLength(20);
             entity.Property(goal => goal.Description).HasMaxLength(500);
@@ -219,6 +238,11 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
                 .WithMany()
                 .HasForeignKey(goal => goal.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Account>()
+                .WithMany()
+                .HasForeignKey(goal => goal.LinkedAccountId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 

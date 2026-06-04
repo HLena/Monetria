@@ -9,6 +9,9 @@ public class SavingsGoal
     public decimal TargetAmount { get; set; }
     public decimal CurrentAmount { get; set; }
 
+    public Guid? LinkedAccountId { get; set; }
+    public bool IsCompleted { get; set; }
+
     public DateTime? TargetDate { get; set; }
 
     public string? Category { get; set; }

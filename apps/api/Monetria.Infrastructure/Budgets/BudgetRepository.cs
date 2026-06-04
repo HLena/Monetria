@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Monetria.Application.Budgets;
 using Monetria.Domain.Entities;
+using Monetria.Domain.Enums;
 using Monetria.Infrastructure.Persistence;
 
 namespace Monetria.Infrastructure.Budgets;
@@ -24,9 +25,29 @@ public sealed class BudgetRepository(MonetriaDbContext dbContext) : IBudgetRepos
         return await dbContext.Budgets
             .AsNoTracking()
             .Where(budget => budget.UserId == userId)
-            .OrderBy(budget => budget.Category)
-            .ThenBy(budget => budget.Period)
+            .OrderBy(budget => budget.Year)
+            .ThenBy(budget => budget.Month)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<decimal> GetSpentAmountAsync(
+        Guid userId,
+        Guid categoryId,
+        int month,
+        int year,
+        CancellationToken cancellationToken = default)
+    {
+        return await (
+            from t in dbContext.Transactions
+            join a in dbContext.Accounts on t.FromAccountId equals a.Id
+            where t.IsActive
+                && t.Type == TransactionType.Expense
+                && t.CategoryId == categoryId
+                && t.Date.Month == month
+                && t.Date.Year == year
+                && a.UserId == userId
+            select t.Amount
+        ).SumAsync(cancellationToken);
     }
 
     public void Remove(Budget budget)

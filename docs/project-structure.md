@@ -106,24 +106,35 @@ Color, KeyIcon (nombre de ícono Lucide), CreatedAt, UpdatedAt
 
 #### `Budget`
 ```
-Id, UserId (FK), Category, LimitAmount, Period, CreatedAt
+Id, UserId (FK), CategoryId (FK → Category), LimitAmount, Month (int), Year (int), RolloverUnused, CreatedAt
+SpentAmount = calculated (never stored)
+Unique: (UserId, CategoryId, Month, Year)
 ```
 
 #### `Debt`
 ```
-Id, UserId (FK), Name, Creditor, OriginalAmount, RemainingAmount
-InterestRate, MinimumPayment, NextPaymentDate, Type
+Id, UserId (FK), AccountId (FK nullable), CategoryId (FK nullable)
+Name, Creditor, OriginalAmount, RemainingAmount
+InterestRate, MinimumPayment, NextPaymentDate, Type, IsActive
 ```
 
-#### `FixedExpense`
+#### `Recurring` (renamed from FixedExpense)
 ```
-Id, UserId (FK), AccountId (FK), Name, Amount, Category
-Period, DueDay, IsActive, Notes
+Id, UserId (FK), AccountId (FK), ToAccountId (FK nullable), CategoryId (FK nullable)
+Name, Type, AmountType (Fixed/Estimated/VariableFree), Amount (nullable), EstimatedAmount (nullable)
+Frequency, StartDate, EndDate (nullable), NextDueDate, IsActive
+```
+
+#### `RecurringOccurrence`
+```
+Id, RecurringId (FK), ScheduledDate, Status (Pending/Confirmed/Skipped/AutoRegistered)
+SuggestedAmount, RealAmount, TransactionId (nullable), ConfirmedAt
 ```
 
 #### `SavingsGoal`
 ```
 Id, UserId (FK), Name, TargetAmount, CurrentAmount
+LinkedAccountId (FK nullable → Account), IsCompleted
 TargetDate, Category, Color, Description
 ```
 
@@ -215,10 +226,11 @@ Capa delgada. Cada grupo de endpoints delega en el servicio de aplicación corre
 | Debts | GET | `/debts` | JWT |
 | Debts | PUT | `/debts/{id}` | JWT |
 | Debts | DELETE | `/debts/{id}` | JWT |
-| FixedExpenses | POST | `/fixed-expenses` | JWT |
-| FixedExpenses | GET | `/fixed-expenses` | JWT |
-| FixedExpenses | PUT | `/fixed-expenses/{id}` | JWT |
-| FixedExpenses | PATCH | `/fixed-expenses/{id}/deactivate` | JWT |
+| Debts | POST | `/debts/{id}/pay` | JWT |
+| Recurrings | POST | `/recurrings` | JWT |
+| Recurrings | GET | `/recurrings` | JWT |
+| Recurrings | PUT | `/recurrings/{id}` | JWT |
+| Recurrings | PATCH | `/recurrings/{id}/deactivate` | JWT |
 | SavingsGoals | POST | `/savings-goals` | JWT |
 | SavingsGoals | GET | `/savings-goals` | JWT |
 | SavingsGoals | PUT | `/savings-goals/{id}` | JWT |
@@ -331,10 +343,10 @@ Transaction.ToAccountId ──> Account   (solo en transferencias)
 
 ## Pending Changes (in order)
 - [x] Fix transfers — 2 atomic Transaction rows with TransferPairId
-- [ ] Rename FixedExpense → Recurring + RecurringOccurrence entity
-- [ ] Fix Budget — CategoryId FK + Month/Year + calculated SpentAmount
-- [ ] Fix SavingsGoal — LinkedAccountId + IsCompleted
-- [ ] Fix Debt — AccountId + CategoryId + POST /debts/{id}/pay
+- [x] Rename FixedExpense → Recurring + RecurringOccurrence entity
+- [x] Fix Budget — CategoryId FK + Month/Year + calculated SpentAmount
+- [x] Fix SavingsGoal — LinkedAccountId + IsCompleted
+- [x] Fix Debt — AccountId + CategoryId + POST /debts/{id}/pay
 - [ ] GET /dashboard endpoint
 - [ ] Pagination for GET /transactions
 - [ ] orval setup in packages/types

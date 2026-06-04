@@ -83,9 +83,9 @@ dotnet ef database update --project apps/api/Monetria.Infrastructure --startup-p
 ## Pending Changes (do these in order)
 - [x] Fix transfers — 2 atomic rows with TransferPairId (migration + data backfill applied)
 - [x] Rename FixedExpense → Recurring + new fields + RecurringOccurrence entity
-- [ ] Fix Budget — CategoryId FK + Month/Year fields + BudgetService calculates SpentAmount
-- [ ] Fix SavingsGoal — add LinkedAccountId + IsCompleted
-- [ ] Fix Debt — add AccountId + CategoryId + POST /debts/{id}/pay endpoint
+- [x] Fix Budget — CategoryId FK + Month/Year fields + BudgetService calculates SpentAmount
+- [x] Fix SavingsGoal — add LinkedAccountId + IsCompleted
+- [x] Fix Debt — add AccountId + CategoryId + POST /debts/{id}/pay endpoint
 - [ ] Add GET /dashboard endpoint
 - [ ] Add pagination to GET /transactions
 - [ ] Setup orval in packages/types for TypeScript type generation from Swagger
@@ -149,3 +149,8 @@ onSuccess: (newTransaction) => {
 - Create transaction → POST /transactions → GET /transactions
 - Edit budget       → PUT /budgets/:id   → GET /budgets
 - Delete account    → DELETE /accounts/:id → GET /accounts
+
+## Change Protocol
+When renaming entities: rename first, add fields second — never both in one session.
+Migrations always run from repo root: cd apps/api && dotnet ef migrations add ...
+After any Domain change: update Infrastructure config + generate migration before touching Application.

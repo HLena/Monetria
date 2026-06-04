@@ -15,6 +15,7 @@ public static class DebtEndpoints
         group.MapGet("/", ListDebtsAsync).WithName("ListDebts");
         group.MapPut("/{debtId:guid}", UpdateDebtAsync).WithName("UpdateDebt");
         group.MapDelete("/{debtId:guid}", DeleteDebtAsync).WithName("DeleteDebt");
+        group.MapPost("/{debtId:guid}/pay", PayDebtAsync).WithName("PayDebt");
 
         return endpoints;
     }
@@ -57,5 +58,16 @@ public static class DebtEndpoints
     {
         await debtService.DeleteAsync(user.GetRequiredUserId(), debtId, cancellationToken);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> PayDebtAsync(
+        Guid debtId,
+        PayDebtRequest request,
+        ClaimsPrincipal user,
+        IDebtService debtService,
+        CancellationToken cancellationToken)
+    {
+        var debt = await debtService.PayAsync(user.GetRequiredUserId(), debtId, request, cancellationToken);
+        return Results.Ok(debt);
     }
 }
