@@ -15,6 +15,11 @@ public interface ITransactionRepository
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default);
 
+    Task<int> CountByUserIdAsync(
+        Guid userId,
+        TransactionFilterRequest filter,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Transaction>> ListByAccountIdAsync(
         Guid accountId,
         TransactionFilterRequest filter,

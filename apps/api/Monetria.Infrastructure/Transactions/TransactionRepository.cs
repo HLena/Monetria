@@ -38,21 +38,27 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default)
     {
-        var userAccountIds = dbContext.Accounts
-            .Where(a => a.UserId == userId)
-            .Select(a => a.Id);
-
-        var query = dbContext.Transactions
-            .AsNoTracking()
-            .Include(transaction => transaction.Category)
-            .Where(transaction => transaction.IsActive && userAccountIds.Contains(transaction.FromAccountId));
-
-        query = ApplyFilters(query, filter);
-
+        var query = BuildUserQuery(userId, filter);
         var ordered = OrderTransactions(query);
-        return filter.Limit.HasValue
-            ? await ordered.Take(filter.Limit.Value).ToListAsync(cancellationToken)
-            : await ordered.ToListAsync(cancellationToken);
+
+        if (filter.Limit.HasValue)
+            return await ordered.Take(filter.Limit.Value).ToListAsync(cancellationToken);
+
+        if (filter.Page.HasValue && filter.PageSize.HasValue)
+        {
+            var skip = (filter.Page.Value - 1) * filter.PageSize.Value;
+            return await ordered.Skip(skip).Take(filter.PageSize.Value).ToListAsync(cancellationToken);
+        }
+
+        return await ordered.ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountByUserIdAsync(
+        Guid userId,
+        TransactionFilterRequest filter,
+        CancellationToken cancellationToken = default)
+    {
+        return await BuildUserQuery(userId, filter).CountAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<Transaction>> ListByAccountIdAsync(
@@ -73,6 +79,26 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
             : await ordered.ToListAsync(cancellationToken);
     }
 
+    public async Task<Transaction?> GetTransferPairAsync(Guid transactionId, Guid transferPairId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Transactions
+            .FirstOrDefaultAsync(t => t.TransferPairId == transferPairId && t.Id != transactionId, cancellationToken);
+    }
+
+    private IQueryable<Transaction> BuildUserQuery(Guid userId, TransactionFilterRequest filter)
+    {
+        var userAccountIds = dbContext.Accounts
+            .Where(a => a.UserId == userId)
+            .Select(a => a.Id);
+
+        var query = dbContext.Transactions
+            .AsNoTracking()
+            .Include(transaction => transaction.Category)
+            .Where(transaction => transaction.IsActive && userAccountIds.Contains(transaction.FromAccountId));
+
+        return ApplyFilters(query, filter);
+    }
+
     private static IQueryable<Transaction> ApplyFilters(
         IQueryable<Transaction> query,
         TransactionFilterRequest filter)
@@ -86,19 +112,13 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         }
 
         if (filter.Type.HasValue)
-        {
             query = query.Where(transaction => transaction.Type == filter.Type.Value);
-        }
 
         if (filter.CategoryId.HasValue)
-        {
             query = query.Where(transaction => transaction.CategoryId == filter.CategoryId.Value);
-        }
 
         if (filter.FromAccountId.HasValue)
-        {
             query = query.Where(transaction => transaction.FromAccountId == filter.FromAccountId.Value);
-        }
 
         if (filter.Month.HasValue)
         {
@@ -114,12 +134,6 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         }
 
         return query;
-    }
-
-    public async Task<Transaction?> GetTransferPairAsync(Guid transactionId, Guid transferPairId, CancellationToken cancellationToken = default)
-    {
-        return await dbContext.Transactions
-            .FirstOrDefaultAsync(t => t.TransferPairId == transferPairId && t.Id != transactionId, cancellationToken);
     }
 
     private static IOrderedQueryable<Transaction> OrderTransactions(IQueryable<Transaction> query)

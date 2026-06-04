@@ -3,6 +3,7 @@ using Monetria.Application.Categories;
 using Monetria.Application.Common;
 using Monetria.Domain.Entities;
 using Monetria.Domain.Enums;
+using System.Collections.Generic;
 
 namespace Monetria.Application.Transactions;
 
@@ -240,23 +241,30 @@ public sealed class TransactionService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<TransactionResponse>> ListByUserIdAsync(
+    public async Task<PagedResponse<TransactionResponse>> ListByUserIdAsync(
         Guid userId,
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
-        {
             throw new ArgumentException("User id is required.", nameof(userId));
-        }
 
-        ValidateFilter(filter);
+        var page = Math.Max(1, filter.Page ?? 1);
+        var pageSize = Math.Clamp(filter.PageSize ?? 20, 1, 100);
+        var pagedFilter = filter with { Page = page, PageSize = pageSize, Limit = null };
 
-        var transactions = await transactionRepository.ListByUserIdAsync(userId, filter, cancellationToken);
+        ValidateFilter(pagedFilter);
 
-        return transactions
-            .Select(MapToResponse)
-            .ToList();
+        var totalCount = await transactionRepository.CountByUserIdAsync(userId, pagedFilter, cancellationToken);
+        var transactions = await transactionRepository.ListByUserIdAsync(userId, pagedFilter, cancellationToken);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        return new PagedResponse<TransactionResponse>(
+            transactions.Select(MapToResponse).ToList(),
+            totalCount,
+            page,
+            pageSize,
+            totalPages);
     }
 
     public async Task<IReadOnlyList<TransactionResponse>> ListByAccountIdAsync(

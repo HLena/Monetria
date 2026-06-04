@@ -103,8 +103,8 @@ public static class TransactionEndpoints
         CancellationToken cancellationToken)
     {
         var userId = user.GetRequiredUserId();
-        var transactions = await transactionService.ListByUserIdAsync(userId, filter, cancellationToken);
+        var paged = await transactionService.ListByUserIdAsync(userId, filter, cancellationToken);
 
-        return Results.Ok(transactions);
+        return Results.Ok(paged);
     }
 }

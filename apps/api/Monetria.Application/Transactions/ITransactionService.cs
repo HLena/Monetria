@@ -1,3 +1,5 @@
+using Monetria.Application.Common;
+
 namespace Monetria.Application.Transactions;
 
 public interface ITransactionService
@@ -10,7 +12,7 @@ public interface ITransactionService
 
     Task DeleteAsync(Guid userId, Guid transactionId, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<TransactionResponse>> ListByUserIdAsync(
+    Task<PagedResponse<TransactionResponse>> ListByUserIdAsync(
         Guid userId,
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default);
