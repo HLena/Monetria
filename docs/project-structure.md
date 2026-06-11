@@ -1,8 +1,8 @@
 # Monetria — Estructura del Proyecto
 
-**Última actualización:** 2026-05-28
+**Última actualización:** 2026-06-04
 
-Monetria es una aplicación de finanzas personales full-stack. Permite gestionar cuentas, transacciones, presupuestos, gastos fijos, metas de ahorro y deudas.
+Monetria es una aplicación de finanzas personales full-stack. Permite gestionar cuentas, transacciones, presupuestos, recurrentes, metas de ahorro, alcancías y deudas.
 
 ---
 
@@ -77,72 +77,107 @@ Entidades y enums sin dependencias externas.
 #### `User`
 ```
 Id, FirstName, LastName, Email (único), PasswordHash, CreatedAt
-→ Tiene: Accounts (1:N)
+→ Tiene: Accounts, Budgets, Recurrings, SavingsGoals, SavingsPockets, Debts
 ```
 
 #### `Account`
 ```
 Id, UserId (FK), Name, Type, CurrencyCode (default: PEN)
-ColorCode, IsActive, CreatedAt, UpdatedAt
-→ Campos de tarjeta de crédito (opcionales):
+InitialBalance (decimal, default 0), ColorCode, IsActive, CreatedAt, UpdatedAt
+→ Campos opcionales para tarjeta:
   InstitutionName, CardLast4Digits, CreditLimit,
   CardHolderName, StatementClosingDay, PaymentDueDay
-→ Tiene: Transactions (1:N)
+→ Saldo NUNCA almacenado — siempre calculado:
+  Balance = InitialBalance + SUM(Income) - SUM(Expense)
 ```
 
 #### `Transaction`
 ```
 Id, FromAccountId (FK), Type, CategoryId (FK nullable)
-Amount, Description, ToAccountId (FK nullable, para transferencias)
-IsActive (soft delete), Date, CreatedAt
+Amount (decimal 18,2), Description
+ToAccountId (FK nullable — solo transferencias)
+TransferPairId (Guid nullable — vincula las 2 filas de una transferencia)
+IsActive (soft delete), Date (DateOnly), CreatedAt
 ```
 
 #### `Category`
 ```
-Id, UserId (nullable — null = categoría por defecto del sistema)
+Id, UserId (nullable — null = categoría del sistema)
 Name, Type (Income/Expense), IsDefault, IsActive
 Color, KeyIcon (nombre de ícono Lucide), CreatedAt, UpdatedAt
 ```
 
 #### `Budget`
 ```
-Id, UserId (FK), CategoryId (FK → Category), LimitAmount, Month (int), Year (int), RolloverUnused, CreatedAt
-SpentAmount = calculated (never stored)
-Unique: (UserId, CategoryId, Month, Year)
+Id, UserId (FK), CategoryId (FK real a Category)
+LimitAmount, Month (int), Year (int)
+RolloverUnused (bool), CreatedAt
+Restricción única: (UserId, CategoryId, Month, Year)
+```
+
+#### `Recurring` (antes FixedExpense)
+```
+Id, UserId (FK), AccountId (FK), ToAccountId (FK nullable)
+CategoryId (FK nullable), Name
+Type (Income/Expense/Transfer)
+AmountType (Fixed/Estimated/VariableFree)
+Amount (nullable), EstimatedAmount (nullable)
+Frequency (Daily/Weekly/Biweekly/Monthly/Yearly)
+StartDate, EndDate (nullable), NextDueDate
+Notes, IsActive, CreatedAt
+```
+
+#### `RecurringOccurrence`
+```
+Id, RecurringId (FK), ScheduledDate (DateOnly)
+Status (Pending/Confirmed/Skipped/AutoRegistered)
+SuggestedAmount (nullable), RealAmount (nullable)
+TransactionId (FK nullable), ConfirmedAt (nullable)
+```
+
+#### `SavingsGoal`
+```
+Id, UserId (FK), Name
+TargetAmount (decimal 18,2, requerido)
+CurrentAmount (decimal 18,2)
+IsCompleted (bool — true cuando CurrentAmount >= TargetAmount)
+LinkedAccountId (Guid?, FK a Account — si presente, CurrentAmount = saldo calculado)
+TargetDate (DateOnly?, opcional)
+CategoryId (Guid?, FK a Category)
+Color (string?)
+Description (string?)
+IsActive (bool, soft delete)
+CreatedAt (DateTime UTC)
+```
+
+#### `SavingsPocket`
+```
+Id, UserId (FK), Name
+CurrentAmount (decimal 18,2 — nunca negativo, empieza en 0)
+LinkedAccountId (Guid?, FK a Account — set null si se elimina la cuenta)
+Color (string?)
+Description (string?)
+IsActive (bool, soft delete)
+CreatedAt (DateTime UTC)
+UpdatedAt (DateTime UTC)
+
+SIN: TargetAmount, TargetDate, IsCompleted, CategoryId
 ```
 
 #### `Debt`
 ```
 Id, UserId (FK), AccountId (FK nullable), CategoryId (FK nullable)
 Name, Creditor, OriginalAmount, RemainingAmount
-InterestRate, MinimumPayment, NextPaymentDate, Type, IsActive
-```
-
-#### `Recurring` (renamed from FixedExpense)
-```
-Id, UserId (FK), AccountId (FK), ToAccountId (FK nullable), CategoryId (FK nullable)
-Name, Type, AmountType (Fixed/Estimated/VariableFree), Amount (nullable), EstimatedAmount (nullable)
-Frequency, StartDate, EndDate (nullable), NextDueDate, IsActive
-```
-
-#### `RecurringOccurrence`
-```
-Id, RecurringId (FK), ScheduledDate, Status (Pending/Confirmed/Skipped/AutoRegistered)
-SuggestedAmount, RealAmount, TransactionId (nullable), ConfirmedAt
-```
-
-#### `SavingsGoal`
-```
-Id, UserId (FK), Name, TargetAmount, CurrentAmount
-LinkedAccountId (FK nullable → Account), IsCompleted
-TargetDate, Category, Color, Description
+InterestRate (decimal 9,4), MinimumPayment
+NextPaymentDate, Type, IsActive, CreatedAt
 ```
 
 **Enums:**
-- `AccountType`: Cash (1), BankAccount (2), CreditCard (3), EWallet (4)
+- `AccountType`: Cash, BankAccount, CreditCard, EWallet
 - `TransactionType`: Income, Expense, Transfer
-- `BudgetPeriod`: Monthly, Weekly
-- `ExpensePeriod`: Monthly, Weekly, Yearly
+- `RecurringAmountType`: Fixed, Estimated, VariableFree
+- `RecurringFrequency`: Daily, Weekly, Biweekly, Monthly, Yearly
+- `RecurringOccurrenceStatus`: Pending, Confirmed, Skipped, AutoRegistered
 
 ---
 
@@ -150,22 +185,33 @@ TargetDate, Category, Color, Description
 
 Servicios, interfaces de repositorios y DTOs. Sin dependencias de infraestructura.
 
-**Patrón por dominio:**
+**Patrón por feature:**
 ```
 Application/
 ├── Accounts/
 │   ├── IAccountService.cs / AccountService.cs
 │   ├── IAccountRepository.cs
 │   ├── IBalanceService.cs / BalanceService.cs
-│   └── AccountDtos.cs          ← CreateAccountRequest, UpdateAccountRequest,
-│                                   AccountSummaryResponse, AccountDetailResponse
+│   └── AccountDtos.cs
 ├── Auth/
 │   ├── IAuthService.cs / AuthService.cs
-│   ├── IJwtTokenGenerator.cs
-│   ├── IPasswordService.cs
-│   └── AuthDtos.cs             ← RegisterRequest, LoginRequest, AuthResponse
-├── [Budgets / Categories / Debts / FixedExpenses / SavingsGoals / Transactions / Users]
-│   └── (mismo patrón)
+│   ├── IJwtTokenGenerator.cs / IPasswordService.cs
+│   └── AuthDtos.cs
+├── Budgets/
+├── Categories/
+├── Debts/
+├── Recurrings/
+│   └── RecurringOccurrences/
+├── SavingsGoals/
+│   ├── ISavingsGoalService.cs / SavingsGoalService.cs
+│   ├── ISavingsGoalRepository.cs
+│   └── SavingsGoalDtos.cs
+├── SavingsPockets/                          ← NUEVO
+│   ├── ISavingsPocketService.cs / SavingsPocketService.cs
+│   ├── ISavingsPocketRepository.cs
+│   └── SavingsPocketDtos.cs
+├── Transactions/
+├── Users/
 └── Common/
     └── IUnitOfWork.cs
 ```
@@ -174,180 +220,79 @@ Application/
 
 ### 3. `Monetria.Infrastructure` — Infraestructura
 
-Implementaciones concretas de repositorios, acceso a base de datos y auth.
-
-- **`MonetriaDbContext.cs`**: DbContext de EF Core con todas las entidades
-- **`JwtTokenGenerator.cs`**: Generación de tokens JWT
-- **`PasswordService.cs`**: Hash/verificación de contraseñas (BCrypt)
-- **Repositorios**: Un repositorio EF Core por entidad
+```
+Infrastructure/
+├── Persistence/
+│   └── MonetriaDbContext.cs        ← DbSets + configuraciones EF Core
+├── Accounts/
+├── Auth/
+├── Budgets/
+├── Categories/
+├── Debts/
+├── Recurrings/
+├── SavingsGoals/
+├── SavingsPockets/                  ← NUEVO
+│   └── SavingsPocketRepository.cs
+├── Transactions/
+└── Users/
+```
 
 **Migraciones aplicadas:**
-1. `20260429162409_InitialCreate` — Esquema inicial
-2. `20260513210732_RenameAccountCreditColumns` — Renombramiento de columnas
-3. `20260518205207_AddTransactionTransferAndSoftDelete` — Tipo Transfer + soft delete
-4. `20260520210924_AddCategoryKeyIconAndReseedCategories` — Campo icon + categorías por defecto
-5. `20260522040601_RenameTransactionAccountIdFields` — `FromAccountId` / `ToAccountId`
-6. `20260522041029_RemoveAccountInitialBalanceAndProviderName` — Limpieza de columnas
+1. `InitialCreate` — Esquema inicial
+2. `AddTransferSupport` — TransferPairId, ToAccountId en Transaction
+3. `AddRecurrings` — Tabla Recurrings y RecurringOccurrences
+4. `AddSavingsPockets` — Nueva tabla SavingsPockets + columnas a SavingsGoals
 
 ---
 
-### 4. `Monetria.API` — Endpoints HTTP (Minimal APIs)
+### 4. `Monetria.API` — Endpoints
 
-Capa delgada. Cada grupo de endpoints delega en el servicio de aplicación correspondiente.
+Un archivo de endpoints por feature, todos registrados en `Program.cs`.
 
-#### Endpoints disponibles
-
-| Grupo | Método | Ruta | Auth |
-|---|---|---|---|
-| Auth | POST | `/auth/register` | No |
-| Auth | POST | `/auth/login` | No |
-| Users | GET | `/users/{id}` | JWT |
-| Accounts | POST | `/accounts` | JWT |
-| Accounts | GET | `/accounts` | JWT |
-| Accounts | GET | `/accounts/{id}` | JWT |
-| Accounts | PUT | `/accounts/{id}` | JWT |
-| Accounts | DELETE | `/accounts/{id}` | JWT |
-| Accounts | GET | `/accounts/balance/summary` | JWT |
-| Transactions | POST | `/transactions` | JWT |
-| Transactions | GET | `/transactions` | JWT |
-| Transactions | GET | `/transactions/{id}` | JWT |
-| Transactions | PUT | `/transactions/{id}` | JWT |
-| Transactions | DELETE | `/transactions/{id}` | JWT |
-| Transactions | GET | `/accounts/{accountId}/transactions` | JWT |
-| Categories | POST | `/categories` | JWT |
-| Categories | GET | `/categories` | JWT |
-| Categories | PATCH | `/categories/{id}` | JWT |
-| Categories | PATCH | `/categories/{id}/deactivate` | JWT |
-| Budgets | POST | `/budgets` | JWT |
-| Budgets | GET | `/budgets` | JWT |
-| Budgets | PUT | `/budgets/{id}` | JWT |
-| Budgets | DELETE | `/budgets/{id}` | JWT |
-| Debts | POST | `/debts` | JWT |
-| Debts | GET | `/debts` | JWT |
-| Debts | PUT | `/debts/{id}` | JWT |
-| Debts | DELETE | `/debts/{id}` | JWT |
-| Debts | POST | `/debts/{id}/pay` | JWT |
-| Recurrings | POST | `/recurrings` | JWT |
-| Recurrings | GET | `/recurrings` | JWT |
-| Recurrings | PUT | `/recurrings/{id}` | JWT |
-| Recurrings | PATCH | `/recurrings/{id}/deactivate` | JWT |
-| SavingsGoals | POST | `/savings-goals` | JWT |
-| SavingsGoals | GET | `/savings-goals` | JWT |
-| SavingsGoals | PUT | `/savings-goals/{id}` | JWT |
-| SavingsGoals | DELETE | `/savings-goals/{id}` | JWT |
+| Feature | Grupo de rutas |
+|---|---|
+| Auth | `/auth` |
+| Accounts | `/accounts` |
+| Transactions | `/transactions` |
+| Categories | `/categories` |
+| Budgets | `/budgets` |
+| Recurrings | `/recurrings` |
+| SavingsGoals | `/savings-goals` |
+| SavingsPockets | `/savings-pockets` ← NUEVO |
+| Debts | `/debts` |
 
 ---
 
-## Frontend
+## Reglas financieras globales
 
-### Páginas (Rutas)
+- Saldo de cuenta = `InitialBalance + SUM(Income) - SUM(Expense)` — nunca almacenado
+- Las transferencias nunca afectan presupuestos ni reportes de ingresos/gastos
+- Transferencia = siempre 2 filas en una sola `UnitOfWork`, vinculadas por `TransferPairId`
+- Presupuesto = `SUM(transactions WHERE CategoryId + Month/Year + Type=Expense)`
+- Recurrente `Fixed` → Transaction automática sin confirmación
+- Recurrente `Estimated/VariableFree` → `RecurringOccurrence(Pending)`, usuario confirma
+- `SavingsGoal` con `LinkedAccountId` → `CurrentAmount` = saldo calculado de esa cuenta
+- `SavingsPocket.CurrentAmount` nunca puede ser negativo — validado en servicio
+- Pago de deuda → `Transaction(Expense)` + reducir `RemainingAmount`, atómico
+- **Nunca borrar datos financieros** — siempre soft delete (`IsActive = false`)
+- Montos = `decimal(18,2)` siempre — nunca `float` o `double`
+- Tasas de interés = `decimal(9,4)`
+- IDs = `Guid`
+- Timestamps = `DateTime UTC`
+- Fechas de calendario = `DateOnly`
 
-| Página | Ruta | Descripción |
+---
+
+## Diferencia SavingsGoal vs SavingsPocket
+
+| | `SavingsGoal` | `SavingsPocket` |
 |---|---|---|
-| `Login.tsx` | `/login` | Registro e inicio de sesión |
-| `Dashboard.tsx` | `/` | Resumen con balance, transacciones recientes |
-| `Accounts.tsx` | `/accounts` | Lista de cuentas + crear |
-| `AccountDetail.tsx` | `/accounts/:id` | Detalle de cuenta + sus transacciones |
-| `Transactions.tsx` | `/transactions` | Todas las transacciones con filtros |
-| `Budgets.tsx` | `/budgets` | Gestión de presupuestos |
-| `FixedExpenses.tsx` | `/fixed-expenses` | Gastos fijos periódicos |
-| `Savings.tsx` | `/savings` | Metas de ahorro |
-| `DebtPlanning.tsx` | `/debts` | Planificación de deudas |
-| `Reports.tsx` | `/reports` | Reportes y gráficas |
-
-### Componentes Compartidos (`src/app/components/shared/`)
-
-- `HeaderPage` — Encabezado estándar de página (título, subtítulo, acciones)
-- `PageContainer` — Wrapper de contenido con paddings
-- `EmptyState` — Mensaje de estado vacío con ícono
-- `ErrorBanner` — Alerta de error
-- `LoadingState` — Spinner de carga
-
-### Hooks Personalizados (`src/app/hooks/`)
-
-```typescript
-useAccounts()        // Carga todas las cuentas al montar
-useTransactions()    // Carga transacciones, cuentas y categorías al montar
-useAccount(id)       // Carga una sola cuenta por ID
-```
-
-### Estado Global (Zustand, `src/app/store/`)
-
-- **`AuthStore`** — Usuario autenticado, token JWT, login/logout/register
-- **`FinanceStore`** — Cuentas, transacciones, categorías, presupuestos, metas, deudas, balance
-
-### Cliente HTTP (`src/lib/apiClient.ts`)
-
-Centraliza las llamadas HTTP e inyecta automáticamente el header `Authorization: Bearer <token>` en todas las peticiones autenticadas.
-
-### Mappers (`src/app/mappers/`)
-
-Transforman los DTOs de la API en modelos de UI:
-- `accountMappers.ts` — `AccountSummaryDto` / `AccountDetailDto` → `Account` (UI)
-- `transactionMappers.ts` — `TransactionDto` → `Transaction` (UI)
-
-### Tipos TypeScript (`src/app/types/`)
-
-```
-types/
-├── api/          ← Tipos de respuesta de la API (DTOs)
-│   ├── accounts.ts       AccountSummaryDto, AccountDetailDto, UserBalanceDto
-│   ├── transactions.ts   TransactionDto, CreateTransactionRequestBody
-│   └── categories.ts     CategoryDto
-├── models/       ← Modelos del frontend (UI)
-│   └── account.ts
-└── enums/        ← Enums de UI (AccountType)
-```
-
----
-
-## Patrones Clave
-
-| Patrón | Dónde | Por qué |
-|---|---|---|
-| Clean Architecture | Backend | Separación de responsabilidades, testabilidad |
-| Repository + Unit of Work | Backend | Abstracción de acceso a datos, transacciones |
-| DTO | Backend | Desacopla contratos HTTP de entidades de dominio |
-| Soft Delete | Transactions, Categories | Preservar historial sin borrado físico |
-| JWT stateless | Auth | Escalabilidad, sin sesiones en servidor |
-| Custom Hooks | Frontend | Encapsulan lógica de datos y estados async |
-| Mapper Layer | Frontend | Desacopla tipos de API de modelos de UI |
-| Minimal APIs | Backend | Endpoints concisos sin Controllers |
-
----
-
-## Base de Datos — Relaciones Principales
-
-```
-User ──< Account ──< Transaction >── Category
-                 └──< FixedExpense
-User ──< Budget
-User ──< Debt
-User ──< SavingsGoal
-Transaction.ToAccountId ──> Account   (solo en transferencias)
-```
-
-**Precisión monetaria:** `decimal(18, 2)` para montos; `decimal(9, 4)` para tasas de interés.
-
-## Monorepo Structure (updated 2026-05-30)
-- Restructured to Turborepo monorepo
-- apps/web ← React frontend
-- apps/api ← .NET backend
-- packages/enums ← @monetria/enums shared package
-
-## Completed Changes
-- [x] Monorepo setup with Turborepo + npm workspaces
-- [x] @monetria/enums package extracted
-- [x] InitialBalance restored to Account entity
-- [x] BalanceService updated to include InitialBalance
-
-## Pending Changes (in order)
-- [x] Fix transfers — 2 atomic Transaction rows with TransferPairId
-- [x] Rename FixedExpense → Recurring + RecurringOccurrence entity
-- [x] Fix Budget — CategoryId FK + Month/Year + calculated SpentAmount
-- [x] Fix SavingsGoal — LinkedAccountId + IsCompleted
-- [x] Fix Debt — AccountId + CategoryId + POST /debts/{id}/pay
-- [ ] GET /dashboard endpoint
-- [ ] Pagination for GET /transactions
-- [ ] orval setup in packages/types
-- [ ] apps/mobile with Expo
+| Tiene monto objetivo | ✅ `TargetAmount` | ❌ |
+| Tiene fecha límite | ✅ `TargetDate` opcional | ❌ |
+| Se marca completada | ✅ `IsCompleted` | ❌ |
+| Tiene categoría | ✅ `CategoryId` FK | ❌ |
+| Vinculable a cuenta | ✅ | ✅ |
+| Depósitos y retiros libres | ❌ solo incremento | ✅ `POST /adjust` |
+| Puede quedar en negativo | ❌ | ❌ |
+| Soft delete | ✅ | ✅ |
+| Calculadora de ahorro | ✅ aplica | ❌ no aplica |

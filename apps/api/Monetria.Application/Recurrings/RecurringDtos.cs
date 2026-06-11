@@ -2,6 +2,18 @@ using Monetria.Domain.Enums;
 
 namespace Monetria.Application.Recurrings;
 
+public sealed record RecurringOccurrenceResponse(
+    Guid Id,
+    Guid RecurringId,
+    DateOnly ScheduledDate,
+    RecurringOccurrenceStatus Status,
+    decimal? SuggestedAmount,
+    decimal? RealAmount,
+    Guid? TransactionId,
+    DateTime? ConfirmedAt);
+
+public sealed record ConfirmOccurrenceRequest(decimal? RealAmount);
+
 public sealed record CreateRecurringRequest(
     Guid AccountId,
     Guid? ToAccountId,
