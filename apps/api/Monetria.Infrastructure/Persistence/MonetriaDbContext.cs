@@ -13,6 +13,7 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
     public DbSet<Recurring> Recurrings => Set<Recurring>();
     public DbSet<RecurringOccurrence> RecurringOccurrences => Set<RecurringOccurrence>();
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
+    public DbSet<SavingsPocket> SavingsPockets => Set<SavingsPocket>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<User> Users => Set<User>();
 
@@ -29,6 +30,7 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
         ConfigureRecurring(modelBuilder);
         ConfigureRecurringOccurrence(modelBuilder);
         ConfigureSavingsGoal(modelBuilder);
+        ConfigureSavingsPocket(modelBuilder);
     }
 
     private static void ConfigureUser(ModelBuilder modelBuilder)
@@ -243,6 +245,31 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
                 .HasForeignKey(goal => goal.LinkedAccountId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+    }
+
+    private static void ConfigureSavingsPocket(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SavingsPocket>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Name).HasMaxLength(120).IsRequired();
+            entity.Property(p => p.CurrentAmount).HasPrecision(18, 2).IsRequired();
+            entity.Property(p => p.Color).HasMaxLength(20);
+            entity.Property(p => p.Description).HasMaxLength(500);
+            entity.Property(p => p.IsActive).IsRequired();
+            entity.Property(p => p.CreatedAt).IsRequired();
+            entity.Property(p => p.UpdatedAt).IsRequired();
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Account>()
+                .WithMany()
+                .HasForeignKey(p => p.LinkedAccountId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(p => new { p.UserId, p.IsActive });
         });
     }
 

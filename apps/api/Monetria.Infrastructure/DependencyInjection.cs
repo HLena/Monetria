@@ -10,6 +10,7 @@ using Monetria.Application.Dashboard;
 using Monetria.Application.Debts;
 using Monetria.Application.Recurrings;
 using Monetria.Application.SavingsGoals;
+using Monetria.Application.SavingsPockets;
 using Monetria.Application.Transactions;
 using Monetria.Application.Users;
 using Monetria.Infrastructure.Accounts;
@@ -20,6 +21,7 @@ using Monetria.Infrastructure.Debts;
 using Monetria.Infrastructure.Recurrings;
 using Monetria.Infrastructure.Persistence;
 using Monetria.Infrastructure.SavingsGoals;
+using Monetria.Infrastructure.SavingsPockets;
 using Monetria.Infrastructure.Transactions;
 using Monetria.Infrastructure.Users;
 
@@ -46,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IDebtRepository, DebtRepository>();
         services.AddScoped<IRecurringRepository, RecurringRepository>();
         services.AddScoped<ISavingsGoalRepository, SavingsGoalRepository>();
+        services.AddScoped<ISavingsPocketRepository, SavingsPocketRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IAccountService, AccountService>();
@@ -59,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ISavingsGoalService, SavingsGoalService>();
+        services.AddScoped<ISavingsPocketService, SavingsPocketService>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<IUserService, UserService>();
 
