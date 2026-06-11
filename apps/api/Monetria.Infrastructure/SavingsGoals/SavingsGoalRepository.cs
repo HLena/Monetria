@@ -19,18 +19,20 @@ public sealed class SavingsGoalRepository(MonetriaDbContext dbContext) : ISaving
 
     public async Task<IReadOnlyList<SavingsGoal>> ListByUserIdAsync(
         Guid userId,
+        bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
-        return await dbContext.SavingsGoals
+        var query = dbContext.SavingsGoals
             .AsNoTracking()
-            .Where(goal => goal.UserId == userId)
+            .Where(goal => goal.UserId == userId);
+
+        if (!includeInactive)
+            query = query.Where(goal => goal.IsActive);
+
+        return await query
             .OrderBy(goal => goal.TargetDate)
             .ThenBy(goal => goal.Name)
             .ToListAsync(cancellationToken);
     }
 
-    public void Remove(SavingsGoal savingsGoal)
-    {
-        dbContext.SavingsGoals.Remove(savingsGoal);
-    }
 }

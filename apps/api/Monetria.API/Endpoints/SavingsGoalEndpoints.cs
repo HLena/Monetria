@@ -30,11 +30,12 @@ public static class SavingsGoalEndpoints
     }
 
     private static async Task<IResult> ListSavingsGoalsAsync(
+        bool includeInactive,
         ClaimsPrincipal user,
         ISavingsGoalService savingsGoalService,
         CancellationToken cancellationToken)
     {
-        var savingsGoals = await savingsGoalService.ListByUserIdAsync(user.GetRequiredUserId(), cancellationToken);
+        var savingsGoals = await savingsGoalService.ListByUserIdAsync(user.GetRequiredUserId(), includeInactive, cancellationToken);
         return Results.Ok(savingsGoals);
     }
 

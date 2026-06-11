@@ -17,4 +17,5 @@ public class SavingsGoal
     public string? Category { get; set; }
     public string? Color { get; set; }
     public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
 }

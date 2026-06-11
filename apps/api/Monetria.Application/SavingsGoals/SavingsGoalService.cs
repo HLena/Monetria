@@ -43,10 +43,11 @@ public sealed class SavingsGoalService(
 
     public async Task<IReadOnlyList<SavingsGoalResponse>> ListByUserIdAsync(
         Guid userId,
+        bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
         ValidateUserId(userId);
-        var savingsGoals = await savingsGoalRepository.ListByUserIdAsync(userId, cancellationToken);
+        var savingsGoals = await savingsGoalRepository.ListByUserIdAsync(userId, includeInactive, cancellationToken);
 
         var responses = new List<SavingsGoalResponse>(savingsGoals.Count);
         foreach (var goal in savingsGoals)
@@ -87,7 +88,7 @@ public sealed class SavingsGoalService(
     {
         ValidateUserId(userId);
         var savingsGoal = await GetUserSavingsGoalAsync(userId, savingsGoalId, cancellationToken);
-        savingsGoalRepository.Remove(savingsGoal);
+        savingsGoal.IsActive = false;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }

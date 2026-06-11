@@ -233,6 +233,7 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(goal => goal.TargetAmount).HasPrecision(18, 2);
             entity.Property(goal => goal.CurrentAmount).HasPrecision(18, 2);
             entity.Property(goal => goal.IsCompleted).IsRequired();
+            entity.Property(goal => goal.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(goal => goal.Category).HasMaxLength(120);
             entity.Property(goal => goal.Color).HasMaxLength(20);
             entity.Property(goal => goal.Description).HasMaxLength(500);
