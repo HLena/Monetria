@@ -92,6 +92,7 @@ app.MapCategoryEndpoints();
 app.MapDebtEndpoints();
 app.MapRecurringEndpoints();
 app.MapSavingsGoalEndpoints();
+app.MapSavingsPocketEndpoints();
 app.MapTransactionEndpoints();
 
 app.Run();
