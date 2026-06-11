@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Monetria.Application.Accounts;
 using Monetria.Application.Auth;
+using Monetria.Application.Budgets;
 using Monetria.Application.Categories;
+using Monetria.Application.Debts;
 using Monetria.Application.Recurrings;
+using Monetria.Application.SavingsGoals;
 using Monetria.Application.SavingsPockets;
 using Monetria.Application.Transactions;
 using Monetria.Application.Users;
@@ -10,9 +13,12 @@ using Monetria.Domain.Entities;
 using Monetria.Domain.Enums;
 using Monetria.Infrastructure.Accounts;
 using Monetria.Infrastructure.Auth;
+using Monetria.Infrastructure.Budgets;
 using Monetria.Infrastructure.Categories;
+using Monetria.Infrastructure.Debts;
 using Monetria.Infrastructure.Persistence;
 using Monetria.Infrastructure.Recurrings;
+using Monetria.Infrastructure.SavingsGoals;
 using Monetria.Infrastructure.SavingsPockets;
 using Monetria.Infrastructure.Transactions;
 using Monetria.Infrastructure.Users;
@@ -1345,5 +1351,366 @@ public sealed class ApplicationServiceTests
         var stored = await dbContext.SavingsPockets.FindAsync(pocket.Id);
         Assert.NotNull(stored);
         Assert.False(stored!.IsActive);
+    }
+
+    // ── Budget ────────────────────────────────────────────────────────────
+
+    private static BudgetService CreateBudgetService(MonetriaDbContext dbContext) =>
+        new(new BudgetRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+
+    [Fact]
+    public async Task CreateBudgetAsync_WithValidRequest_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateBudgetService(dbContext);
+        var userId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+
+        var budget = await service.CreateAsync(userId, new CreateBudgetRequest(categoryId, 500, 6, 2026));
+
+        Assert.Equal(userId, budget.UserId);
+        Assert.Equal(categoryId, budget.CategoryId);
+        Assert.Equal(500, budget.LimitAmount);
+        Assert.Equal(6, budget.Month);
+        Assert.Equal(2026, budget.Year);
+    }
+
+    [Fact]
+    public async Task CreateBudgetAsync_WithZeroLimitAmount_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateBudgetService(dbContext);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(Guid.NewGuid(), new CreateBudgetRequest(Guid.NewGuid(), 0, 6, 2026)));
+    }
+
+    [Fact]
+    public async Task CreateBudgetAsync_WithInvalidMonth_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateBudgetService(dbContext);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(Guid.NewGuid(), new CreateBudgetRequest(Guid.NewGuid(), 100, 13, 2026)));
+    }
+
+    [Fact]
+    public async Task DeleteBudgetAsync_WhenBelongsToAnotherUser_ThrowsUnauthorizedAccessException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateBudgetService(dbContext);
+        var ownerId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+
+        var budget = await service.CreateAsync(ownerId, new CreateBudgetRequest(Guid.NewGuid(), 200, 1, 2026));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.DeleteAsync(requesterId, budget.Id));
+    }
+
+    [Fact]
+    public async Task ListBudgetsAsync_WithMonthFilter_ReturnsOnlyMatchingBudgets()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateBudgetService(dbContext);
+        var userId = Guid.NewGuid();
+
+        await service.CreateAsync(userId, new CreateBudgetRequest(Guid.NewGuid(), 100, 1, 2026));
+        await service.CreateAsync(userId, new CreateBudgetRequest(Guid.NewGuid(), 100, 2, 2026));
+
+        var result = await service.ListByUserIdAsync(userId, month: 1, year: null);
+
+        Assert.Single(result);
+        Assert.Equal(1, result[0].Month);
+    }
+
+    // ── Debt ──────────────────────────────────────────────────────────────
+
+    private static DebtService CreateDebtService(MonetriaDbContext dbContext) =>
+        new(new DebtRepository(dbContext),
+            new AccountRepository(dbContext),
+            new TransactionRepository(dbContext),
+            new MonetriaUnitOfWork(dbContext));
+
+    [Fact]
+    public async Task CreateDebtAsync_WithValidRequest_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateDebtService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var debt = await service.CreateAsync(userId, new CreateDebtRequest(
+            "Car Loan", "Bank", 10000, 8000, 0.05m, 200, null, "personal"));
+
+        Assert.Equal(userId, debt.UserId);
+        Assert.Equal("Car Loan", debt.Name);
+        Assert.Equal(10000, debt.OriginalAmount);
+        Assert.Equal(8000, debt.RemainingAmount);
+        Assert.True(debt.IsActive);
+    }
+
+    [Fact]
+    public async Task CreateDebtAsync_WithNegativeOriginalAmount_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateDebtService(dbContext);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(Guid.NewGuid(), new CreateDebtRequest(
+                "Bad Debt", null, -100, 0, 0, 10, null, null)));
+    }
+
+    [Fact]
+    public async Task CreateDebtAsync_WithRemainingExceedingOriginal_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateDebtService(dbContext);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(Guid.NewGuid(), new CreateDebtRequest(
+                "Bad Debt", null, 1000, 1500, 0, 10, null, null)));
+    }
+
+    [Fact]
+    public async Task DeleteDebtAsync_SetsIsActiveFalse()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateDebtService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var debt = await service.CreateAsync(userId, new CreateDebtRequest(
+            "Loan", null, 5000, 5000, 0, 100, null, null));
+
+        await service.DeleteAsync(userId, debt.Id);
+
+        var stored = await dbContext.Debts.FindAsync(debt.Id);
+        Assert.NotNull(stored);
+        Assert.False(stored!.IsActive);
+    }
+
+    [Fact]
+    public async Task PayDebtAsync_ReducesRemainingAmount()
+    {
+        await using var dbContext = CreateDbContext();
+        var accountService = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var debtService = CreateDebtService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var account = await accountService.CreateAsync(userId, new CreateAccountRequest(
+            "Wallet", AccountType.Cash, 0, "USD", null, null, null, null, null, null, null));
+
+        var debt = await debtService.CreateAsync(userId, new CreateDebtRequest(
+            "Loan", null, 5000, 5000, 0, 100, null, null, account.Id));
+
+        var result = await debtService.PayAsync(userId, debt.Id, new PayDebtRequest(500));
+
+        Assert.Equal(4500, result.RemainingAmount);
+        Assert.True(result.IsActive);
+    }
+
+    [Fact]
+    public async Task PayDebtAsync_WhenFullyPaid_SetsIsActiveFalse()
+    {
+        await using var dbContext = CreateDbContext();
+        var accountService = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var debtService = CreateDebtService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var account = await accountService.CreateAsync(userId, new CreateAccountRequest(
+            "Wallet", AccountType.Cash, 0, "USD", null, null, null, null, null, null, null));
+
+        var debt = await debtService.CreateAsync(userId, new CreateDebtRequest(
+            "SmallLoan", null, 200, 200, 0, 50, null, null, account.Id));
+
+        var result = await debtService.PayAsync(userId, debt.Id, new PayDebtRequest(200));
+
+        Assert.Equal(0, result.RemainingAmount);
+        Assert.False(result.IsActive);
+    }
+
+    [Fact]
+    public async Task ListDebtsAsync_WithIsActiveFilter_ReturnsOnlyActive()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateDebtService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var debt = await service.CreateAsync(userId, new CreateDebtRequest(
+            "Active Debt", null, 1000, 1000, 0, 100, null, null));
+
+        await service.CreateAsync(userId, new CreateDebtRequest(
+            "Inactive Debt", null, 500, 500, 0, 50, null, null));
+
+        await service.DeleteAsync(userId, (await service.ListByUserIdAsync(userId))
+            .First(d => d.Name == "Inactive Debt").Id);
+
+        var activeDebts = await service.ListByUserIdAsync(userId, isActive: true);
+
+        Assert.Single(activeDebts);
+        Assert.Equal("Active Debt", activeDebts[0].Name);
+    }
+
+    // ── SavingsGoal ───────────────────────────────────────────────────────
+
+    private static SavingsGoalService CreateSavingsGoalService(MonetriaDbContext dbContext) =>
+        new(new SavingsGoalRepository(dbContext),
+            new AccountRepository(dbContext),
+            new BalanceService(new TransactionRepository(dbContext), new AccountRepository(dbContext)),
+            new MonetriaUnitOfWork(dbContext));
+
+    [Fact]
+    public async Task CreateSavingsGoalAsync_WithValidRequest_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsGoalService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var goal = await service.CreateAsync(userId, new CreateSavingsGoalRequest(
+            "Vacation", 3000, 0, null, null, null, null, null));
+
+        Assert.Equal(userId, goal.UserId);
+        Assert.Equal("Vacation", goal.Name);
+        Assert.Equal(3000, goal.TargetAmount);
+        Assert.False(goal.IsCompleted);
+    }
+
+    [Fact]
+    public async Task CreateSavingsGoalAsync_WithZeroTargetAmount_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsGoalService(dbContext);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(Guid.NewGuid(), new CreateSavingsGoalRequest(
+                "Invalid Goal", 0, 0, null, null, null, null, null)));
+    }
+
+    [Fact]
+    public async Task CreateSavingsGoalAsync_WhenCurrentAmountMeetsTarget_IsCompleted()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsGoalService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var goal = await service.CreateAsync(userId, new CreateSavingsGoalRequest(
+            "Already Done", 1000, 1000, null, null, null, null, null));
+
+        Assert.True(goal.IsCompleted);
+    }
+
+    [Fact]
+    public async Task ListSavingsGoalsAsync_ExcludesDeletedByDefault()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsGoalService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var goal = await service.CreateAsync(userId, new CreateSavingsGoalRequest(
+            "To Delete", 500, 0, null, null, null, null, null));
+
+        await service.DeleteAsync(userId, goal.Id);
+
+        var active = await service.ListByUserIdAsync(userId, includeInactive: false);
+        var all = await service.ListByUserIdAsync(userId, includeInactive: true);
+
+        Assert.Empty(active);
+        Assert.Single(all);
+    }
+
+    // ── Recurring ─────────────────────────────────────────────────────────
+
+    private static RecurringService CreateRecurringService(MonetriaDbContext dbContext) =>
+        new(new RecurringRepository(dbContext),
+            new AccountRepository(dbContext),
+            new CategoryRepository(dbContext),
+            new MonetriaUnitOfWork(dbContext));
+
+    [Fact]
+    public async Task CreateRecurringAsync_WithValidRequest_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var accountService = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var recurringService = CreateRecurringService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var account = await accountService.CreateAsync(userId, new CreateAccountRequest(
+            "Wallet", AccountType.Cash, 0, "USD", null, null, null, null, null, null, null));
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var recurring = await recurringService.CreateAsync(userId, new CreateRecurringRequest(
+            account.Id, null, null, "Netflix", TransactionType.Expense,
+            RecurringAmountType.Fixed, 15, null, RecurringFrequency.Monthly, today, null, today));
+
+        Assert.Equal("Netflix", recurring.Name);
+        Assert.Equal(userId, recurring.UserId);
+        Assert.True(recurring.IsActive);
+    }
+
+    [Fact]
+    public async Task CreateRecurringAsync_WithoutAmount_ForFixedType_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var accountService = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var recurringService = CreateRecurringService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var account = await accountService.CreateAsync(userId, new CreateAccountRequest(
+            "Wallet", AccountType.Cash, 0, "USD", null, null, null, null, null, null, null));
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            recurringService.CreateAsync(userId, new CreateRecurringRequest(
+                account.Id, null, null, "Bad", TransactionType.Expense,
+                RecurringAmountType.Fixed, null, null, RecurringFrequency.Monthly, today, null, today)));
+    }
+
+    [Fact]
+    public async Task DeactivateRecurringAsync_SetsIsActiveFalse()
+    {
+        await using var dbContext = CreateDbContext();
+        var accountService = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var recurringService = CreateRecurringService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var account = await accountService.CreateAsync(userId, new CreateAccountRequest(
+            "Wallet", AccountType.Cash, 0, "USD", null, null, null, null, null, null, null));
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var recurring = await recurringService.CreateAsync(userId, new CreateRecurringRequest(
+            account.Id, null, null, "Spotify", TransactionType.Expense,
+            RecurringAmountType.Fixed, 10, null, RecurringFrequency.Monthly, today, null, today));
+
+        var result = await recurringService.DeactivateAsync(userId, recurring.Id);
+
+        Assert.False(result.IsActive);
+    }
+
+    [Fact]
+    public async Task ListRecurringsAsync_WithPagination_ReturnsCorrectPage()
+    {
+        await using var dbContext = CreateDbContext();
+        var accountService = new AccountService(new AccountRepository(dbContext), new TransactionRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var recurringService = CreateRecurringService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var account = await accountService.CreateAsync(userId, new CreateAccountRequest(
+            "Wallet", AccountType.Cash, 0, "USD", null, null, null, null, null, null, null));
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        for (var i = 1; i <= 5; i++)
+        {
+            await recurringService.CreateAsync(userId, new CreateRecurringRequest(
+                account.Id, null, null, $"Sub {i}", TransactionType.Expense,
+                RecurringAmountType.Fixed, 10, null, RecurringFrequency.Monthly, today, null, today));
+        }
+
+        var page1 = await recurringService.ListByUserIdAsync(userId, new RecurringFilterRequest(false, 1, 3));
+        var page2 = await recurringService.ListByUserIdAsync(userId, new RecurringFilterRequest(false, 2, 3));
+
+        Assert.Equal(3, page1.Items.Count);
+        Assert.Equal(2, page2.Items.Count);
+        Assert.Equal(5, page1.TotalCount);
     }
 }
