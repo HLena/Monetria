@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Monetria.Application.Accounts;
 using Monetria.Application.Auth;
 using Monetria.Application.Categories;
+using Monetria.Application.Recurrings;
 using Monetria.Application.SavingsPockets;
 using Monetria.Application.Transactions;
 using Monetria.Application.Users;
@@ -11,6 +12,7 @@ using Monetria.Infrastructure.Accounts;
 using Monetria.Infrastructure.Auth;
 using Monetria.Infrastructure.Categories;
 using Monetria.Infrastructure.Persistence;
+using Monetria.Infrastructure.Recurrings;
 using Monetria.Infrastructure.SavingsPockets;
 using Monetria.Infrastructure.Transactions;
 using Monetria.Infrastructure.Users;
@@ -1106,6 +1108,158 @@ public sealed class ApplicationServiceTests
         {
             return $"test-token-{user.Id}";
         }
+    }
+
+    // ── RecurringOccurrence ────────────────────────────────────────────────
+
+    private static RecurringOccurrenceService CreateOccurrenceService(MonetriaDbContext dbContext) =>
+        new(new RecurringOccurrenceRepository(dbContext),
+            new RecurringRepository(dbContext),
+            new TransactionRepository(dbContext),
+            new MonetriaUnitOfWork(dbContext));
+
+    private static Recurring AddRecurring(
+        MonetriaDbContext dbContext,
+        Guid userId,
+        Guid accountId,
+        RecurringAmountType amountType,
+        decimal? amount = 100,
+        decimal? estimatedAmount = null)
+    {
+        var recurring = new Recurring
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            AccountId = accountId,
+            Name = "Test Recurring",
+            Type = TransactionType.Expense,
+            AmountType = amountType,
+            Amount = amount,
+            EstimatedAmount = estimatedAmount,
+            Frequency = RecurringFrequency.Monthly,
+            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            NextDueDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            IsActive = true
+        };
+        dbContext.Recurrings.Add(recurring);
+        return recurring;
+    }
+
+    private static RecurringOccurrence AddOccurrence(
+        MonetriaDbContext dbContext,
+        Guid recurringId,
+        RecurringOccurrenceStatus status = RecurringOccurrenceStatus.Pending,
+        decimal? suggestedAmount = null)
+    {
+        var occurrence = new RecurringOccurrence
+        {
+            Id = Guid.NewGuid(),
+            RecurringId = recurringId,
+            ScheduledDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            Status = status,
+            SuggestedAmount = suggestedAmount
+        };
+        dbContext.RecurringOccurrences.Add(occurrence);
+        return occurrence;
+    }
+
+    [Fact]
+    public async Task ConfirmOccurrenceAsync_Estimated_CreatesTransactionAndUpdatesStatus()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.Estimated, estimatedAmount: 200);
+        var occurrence = AddOccurrence(dbContext, recurring.Id, suggestedAmount: 200);
+        await dbContext.SaveChangesAsync();
+        var service = CreateOccurrenceService(dbContext);
+
+        var result = await service.ConfirmAsync(userId, occurrence.Id, new ConfirmOccurrenceRequest(null));
+
+        Assert.Equal(RecurringOccurrenceStatus.Confirmed, result.Status);
+        Assert.Equal(200, result.RealAmount);
+        Assert.NotNull(result.TransactionId);
+        Assert.True(await dbContext.Transactions.AnyAsync(t => t.Id == result.TransactionId));
+    }
+
+    [Fact]
+    public async Task ConfirmOccurrenceAsync_VariableFree_UsesProvidedAmount()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.VariableFree);
+        var occurrence = AddOccurrence(dbContext, recurring.Id);
+        await dbContext.SaveChangesAsync();
+        var service = CreateOccurrenceService(dbContext);
+
+        var result = await service.ConfirmAsync(userId, occurrence.Id, new ConfirmOccurrenceRequest(350));
+
+        Assert.Equal(RecurringOccurrenceStatus.Confirmed, result.Status);
+        Assert.Equal(350, result.RealAmount);
+    }
+
+    [Fact]
+    public async Task ConfirmOccurrenceAsync_VariableFree_WithoutAmount_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.VariableFree);
+        var occurrence = AddOccurrence(dbContext, recurring.Id);
+        await dbContext.SaveChangesAsync();
+        var service = CreateOccurrenceService(dbContext);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.ConfirmAsync(userId, occurrence.Id, new ConfirmOccurrenceRequest(null)));
+    }
+
+    [Fact]
+    public async Task SkipOccurrenceAsync_SetsStatusSkipped()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.Estimated, estimatedAmount: 100);
+        var occurrence = AddOccurrence(dbContext, recurring.Id);
+        await dbContext.SaveChangesAsync();
+        var service = CreateOccurrenceService(dbContext);
+
+        var result = await service.SkipAsync(userId, occurrence.Id);
+
+        Assert.Equal(RecurringOccurrenceStatus.Skipped, result.Status);
+        Assert.Null(result.TransactionId);
+    }
+
+    [Fact]
+    public async Task SkipOccurrenceAsync_WhenBelongsToAnotherUser_ThrowsUnauthorizedAccessException()
+    {
+        await using var dbContext = CreateDbContext();
+        var ownerId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var account = AddAccount(dbContext, ownerId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, ownerId, account.Id, RecurringAmountType.Estimated, estimatedAmount: 100);
+        var occurrence = AddOccurrence(dbContext, recurring.Id);
+        await dbContext.SaveChangesAsync();
+        var service = CreateOccurrenceService(dbContext);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.SkipAsync(requesterId, occurrence.Id));
+    }
+
+    [Fact]
+    public async Task ConfirmOccurrenceAsync_AlreadyConfirmed_ThrowsInvalidOperationException()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.Estimated, estimatedAmount: 100);
+        var occurrence = AddOccurrence(dbContext, recurring.Id, RecurringOccurrenceStatus.Confirmed);
+        await dbContext.SaveChangesAsync();
+        var service = CreateOccurrenceService(dbContext);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ConfirmAsync(userId, occurrence.Id, new ConfirmOccurrenceRequest(100)));
     }
 
     // ── SavingsPocket ──────────────────────────────────────────────────────
