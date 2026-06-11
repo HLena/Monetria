@@ -19,11 +19,17 @@ public sealed class DebtRepository(MonetriaDbContext dbContext) : IDebtRepositor
 
     public async Task<IReadOnlyList<Debt>> ListByUserIdAsync(
         Guid userId,
+        bool? isActive = null,
         CancellationToken cancellationToken = default)
     {
-        return await dbContext.Debts
+        var query = dbContext.Debts
             .AsNoTracking()
-            .Where(debt => debt.UserId == userId)
+            .Where(debt => debt.UserId == userId);
+
+        if (isActive.HasValue)
+            query = query.Where(debt => debt.IsActive == isActive.Value);
+
+        return await query
             .OrderBy(debt => debt.NextPaymentDate)
             .ThenBy(debt => debt.Name)
             .ToListAsync(cancellationToken);

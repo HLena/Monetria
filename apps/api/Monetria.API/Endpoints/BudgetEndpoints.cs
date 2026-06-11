@@ -30,11 +30,13 @@ public static class BudgetEndpoints
     }
 
     private static async Task<IResult> ListBudgetsAsync(
+        int? month,
+        int? year,
         ClaimsPrincipal user,
         IBudgetService budgetService,
         CancellationToken cancellationToken)
     {
-        var budgets = await budgetService.ListByUserIdAsync(user.GetRequiredUserId(), cancellationToken);
+        var budgets = await budgetService.ListByUserIdAsync(user.GetRequiredUserId(), month, year, cancellationToken);
         return Results.Ok(budgets);
     }
 

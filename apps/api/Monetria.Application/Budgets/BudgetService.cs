@@ -42,10 +42,12 @@ public sealed class BudgetService(IBudgetRepository budgetRepository, IUnitOfWor
 
     public async Task<IReadOnlyList<BudgetResponse>> ListByUserIdAsync(
         Guid userId,
+        int? month = null,
+        int? year = null,
         CancellationToken cancellationToken = default)
     {
         ValidateUserId(userId);
-        var budgets = await budgetRepository.ListByUserIdAsync(userId, cancellationToken);
+        var budgets = await budgetRepository.ListByUserIdAsync(userId, month, year, cancellationToken);
 
         var responses = new List<BudgetResponse>(budgets.Count);
         foreach (var budget in budgets)

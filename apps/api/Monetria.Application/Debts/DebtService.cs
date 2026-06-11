@@ -47,10 +47,11 @@ public sealed class DebtService(
 
     public async Task<IReadOnlyList<DebtResponse>> ListByUserIdAsync(
         Guid userId,
+        bool? isActive = null,
         CancellationToken cancellationToken = default)
     {
         ValidateUserId(userId);
-        var debts = await debtRepository.ListByUserIdAsync(userId, cancellationToken);
+        var debts = await debtRepository.ListByUserIdAsync(userId, isActive, cancellationToken);
         return debts.Select(MapToResponse).ToList();
     }
 

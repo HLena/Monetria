@@ -31,11 +31,12 @@ public static class DebtEndpoints
     }
 
     private static async Task<IResult> ListDebtsAsync(
+        bool? isActive,
         ClaimsPrincipal user,
         IDebtService debtService,
         CancellationToken cancellationToken)
     {
-        var debts = await debtService.ListByUserIdAsync(user.GetRequiredUserId(), cancellationToken);
+        var debts = await debtService.ListByUserIdAsync(user.GetRequiredUserId(), isActive, cancellationToken);
         return Results.Ok(debts);
     }
 

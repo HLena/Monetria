@@ -20,11 +20,21 @@ public sealed class BudgetRepository(MonetriaDbContext dbContext) : IBudgetRepos
 
     public async Task<IReadOnlyList<Budget>> ListByUserIdAsync(
         Guid userId,
+        int? month = null,
+        int? year = null,
         CancellationToken cancellationToken = default)
     {
-        return await dbContext.Budgets
+        var query = dbContext.Budgets
             .AsNoTracking()
-            .Where(budget => budget.UserId == userId)
+            .Where(budget => budget.UserId == userId);
+
+        if (month.HasValue)
+            query = query.Where(budget => budget.Month == month.Value);
+
+        if (year.HasValue)
+            query = query.Where(budget => budget.Year == year.Value);
+
+        return await query
             .OrderBy(budget => budget.Year)
             .ThenBy(budget => budget.Month)
             .ToListAsync(cancellationToken);
