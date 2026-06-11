@@ -45,8 +45,8 @@ public sealed class DashboardService(
         var recentFilter = new TransactionFilterRequest(Limit: 10);
         var recentTransactions = await transactionRepository.ListByUserIdAsync(userId, recentFilter, cancellationToken);
 
-        var allBudgets = await budgetRepository.ListByUserIdAsync(userId, cancellationToken);
-        var currentBudgets = allBudgets.Where(b => b.Month == month && b.Year == year).ToList();
+        var allBudgets = await budgetRepository.ListByUserIdAsync(userId, month, year, cancellationToken);
+        var currentBudgets = allBudgets.ToList();
 
         var budgetEntries = new List<BudgetSummaryEntry>(currentBudgets.Count);
         foreach (var budget in currentBudgets)
@@ -58,7 +58,7 @@ public sealed class DashboardService(
                 budget.Month, budget.Year, budget.RolloverUnused));
         }
 
-        var recurrings = await recurringRepository.ListByUserIdAsync(userId, false, cancellationToken);
+        var recurrings = await recurringRepository.ListByUserIdAsync(userId, new RecurringFilterRequest(PageSize: 100), cancellationToken);
         var cutoff = DateOnly.FromDateTime(now.AddDays(7));
         var upcomingRecurrings = recurrings
             .Where(r => r.NextDueDate <= cutoff)

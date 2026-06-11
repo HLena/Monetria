@@ -14,6 +14,11 @@ public sealed record RecurringOccurrenceResponse(
 
 public sealed record ConfirmOccurrenceRequest(decimal? RealAmount);
 
+public sealed record RecurringFilterRequest(
+    bool IncludeInactive = false,
+    int Page = 1,
+    int PageSize = 20);
+
 public sealed record CreateRecurringRequest(
     Guid AccountId,
     Guid? ToAccountId,

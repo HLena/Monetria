@@ -22,20 +22,36 @@ public sealed class RecurringRepository(MonetriaDbContext dbContext) : IRecurrin
 
     public async Task<IReadOnlyList<Recurring>> ListByUserIdAsync(
         Guid userId,
-        bool includeInactive = false,
+        RecurringFilterRequest filter,
         CancellationToken cancellationToken = default)
+    {
+        var page = Math.Max(1, filter.Page);
+        var pageSize = Math.Clamp(filter.PageSize, 1, 100);
+
+        return await BuildQuery(userId, filter)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountByUserIdAsync(
+        Guid userId,
+        RecurringFilterRequest filter,
+        CancellationToken cancellationToken = default)
+    {
+        return BuildQuery(userId, filter).CountAsync(cancellationToken);
+    }
+
+    private IQueryable<Recurring> BuildQuery(Guid userId, RecurringFilterRequest filter)
     {
         var query = dbContext.Recurrings
             .AsNoTracking()
             .Include(r => r.Category)
             .Where(r => r.UserId == userId);
 
-        if (!includeInactive)
+        if (!filter.IncludeInactive)
             query = query.Where(r => r.IsActive);
 
-        return await query
-            .OrderBy(r => r.NextDueDate)
-            .ThenBy(r => r.Name)
-            .ToListAsync(cancellationToken);
+        return query.OrderBy(r => r.NextDueDate).ThenBy(r => r.Name);
     }
 }

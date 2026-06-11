@@ -34,13 +34,16 @@ public static class RecurringEndpoints
 
     private static async Task<IResult> ListRecurringsAsync(
         bool includeInactive,
+        int page,
+        int pageSize,
         ClaimsPrincipal user,
         IRecurringService recurringService,
         CancellationToken cancellationToken)
     {
+        var filter = new RecurringFilterRequest(includeInactive, page == 0 ? 1 : page, pageSize == 0 ? 20 : pageSize);
         var recurrings = await recurringService.ListByUserIdAsync(
             user.GetRequiredUserId(),
-            includeInactive,
+            filter,
             cancellationToken);
 
         return Results.Ok(recurrings);

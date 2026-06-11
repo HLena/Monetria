@@ -3,6 +3,7 @@ using Monetria.Application.Categories;
 using Monetria.Application.Common;
 using Monetria.Domain.Entities;
 using Monetria.Domain.Enums;
+using PagedResponse = Monetria.Application.Common.PagedResponse<Monetria.Application.Recurrings.RecurringResponse>;
 
 namespace Monetria.Application.Recurrings;
 
@@ -69,14 +70,18 @@ public sealed class RecurringService(
         return MapToResponse(recurring);
     }
 
-    public async Task<IReadOnlyList<RecurringResponse>> ListByUserIdAsync(
+    public async Task<PagedResponse> ListByUserIdAsync(
         Guid userId,
-        bool includeInactive = false,
+        RecurringFilterRequest filter,
         CancellationToken cancellationToken = default)
     {
         ValidateUserId(userId);
-        var recurrings = await recurringRepository.ListByUserIdAsync(userId, includeInactive, cancellationToken);
-        return recurrings.Select(MapToResponse).ToList();
+        var page = Math.Max(1, filter.Page);
+        var pageSize = Math.Clamp(filter.PageSize, 1, 100);
+        var recurrings = await recurringRepository.ListByUserIdAsync(userId, filter, cancellationToken);
+        var totalCount = await recurringRepository.CountByUserIdAsync(userId, filter, cancellationToken);
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        return new PagedResponse(recurrings.Select(MapToResponse).ToList(), totalCount, page, pageSize, totalPages);
     }
 
     public async Task<RecurringResponse> UpdateAsync(
