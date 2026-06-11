@@ -134,7 +134,7 @@ Documento de referencia del estado actual del backend de Monetria. Cubre lo que 
 - Frecuencias: `Daily`, `Weekly`, `Biweekly`, `Monthly`, `Yearly`
 - `Fixed` → crea Transaction automáticamente al llegar `NextDueDate`
 - `Estimated`/`VariableFree` → crea `RecurringOccurrence(Pending)` para que el usuario confirme
-- Entidad `RecurringOccurrence` existe en dominio y se crea, pero **no tiene endpoints propios** (ver Pendientes)
+- La gestión de ocurrencias se hace vía los endpoints de RecurringOccurrences (ver sección siguiente)
 
 ---
 
@@ -255,63 +255,7 @@ Devuelve en una sola llamada:
 
 ## Lo que está pendiente
 
-### 1. SavingsPocket — dominio completo faltante
-
-**Prioridad: Alta**
-
-Está definido en `CLAUDE.md` y en `docs/project-structure.md` como entidad separada de `SavingsGoal`, pero no existe en el código.
-
-Diferencia clave: `SavingsPocket` no tiene objetivo ni fecha límite. Es una alcancía libre donde el usuario deposita y retira sin restricción, siempre que el saldo no sea negativo.
-
-**Qué falta crear:**
-
-| Capa | Qué crear |
-|---|---|
-| Domain | Entidad `SavingsPocket` |
-| Infrastructure | Migración + `SavingsPocketRepository` |
-| Application | `ISavingsPocketRepository`, `ISavingsPocketService`, `SavingsPocketService`, `SavingsPocketDtos` |
-| API | `SavingsPocketEndpoints` con 5 endpoints |
-
-**Endpoints requeridos:**
-
-| Método | Ruta | Descripción |
-|---|---|---|
-| `POST` | `/savings-pockets` | Crea una alcancía |
-| `GET` | `/savings-pockets` | Lista alcancías del usuario |
-| `PUT` | `/savings-pockets/{id}` | Actualiza nombre, color, descripción |
-| `DELETE` | `/savings-pockets/{id}` | Soft delete |
-| `POST` | `/savings-pockets/{id}/adjust` | Deposita (`Amount > 0`) o retira (`Amount < 0`) |
-
-**Reglas del `POST /adjust`:**
-- `Amount > 0` = depósito
-- `Amount < 0` = retiro
-- Validar que `CurrentAmount + Amount >= 0` antes de aplicar
-- Actualizar `UpdatedAt` al ajustar
-
----
-
-### 2. RecurringOccurrence — gestión sin endpoints
-
-**Prioridad: Media**
-
-La entidad `RecurringOccurrence` existe y se crea automáticamente cuando un `Recurring` de tipo `Estimated` o `VariableFree` llega a su `NextDueDate`. Sin embargo, el usuario no tiene forma de gestionar estas ocurrencias desde la API.
-
-**Qué falta:**
-
-| Método | Ruta | Descripción |
-|---|---|---|
-| `GET` | `/recurrings/{id}/occurrences` | Lista ocurrencias de un recurrente |
-| `PATCH` | `/recurrings/occurrences/{id}/confirm` | Confirma con monto real → crea Transaction |
-| `PATCH` | `/recurrings/occurrences/{id}/skip` | Marca como omitida (no contamina promedios) |
-
-**Notas:**
-- `Skipped` ≠ `Amount = 0` — las ocurrencias omitidas no se usan en cálculos de promedio
-- Al confirmar, se crea una `Transaction` y se vincula en `TransactionId`
-- Puede necesitar un `IRecurringOccurrenceRepository` separado
-
----
-
-### 3. Paginación en endpoints de lista
+### 1. Paginación en endpoints de lista
 
 **Prioridad: Media**
 
@@ -332,27 +276,24 @@ Para los de volumen bajo puede ser suficiente con un parámetro `?isActive=true/
 
 ---
 
-### 4. Tests — sin cobertura
+### 2. Tests — cobertura parcial
 
 **Prioridad: Alta**
 
-El proyecto no tiene ningún test escrito. `Monetria.Tests` existe como proyecto pero está vacío.
+Actualmente hay 63 tests cubriendo Auth, Accounts, Transactions, Transfers, BalanceService, SavingsPockets y RecurringOccurrences. Quedan sin cobertura:
 
-**Qué testear primero (por impacto):**
-
-| Test | Razón |
+| Test pendiente | Razón |
 |---|---|
-| Cálculo de saldo de cuenta | Lógica crítica, nunca almacenada |
 | Pago de deuda (atomicidad) | Dos operaciones en una `UnitOfWork` |
-| `POST /adjust` en SavingsPocket | Validación de no-negatividad |
-| Transferencias (par atómico) | Dos filas vinculadas |
 | `SpentAmount` en Budget | Calculado, no almacenado |
+| Recurrings CRUD | Validaciones de AmountType |
+| SavingsGoals con LinkedAccount | Lógica de CurrentAmount calculado |
 
-**Stack sugerido:** xUnit + Moq para unit tests de servicios. Para integración, TestContainers con PostgreSQL real (evita divergencias mock/prod).
+**Stack actual:** xUnit + EF Core InMemory. Para integración futura: TestContainers con PostgreSQL real.
 
 ---
 
-### 5. Procesamiento automático de Recurrings
+### 3. Procesamiento automático de Recurrings
 
 **Prioridad: Media**
 
@@ -425,13 +366,13 @@ Implementado
   [x] Debts (CRUD + pay endpoint)
   [x] Dashboard (resumen mensual)
   [x] UnitOfWork + soft delete + ownership checks
-  [x] 14 migraciones aplicadas
+  [x] 15 migraciones aplicadas
 
 Pendiente
   [x] SavingsPocket (entidad + CRUD + /adjust)
   [x] RecurringOccurrence endpoints (confirm + skip)
   [ ] Background service para procesar Recurrings automáticos
-  [ ] Tests (unitarios e integración)
+  [~] Tests (63 escritos — faltan Debts, Budgets, SavingsGoals)
   [ ] Paginación en endpoints de lista restantes
 
 Mejoras
