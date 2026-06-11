@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IDebtRepository, DebtRepository>();
         services.AddScoped<IRecurringRepository, RecurringRepository>();
+        services.AddScoped<IRecurringOccurrenceRepository, RecurringOccurrenceRepository>();
         services.AddScoped<ISavingsGoalRepository, SavingsGoalRepository>();
         services.AddScoped<ISavingsPocketRepository, SavingsPocketRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
@@ -59,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IDebtService, DebtService>();
         services.AddScoped<IRecurringService, RecurringService>();
+        services.AddScoped<IRecurringOccurrenceService, RecurringOccurrenceService>();
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ISavingsGoalService, SavingsGoalService>();
