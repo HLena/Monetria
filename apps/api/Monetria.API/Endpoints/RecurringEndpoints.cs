@@ -15,6 +15,9 @@ public static class RecurringEndpoints
         group.MapGet("/", ListRecurringsAsync).WithName("ListRecurrings");
         group.MapPut("/{recurringId:guid}", UpdateRecurringAsync).WithName("UpdateRecurring");
         group.MapPatch("/{recurringId:guid}/deactivate", DeactivateRecurringAsync).WithName("DeactivateRecurring");
+        group.MapGet("/{recurringId:guid}/occurrences", ListOccurrencesAsync).WithName("ListRecurringOccurrences");
+        group.MapPatch("/occurrences/{occurrenceId:guid}/confirm", ConfirmOccurrenceAsync).WithName("ConfirmRecurringOccurrence");
+        group.MapPatch("/occurrences/{occurrenceId:guid}/skip", SkipOccurrenceAsync).WithName("SkipRecurringOccurrence");
 
         return endpoints;
     }
@@ -71,5 +74,49 @@ public static class RecurringEndpoints
             cancellationToken);
 
         return Results.Ok(recurring);
+    }
+
+    private static async Task<IResult> ListOccurrencesAsync(
+        Guid recurringId,
+        ClaimsPrincipal user,
+        IRecurringOccurrenceService occurrenceService,
+        CancellationToken cancellationToken)
+    {
+        var occurrences = await occurrenceService.ListByRecurringIdAsync(
+            user.GetRequiredUserId(),
+            recurringId,
+            cancellationToken);
+
+        return Results.Ok(occurrences);
+    }
+
+    private static async Task<IResult> ConfirmOccurrenceAsync(
+        Guid occurrenceId,
+        ConfirmOccurrenceRequest request,
+        ClaimsPrincipal user,
+        IRecurringOccurrenceService occurrenceService,
+        CancellationToken cancellationToken)
+    {
+        var occurrence = await occurrenceService.ConfirmAsync(
+            user.GetRequiredUserId(),
+            occurrenceId,
+            request,
+            cancellationToken);
+
+        return Results.Ok(occurrence);
+    }
+
+    private static async Task<IResult> SkipOccurrenceAsync(
+        Guid occurrenceId,
+        ClaimsPrincipal user,
+        IRecurringOccurrenceService occurrenceService,
+        CancellationToken cancellationToken)
+    {
+        var occurrence = await occurrenceService.SkipAsync(
+            user.GetRequiredUserId(),
+            occurrenceId,
+            cancellationToken);
+
+        return Results.Ok(occurrence);
     }
 }
