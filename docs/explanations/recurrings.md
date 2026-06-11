@@ -71,3 +71,38 @@ Una ocurrencia omitida no debe entrar en cálculos de promedios históricos ni e
 6. `ConfirmOccurrenceAsync_AlreadyConfirmed_ThrowsInvalidOperationException`
 
 Todos pasan (6/6).
+
+## 2026-06-10 — Paginación en GET /recurrings
+
+### Qué se implementó
+
+`GET /recurrings` ahora devuelve `PagedResponse<RecurringResponse>` en lugar de una lista plana.
+
+**Nuevos parámetros de query:**
+- `includeInactive` (bool, default `false`) — incluye recurrentes desactivados
+- `page` (int, default `1`)
+- `pageSize` (int, default `20`, máx `100`)
+
+**Respuesta:**
+```json
+{
+  "items": [...],
+  "totalCount": 42,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 3
+}
+```
+
+**Archivos modificados:**
+- `RecurringDtos.cs` — agregado `RecurringFilterRequest`
+- `IRecurringRepository.cs` — firma actualizada + `CountByUserIdAsync`
+- `RecurringRepository.cs` — `BuildQuery()` + paginación con `Skip/Take`
+- `IRecurringService.cs` — retorno cambiado a `PagedResponse<RecurringResponse>`
+- `RecurringService.cs` — implementación de paginación
+- `RecurringEndpoints.cs` — acepta `page`, `pageSize`, `includeInactive`
+- `DashboardService.cs` — actualizado para usar la nueva firma del repositorio
+
+### Fix: SavingsGoal.IsActive
+
+La entidad `SavingsGoal` no tenía campo `IsActive`, lo que causaba que el filtro `includeInactive` en el repositorio no compilara. Se agregó el campo, se actualizó la configuración de EF Core en `MonetriaDbContext`, y se cambió `DeleteAsync` de hard delete a soft delete (`IsActive = false`). Migración: `AddSavingsGoalIsActive`.

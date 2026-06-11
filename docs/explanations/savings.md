@@ -355,3 +355,23 @@ Feature completo de `SavingsPocket` como entidad independiente de `SavingsGoal`.
 6. `DeleteSavingsPocketAsync_SetsIsActiveFalse_DoesNotPhysicallyDelete`
 
 Todos pasan (6/6). También se corrigieron 2 errores preexistentes en `GatedTransactionRepository` y `ListTransactionsAsync_DoesNotReturnDeletedTransactions`.
+## 2026-06-10 — Fix SavingsGoal soft delete + tests
+
+### Problema
+
+`SavingsGoal` no tenía el campo `IsActive` aunque el repositorio lo usaba para filtrar. Esto causaba un error de compilación. Adicionalmente, `DeleteAsync` hacía hard delete (`dbContext.Remove`), contradiciendo la regla universal de soft delete.
+
+### Fix aplicado
+
+- `SavingsGoal.cs` — agregado `bool IsActive { get; set; } = true`
+- `MonetriaDbContext.cs` — configurado `IsActive` con `HasDefaultValue(true)`
+- `SavingsGoalService.DeleteAsync` — cambiado a `savingsGoal.IsActive = false`
+- `ISavingsGoalRepository` + `SavingsGoalRepository` — eliminado método `Remove`
+- Migración: `AddSavingsGoalIsActive`
+
+### Tests agregados (SavingsGoals)
+
+1. `CreateSavingsGoalAsync_WithValidRequest_Succeeds`
+2. `CreateSavingsGoalAsync_WithZeroTargetAmount_ThrowsArgumentException`
+3. `CreateSavingsGoalAsync_WhenCurrentAmountMeetsTarget_IsCompleted`
+4. `ListSavingsGoalsAsync_ExcludesDeletedByDefault`

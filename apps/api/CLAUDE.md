@@ -1,50 +1,111 @@
-# API — ASP.NET Core Backend
+# Backend Rules
 
-## Stack
-- .NET 10 / C# 13
-- ASP.NET Core Minimal APIs
-- Entity Framework Core 10
-- PostgreSQL
-- JWT Bearer + BCrypt
+## Architecture
 
-## Architecture — Clean Architecture
-Monetria.API/            ← thin endpoints, no business logic
-Monetria.Application/    ← services, interfaces, DTOs (sealed records)
-Monetria.Domain/         ← pure entities and enums, no dependencies
-Monetria.Infrastructure/ ← EF Core, repositories, JWT, BCrypt
-Monetria.Tests/          ← unit tests
-
-## Conventions
-- English only — entities, methods, variables, comments
-- DTOs: sealed records in Application/<Feature>/<Feature>Dtos.cs
-- Services: IService + Service in Application/<Feature>/
-- One repository interface per entity in Application/<Feature>/
-- Soft delete: IsActive = false — never DELETE financial records
-- Monetary amounts: decimal(18,2) always
-- Interest rates: decimal(9,4)
-- IDs: Guid
-- Timestamps: DateTime UTC
-- Calendar dates: DateOnly
-
-## Migrations
-Always run from monorepo root:
-```bash
-dotnet ef migrations add <Name> --project apps/api/Monetria.Infrastructure --startup-project apps/api/Monetria.API
-dotnet ef database update --project apps/api/Monetria.Infrastructure --startup-project apps/api/Monetria.API
+```
+Monetria.API          ← endpoints delgados, sin lógica
+Monetria.Application  ← servicios, DTOs, interfaces de repositorios
+Monetria.Domain       ← entidades puras, enums, sin dependencias externas
+Monetria.Infrastructure ← EF Core, repositorios, JWT, BCrypt
 ```
 
-## Critical Rules
-- NEVER float/double for money — always decimal(18,2)
-- NEVER hard delete — IsActive = false
-- Transfers MUST be 2 atomic Transaction rows in one UnitOfWork
-- Budget CategoryId must be real FK to Category table — never string/enum
-- Debt payment must create Transaction + reduce RemainingAmount in one UnitOfWork
-- Account balance is always calculated — never stored as column
+Rules:
+- API must stay thin — no business logic
+- Business logic belongs in Application
+- Domain must stay pure — no framework dependencies
+- Infrastructure cannot contain business logic
 
-## Entity Change Checklist
-1. Domain entity updated
-2. EF configuration updated (HasOne, HasForeignKey, HasIndex)
-3. Migration generated and reviewed
-4. Service/DTOs updated to match
-5. Endpoints return new fields
-Never store computed values (Balance, SpentAmount, CurrentAmount) as columns.
+---
+
+## Feature Organization
+
+Each feature lives in its own folder across all layers:
+
+```
+Application/
+└── FeatureName/
+    ├── IFeatureService.cs
+    ├── FeatureService.cs
+    ├── IFeatureRepository.cs
+    └── FeatureDtos.cs       ← sealed records only
+
+Infrastructure/
+└── FeatureName/
+    └── FeatureRepository.cs
+
+API/Endpoints/
+└── FeatureEndpoints.cs      ← MapGroup + RequireAuthorization
+```
+
+---
+
+## Coding Conventions
+
+- DTOs as `sealed record` in `Application/<Feature>/<Feature>Dtos.cs`
+- One service per feature — interface + implementation
+- Services validate ownership: always check `entity.UserId == userId`
+- Throw `NotFoundException` when entity not found
+- Throw `UnauthorizedAccessException` when user doesn't own the resource
+- All timestamps: `DateTime.UtcNow`
+- All IDs: `Guid.NewGuid()`
+- Soft delete: set `IsActive = false`, never call `dbContext.Remove()` on financial data
+- Migrations always run from monorepo root:
+  ```
+  dotnet ef migrations add <Name> \
+    --project apps/api/Monetria.Infrastructure \
+    --startup-project apps/api/Monetria.API
+  ```
+
+---
+
+## Financial Rules (enforce in services)
+
+- Amounts: `decimal(18,2)` — never `float` or `double`
+- Interest rates: `decimal(9,4)`
+- Account balance is NEVER stored — always calculated: `InitialBalance + SUM(Income) - SUM(Expense)`
+- Transfer = always 2 rows in one `UnitOfWork`, linked by `TransferPairId`
+- Transfers do NOT affect budgets or income/expense reports
+- `SavingsPocket.CurrentAmount` must never go below 0 — validate in `AdjustAmountAsync`
+
+---
+
+## Savings Module
+
+Two separate entities, two separate features. Never merge them.
+
+### `SavingsGoal` — has a target
+- `TargetAmount`: required, > 0
+- `TargetDate`: `DateOnly?`
+- `IsCompleted`: `true` when `CurrentAmount >= TargetAmount`
+- `LinkedAccountId`: optional FK to Account — when present, `CurrentAmount` is calculated from that account's balance
+- `CategoryId`: real FK to `Category` — never string
+- `IsActive`: soft delete
+
+### `SavingsPocket` — open-ended piggy bank
+- NO `TargetAmount`, NO `TargetDate`, NO `IsCompleted`, NO `CategoryId`
+- `CurrentAmount` starts at 0, never goes negative
+- Adjust endpoint: `POST /savings-pockets/{id}/adjust`
+  - `Amount > 0` = deposit
+  - `Amount < 0` = withdrawal
+  - Validation: `pocket.CurrentAmount + request.Amount >= 0`
+- `IsActive`: soft delete
+- `UpdatedAt` updated on every write operation
+
+---
+
+## Testing
+
+All business logic changes require tests.
+
+Required tests per service method:
+- Happy path
+- Not found (NotFoundException)
+- Wrong user (UnauthorizedAccessException)
+- Invalid input (ArgumentException)
+
+For SavingsPocket specifically:
+- `AdjustAmountAsync_Deposit_IncreasesAmount`
+- `AdjustAmountAsync_Withdrawal_DecreasesAmount`
+- `AdjustAmountAsync_WithdrawMoreThanBalance_ThrowsArgumentException`
+- `AdjustAmountAsync_WhenBelongsToAnotherUser_ThrowsUnauthorized`
+- `DeleteAsync_SetIsActiveFalse_DoesNotPhysicallyDelete`

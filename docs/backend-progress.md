@@ -1,6 +1,6 @@
 # Backend — Estado del Proyecto
 
-**Última actualización:** 2026-06-11 (sesión 2)
+**Última actualización:** 2026-06-10 (sesión 3)
 
 Documento de referencia del estado actual del backend de Monetria. Cubre lo que ya está implementado, lo que está pendiente, y mejoras identificadas.
 
@@ -14,11 +14,11 @@ Documento de referencia del estado actual del backend de Monetria. Cubre lo que 
 | Endpoints disponibles | 48 |
 | Servicios | 12 de 12 |
 | Repositorios | 10 de 10 |
-| Migraciones aplicadas | 15 |
+| Migraciones aplicadas | 16 |
 | Autenticación | JWT + BCrypt |
-| Tests | 63 (6 nuevos de RecurringOccurrence) |
+| Tests | 83 (20 nuevos: Budgets, Debts, SavingsGoals, Recurrings) |
 
-**Completud general: ~99%** — SavingsPocket y RecurringOccurrence completados. Pendiente: background service para Recurrings, paginación en listas.
+**Completud general: ~100%** — Todo implementado. Pendiente opcional: background service para Recurrings automáticos.
 
 ---
 
@@ -255,45 +255,7 @@ Devuelve en una sola llamada:
 
 ## Lo que está pendiente
 
-### 1. Paginación en endpoints de lista
-
-**Prioridad: Media**
-
-Solo `GET /transactions` tiene paginación por offset (`PagedResponse<T>`). El resto de los endpoints devuelven listas completas, lo que puede ser un problema a medida que crezcan los datos.
-
-**Endpoints que deberían paginarse:**
-
-| Endpoint | Volumen esperado |
-|---|---|
-| `GET /budgets` | Bajo (12 meses × N categorías) |
-| `GET /recurrings` | Medio |
-| `GET /debts` | Bajo |
-| `GET /savings-goals` | Bajo |
-| `GET /savings-pockets` | Bajo |
-| `GET /accounts` | Bajo |
-
-Para los de volumen bajo puede ser suficiente con un parámetro `?isActive=true/false` para filtrar activos vs inactivos, sin paginación completa.
-
----
-
-### 2. Tests — cobertura parcial
-
-**Prioridad: Alta**
-
-Actualmente hay 63 tests cubriendo Auth, Accounts, Transactions, Transfers, BalanceService, SavingsPockets y RecurringOccurrences. Quedan sin cobertura:
-
-| Test pendiente | Razón |
-|---|---|
-| Pago de deuda (atomicidad) | Dos operaciones en una `UnitOfWork` |
-| `SpentAmount` en Budget | Calculado, no almacenado |
-| Recurrings CRUD | Validaciones de AmountType |
-| SavingsGoals con LinkedAccount | Lógica de CurrentAmount calculado |
-
-**Stack actual:** xUnit + EF Core InMemory. Para integración futura: TestContainers con PostgreSQL real.
-
----
-
-### 3. Procesamiento automático de Recurrings
+### 1. Procesamiento automático de Recurrings
 
 **Prioridad: Media**
 
@@ -372,8 +334,8 @@ Pendiente
   [x] SavingsPocket (entidad + CRUD + /adjust)
   [x] RecurringOccurrence endpoints (confirm + skip)
   [ ] Background service para procesar Recurrings automáticos
-  [~] Tests (63 escritos — faltan Debts, Budgets, SavingsGoals)
-  [ ] Paginación en endpoints de lista restantes
+  [x] Tests (83 escritos — todos los dominios cubiertos)
+  [x] Paginación en GET /recurrings + filtros month/year en /budgets + isActive en /debts + includeInactive en /savings-goals
 
 Mejoras
   [ ] Fix N+1 en DashboardService

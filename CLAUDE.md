@@ -1,156 +1,112 @@
-# Monetria — Project Context
+# Project Rules
 
-## What is this project
-Personal finance app. Monorepo with React frontend and ASP.NET Core backend.
+## Stack
+- React
+- TypeScript
+- .NET 10 / C# 13
+- PostgreSQL
 
-## Docs
-Full documentation is in `/docs/`. Read relevant files before making changes:
-- `/docs/architecture.md` — Clean Architecture layers
-- `/docs/domain.md` — domain rules per entity
-- `/docs/decisions.md` — technical decisions log
-- `/docs/project-structure.md` — full project structure
-- `/docs/features/` — feature specifications
-- `/docs/explanations/` — change logs per module
-
-## Monorepo Structure
-
-Monetria/
-├── apps/
-│   ├── web/     ← React 18 + Vite + TypeScript + Tailwind + Zustand + React Hook Form
-│   └── api/     ← ASP.NET Core 10 + C# 13 + EF Core 10 + PostgreSQL + JWT
-├── packages/
-│   └── enums/   ← @monetria/enums — shared TypeScript enums
-├── package.json ← npm workspaces (packageManager: npm)
-└── turbo.json
-
-## Running the Project
-```bash
-npm run dev        # web + api together
-npm run dev:web    # React only (port 5173)
-npm run dev:api    # .NET only (port 5000/5001)
-
-# Migrations — always from monorepo root
-dotnet ef migrations add <Name> --project apps/api/Monetria.Infrastructure --startup-project apps/api/Monetria.API
-dotnet ef database update --project apps/api/Monetria.Infrastructure --startup-project apps/api/Monetria.API
-```
-
-## Domain Entities — Quick Reference
-
-### Account
-- Fields: Id, UserId, Name, Type, CurrencyCode, InitialBalance (decimal, default 0), ColorCode, IsActive
-- Credit card extra: InstitutionName, CardLast4Digits, CreditLimit, CardHolderName, StatementClosingDay, PaymentDueDay
-- Balance = InitialBalance + SUM(transactions delta) — never stored as column
-
-### Transaction
-- Fields: Id, AccountId (FK), Type (Income/Expense/Transfer), CategoryId (FK nullable), Amount, Description, TransferPairId (nullable), IsActive, Date, CreatedAt
-- ⚠️ Transfer = always 2 rows linked by TransferPairId inside one UnitOfWork
-- Transfer outflow row: ToAccountId = destino (resta del saldo origen)
-- Transfer inflow row: ToAccountId = null (suma al saldo destino)
-
-### Category
-- Fields: Id, UserId (nullable = system), Name, Type, IsDefault, IsActive, Color, KeyIcon
-
-### Budget
-- Fields: Id, UserId, CategoryId (FK), LimitAmount, Month (int), Year (int), RolloverUnused
-- SpentAmount = calculated, never stored
-- Unique: (UserId, CategoryId, Month, Year)
-
-### Recurring (renamed from FixedExpense)
-- Fields: Id, UserId, AccountId, ToAccountId (nullable), CategoryId (nullable), Name, Type, AmountType (Fixed/Estimated/VariableFree), Amount (nullable), EstimatedAmount (nullable), Frequency, StartDate, EndDate (nullable), NextDueDate, IsActive
-
-### RecurringOccurrence
-- Fields: Id, RecurringId, ScheduledDate, Status (Pending/Confirmed/Skipped/AutoRegistered), SuggestedAmount, RealAmount, TransactionId (nullable), ConfirmedAt
-
-### SavingsGoal
-- Fields: Id, UserId, Name, TargetAmount, CurrentAmount, LinkedAccountId (nullable), TargetDate (nullable), CategoryId (nullable), Color, Description, IsCompleted
-- If LinkedAccountId set: CurrentAmount = account balance (calculated)
-
-### Debt
-- Fields: Id, UserId, AccountId (nullable), CategoryId (nullable), Name, Creditor, OriginalAmount, RemainingAmount, InterestRate, MinimumPayment, NextPaymentDate, Type, IsActive
-
-## Critical Business Rules
-1. Account balance = InitialBalance + SUM(income) - SUM(expenses) — never store as column
-2. Transfers never affect budgets — not income or expense
-3. Transfer = 2 Transaction rows with TransferPairId, created atomically in one UnitOfWork
-4. Budget spending = SUM transactions WHERE CategoryId matches AND date within Month/Year
-5. Recurring Fixed → auto-creates Transaction
-6. Recurring Estimated/VariableFree → creates RecurringOccurrence(Pending), user confirms
-7. SavingsGoal.CurrentAmount = linked account balance if LinkedAccountId set, else manual
-8. Debt payment = Transaction(Expense) + reduce RemainingAmount in one UnitOfWork
-9. Never hard delete financial records — always soft delete (IsActive = false)
-10. All monetary amounts: decimal(18,2) — never float or double
-
-## Pending Changes (do these in order)
-- [x] Fix transfers — 2 atomic rows with TransferPairId (migration + data backfill applied)
-- [x] Rename FixedExpense → Recurring + new fields + RecurringOccurrence entity
-- [x] Fix Budget — CategoryId FK + Month/Year fields + BudgetService calculates SpentAmount
-- [x] Fix SavingsGoal — add LinkedAccountId + IsCompleted
-- [x] Fix Debt — add AccountId + CategoryId + POST /debts/{id}/pay endpoint
-- [x] Add GET /dashboard endpoint
-- [x] Add pagination to GET /transactions
-- [ ] Setup orval in packages/types for TypeScript type generation from Swagger
-- [ ] Create apps/mobile with Expo
-
-## Completed
-- [x] Monorepo with Turborepo + npm workspaces
-- [x] @monetria/enums package with AccountType
-- [x] InitialBalance restored to Account entity
-- [x] BalanceService updated to include InitialBalance
-- [x] BalanceService concurrent DbContext fix — Task.WhenAll → sequential foreach (PostgreSQL safe)
-- [x] Clean Architecture (Domain/Application/Infrastructure/API)
-- [x] JWT + BCrypt auth
-- [x] Soft delete on Transaction and Category
-- [x] decimal(18,2) for all monetary amounts
-- [x] Swagger active
-- [x] Frontend: getMonthKey timezone fix — date-only strings parsed directly, no UTC conversion
-- [x] Frontend: transfer rows show red/- (outflow, toAccountId set) and green/+ (inflow, toAccountId null)
+## Coding Rules
+- Use TypeScript strict mode
+- No `any`
+- Functional components only
+- Reusable hooks
+- Clean architecture
 
 ## Workflow
 Before coding:
-1. Read relevant docs in /docs/
-2. Explain approach
-3. Create plan
-4. Wait for approval
+1. Explain approach
+2. Create plan
+3. Wait for approval
 
 When implementing:
 1. Backend first
-2. Tests second  
+2. Tests second
 3. Frontend last
 
 After implementing:
-1. If instructed to commit — create focused git commits per change
-2. After each change — update relevant file in docs/explanations/
+1. If I type commit, add commits for each new change in the project
+2. After each modification, new implementation or fix an issue create or update a file in docs/explanations/. Name it after the feature (e.g. accounts.md, savings.md). If the file already exists, append a new dated section.
 
 Never:
 - Modify unrelated files
-- Add unnecessary dependencies
+- Add dependencies unnecessarily
 - Break existing APIs
-- Use float/double for money
-- Hard delete financial records
 
-## API and State Conventions
+---
 
-### Post-then-fetch pattern
-After any mutating operation (POST, PUT, PATCH, DELETE), always call
-the corresponding GET endpoint to refresh local state.
-Never update state manually with the mutation response.
+## Domain Model — Quick Reference
 
-// ✅ Correct
-onSuccess: () => {
-  queryClient.invalidateQueries({ queryKey: ['transactions'] })
-}
+### Entities and their key rules
 
-// ❌ Incorrect
-onSuccess: (newTransaction) => {
-  queryClient.setQueryData(['transactions'], prev => [...prev, newTransaction])
-}
+**Account**
+- Saldo = `InitialBalance + SUM(Income) - SUM(Expense)` — NUNCA almacenado como columna
+- Soft delete: `IsActive = false`
+- Tipos: Cash, BankAccount, CreditCard, EWallet
 
-### Examples
-- Create transaction → POST /transactions → GET /transactions
-- Edit budget       → PUT /budgets/:id   → GET /budgets
-- Delete account    → DELETE /accounts/:id → GET /accounts
+**Transaction**
+- Monto SIEMPRE positivo — el tipo define la dirección
+- Transferencia = 2 filas atómicas vinculadas por `TransferPairId`
+- Soft delete: `IsActive = false`
+- Transferencias NO afectan presupuestos ni reportes
 
-## Change Protocol
-When renaming entities: rename first, add fields second — never both in one session.
-Migrations always run from repo root: cd apps/api && dotnet ef migrations add ...
-After any Domain change: update Infrastructure config + generate migration before touching Application.
+**Category**
+- `UserId = null` → categoría del sistema, no se puede eliminar
+- FK real en Budget — nunca string
+
+**Budget**
+- `SpentAmount` calculado: `SUM(t.Amount WHERE CategoryId + Month/Year + Expense + IsActive)`
+- Restricción única: `(UserId, CategoryId, Month, Year)`
+- No bloquea gastos — solo alerta
+
+**Recurring** (antes FixedExpense)
+- AmountType: Fixed (auto), Estimated (confirmar), VariableFree (ingresar)
+- Fixed → Transaction automática
+- Estimated/VariableFree → RecurringOccurrence(Pending)
+- Skipped ≠ Amount=0 — no contaminar promedios históricos
+
+**SavingsGoal**
+- Requiere `TargetAmount > 0`
+- `IsCompleted = true` cuando `CurrentAmount >= TargetAmount`
+- `LinkedAccountId` presente → `CurrentAmount` = saldo calculado de esa cuenta
+- `TargetDate` es `DateOnly?`, no `DateTime`
+- `CategoryId` es FK real a `Category`, no string
+- Soft delete: `IsActive = false`
+
+**SavingsPocket** ← NUEVA ENTIDAD (2026-06-04)
+- Sin `TargetAmount`, sin `TargetDate`, sin `IsCompleted`, sin `CategoryId`
+- `CurrentAmount` NUNCA negativo — validado en `AdjustAmountAsync`
+- Endpoint de ajuste: `POST /savings-pockets/{id}/adjust`
+  - `Amount > 0` = depósito
+  - `Amount < 0` = retiro
+- Soft delete: `IsActive = false`
+- Ver: `docs/explanations/savings.md`
+
+**Debt**
+- Pago = `Transaction(Expense)` + reducir `RemainingAmount`, en la misma `UnitOfWork`
+- `IsActive = false` cuando `RemainingAmount <= 0`
+
+---
+
+## Savings Module — Two Concepts, Two Entities
+
+NO mezclar SavingsGoal con SavingsPocket. Son conceptos distintos:
+
+| Pregunta | Usar |
+|---|---|
+| ¿El usuario tiene un monto objetivo? | `SavingsGoal` |
+| ¿El usuario solo quiere apartar dinero sin meta? | `SavingsPocket` |
+
+La página `/savings` (frontend) debe mostrar ambas secciones claramente separadas.
+La calculadora de ahorro aplica SOLO a `SavingsGoal`.
+
+---
+
+## Global Financial Rules
+
+- `decimal(18,2)` para todos los montos — nunca `float` o `double`
+- `decimal(9,4)` para tasas de interés
+- `Guid` para todos los IDs
+- `DateTime UTC` para timestamps
+- `DateOnly` para fechas de calendario
+- Soft delete universal — nunca `DELETE` físico en datos financieros
