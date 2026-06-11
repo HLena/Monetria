@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Monetria.Application.Accounts;
 using Monetria.Application.Auth;
 using Monetria.Application.Categories;
+using Monetria.Application.SavingsPockets;
 using Monetria.Application.Transactions;
 using Monetria.Application.Users;
 using Monetria.Domain.Entities;
@@ -10,6 +11,7 @@ using Monetria.Infrastructure.Accounts;
 using Monetria.Infrastructure.Auth;
 using Monetria.Infrastructure.Categories;
 using Monetria.Infrastructure.Persistence;
+using Monetria.Infrastructure.SavingsPockets;
 using Monetria.Infrastructure.Transactions;
 using Monetria.Infrastructure.Users;
 
@@ -484,7 +486,7 @@ public sealed class ApplicationServiceTests
 
         var list = await service.ListByUserIdAsync(userId, new TransactionFilterRequest());
 
-        Assert.Empty(list);
+        Assert.Empty(list.Items);
     }
 
     private static CreateTransactionRequest CreateTransactionRequest(
@@ -1093,6 +1095,9 @@ public sealed class ApplicationServiceTests
         public Task<Transaction?> GetTransferPairAsync(Guid transactionId, Guid transferPairId, CancellationToken ct = default)
             => dbContext.Transactions
                 .FirstOrDefaultAsync(t => t.TransferPairId == transferPairId && t.Id != transactionId, ct);
+
+        public Task<int> CountByUserIdAsync(Guid userId, TransactionFilterRequest filter, CancellationToken ct = default)
+            => Task.FromResult(0);
     }
 
     private sealed class TestJwtTokenGenerator : IJwtTokenGenerator
@@ -1101,5 +1106,90 @@ public sealed class ApplicationServiceTests
         {
             return $"test-token-{user.Id}";
         }
+    }
+
+    // ── SavingsPocket ──────────────────────────────────────────────────────
+
+    private static SavingsPocketService CreateSavingsPocketService(MonetriaDbContext dbContext) =>
+        new(new SavingsPocketRepository(dbContext), new AccountRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+
+    [Fact]
+    public async Task CreateSavingsPocketAsync_CurrentAmountAlwaysStartsAtZero()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsPocketService(dbContext);
+        var userId = Guid.NewGuid();
+
+        var pocket = await service.CreateAsync(userId, new CreateSavingsPocketRequest("Vacaciones", null, null, null));
+
+        Assert.Equal(0, pocket.CurrentAmount);
+    }
+
+    [Fact]
+    public async Task AdjustAmountAsync_Deposit_IncreasesAmount()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsPocketService(dbContext);
+        var userId = Guid.NewGuid();
+        var pocket = await service.CreateAsync(userId, new CreateSavingsPocketRequest("Fondo", null, null, null));
+
+        var result = await service.AdjustAmountAsync(userId, pocket.Id, new AdjustSavingsPocketRequest(500, null));
+
+        Assert.Equal(500, result.CurrentAmount);
+    }
+
+    [Fact]
+    public async Task AdjustAmountAsync_Withdrawal_DecreasesAmount()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsPocketService(dbContext);
+        var userId = Guid.NewGuid();
+        var pocket = await service.CreateAsync(userId, new CreateSavingsPocketRequest("Fondo", null, null, null));
+        await service.AdjustAmountAsync(userId, pocket.Id, new AdjustSavingsPocketRequest(1000, null));
+
+        var result = await service.AdjustAmountAsync(userId, pocket.Id, new AdjustSavingsPocketRequest(-300, null));
+
+        Assert.Equal(700, result.CurrentAmount);
+    }
+
+    [Fact]
+    public async Task AdjustAmountAsync_WithdrawMoreThanBalance_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsPocketService(dbContext);
+        var userId = Guid.NewGuid();
+        var pocket = await service.CreateAsync(userId, new CreateSavingsPocketRequest("Fondo", null, null, null));
+        await service.AdjustAmountAsync(userId, pocket.Id, new AdjustSavingsPocketRequest(200, null));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.AdjustAmountAsync(userId, pocket.Id, new AdjustSavingsPocketRequest(-201, null)));
+    }
+
+    [Fact]
+    public async Task AdjustAmountAsync_WhenBelongsToAnotherUser_ThrowsUnauthorizedAccessException()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsPocketService(dbContext);
+        var ownerId = Guid.NewGuid();
+        var requesterId = Guid.NewGuid();
+        var pocket = await service.CreateAsync(ownerId, new CreateSavingsPocketRequest("Fondo", null, null, null));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.AdjustAmountAsync(requesterId, pocket.Id, new AdjustSavingsPocketRequest(100, null)));
+    }
+
+    [Fact]
+    public async Task DeleteSavingsPocketAsync_SetsIsActiveFalse_DoesNotPhysicallyDelete()
+    {
+        await using var dbContext = CreateDbContext();
+        var service = CreateSavingsPocketService(dbContext);
+        var userId = Guid.NewGuid();
+        var pocket = await service.CreateAsync(userId, new CreateSavingsPocketRequest("Fondo", null, null, null));
+
+        await service.DeleteAsync(userId, pocket.Id);
+
+        var stored = await dbContext.SavingsPockets.FindAsync(pocket.Id);
+        Assert.NotNull(stored);
+        Assert.False(stored!.IsActive);
     }
 }
