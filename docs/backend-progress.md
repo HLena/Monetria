@@ -1,6 +1,6 @@
 # Backend — Estado del Proyecto
 
-**Última actualización:** 2026-06-11
+**Última actualización:** 2026-06-11 (sesión 2)
 
 Documento de referencia del estado actual del backend de Monetria. Cubre lo que ya está implementado, lo que está pendiente, y mejoras identificadas.
 
@@ -11,14 +11,14 @@ Documento de referencia del estado actual del backend de Monetria. Cubre lo que 
 | Categoría | Estado |
 |---|---|
 | Dominios implementados | 10 de 10 |
-| Endpoints disponibles | 45 |
-| Servicios | 11 de 11 |
-| Repositorios | 9 de 9 |
+| Endpoints disponibles | 48 |
+| Servicios | 12 de 12 |
+| Repositorios | 10 de 10 |
 | Migraciones aplicadas | 15 |
 | Autenticación | JWT + BCrypt |
-| Tests | 57 (6 nuevos de SavingsPocket) |
+| Tests | 63 (6 nuevos de RecurringOccurrence) |
 
-**Completud general: ~98%** — SavingsPocket completado. Pendiente: RecurringOccurrence endpoints, background service para Recurrings, paginación en listas.
+**Completud general: ~99%** — SavingsPocket y RecurringOccurrence completados. Pendiente: background service para Recurrings, paginación en listas.
 
 ---
 
@@ -172,6 +172,33 @@ Documento de referencia del estado actual del backend de Monetria. Cubre lo que 
 - Pago = `Transaction(Expense)` + reducir `RemainingAmount`, en la misma `UnitOfWork`
 - `IsActive = false` automático cuando `RemainingAmount <= 0`
 - `InterestRate` en `decimal(9,4)`
+
+---
+
+### RecurringOccurrences
+
+**Archivos:** `Monetria.API/Endpoints/RecurringEndpoints.cs` (endpoints añadidos al grupo existente)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/recurrings/{recurringId}/occurrences` | Lista todas las ocurrencias de un recurrente |
+| `PATCH` | `/recurrings/occurrences/{id}/confirm` | Confirma una ocurrencia pendiente → crea Transaction |
+| `PATCH` | `/recurrings/occurrences/{id}/skip` | Omite una ocurrencia pendiente |
+
+**Reglas de confirm:**
+- Solo ocurrencias con `Status = Pending` pueden confirmarse
+- `VariableFree`: `RealAmount` en el request es obligatorio y > 0
+- `Estimated`: usa `RealAmount` del request si viene; si no, usa `SuggestedAmount` de la ocurrencia
+- `Fixed`: lanza `InvalidOperationException` — las ocurrencias Fixed se auto-registran
+- Para recurrentes `Transfer`: crea **2 Transaction** vinculadas por `TransferPairId`, atómicamente
+- `ConfirmedAt` y `TransactionId` se populan al confirmar
+
+**Reglas de skip:**
+- Solo ocurrencias `Pending` pueden omitirse
+- `Skipped ≠ Amount=0` — las ocurrencias omitidas no contaminan promedios históricos
+- No crea ninguna Transaction
+
+**Ownership:** se valida a través de `occurrence.Recurring.UserId == userId`
 
 ---
 
@@ -402,7 +429,7 @@ Implementado
 
 Pendiente
   [x] SavingsPocket (entidad + CRUD + /adjust)
-  [ ] RecurringOccurrence endpoints (confirm + skip)
+  [x] RecurringOccurrence endpoints (confirm + skip)
   [ ] Background service para procesar Recurrings automáticos
   [ ] Tests (unitarios e integración)
   [ ] Paginación en endpoints de lista restantes
