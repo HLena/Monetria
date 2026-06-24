@@ -33,3 +33,13 @@
 - Pago requiere `AccountId` en la deuda — si no tiene, lanza `InvalidOperationException`
 - No se puede pagar más del `RemainingAmount`
 - Soft delete: `IsActive = false`
+
+## 2026-06-23 — Refactor: extracción de componentes y simplificación de página
+
+### Qué se cambió
+- `DebtForm` extraído de `pages/DebtPlanning.tsx` a `components/debts/DebtForm.tsx`
+  - `DEBT_TYPES` exportado desde el mismo archivo para reutilización en la página
+- `DebtCalculator` extraído a `components/debts/DebtCalculator.tsx`
+  - Ahora soporta dark mode correctamente
+- `pages/DebtPlanning.tsx` usa `SummaryCard` (variantes `rose`, `emerald`, `amber`, `indigo`) y `EmptyState`
+- `daysUntilDue` movida al scope del módulo de la página (helper puro, no necesitaba ser inline en el render)

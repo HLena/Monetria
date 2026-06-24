@@ -55,3 +55,31 @@ to avoid contaminating income/expense reports with opening balance entries.
 - Monetria.Application/Accounts/AccountService.cs — removed opening Transaction, assign to entity
 - Monetria.Application/Accounts/BalanceService.cs — balance = InitialBalance + delta
 - Migration: RestoreInitialBalance
+
+## 2026-06-24 — Reusable shared components extracted from forms
+
+### New shared components created
+
+Three components were extracted after identifying repeated patterns across all feature forms:
+
+**`ColorPicker`** (`shared/ColorPicker.tsx`)
+- Props: `colors: string[]`, `value: string`, `onChange`, `shape?: 'circle' | 'square'` (default: `'circle'`)
+- Replaces duplicate swatch code in `DebtForm`, `SavingsGoalForm`; `AccountForm` uses `shape="square"`
+
+**`FormActions`** (`shared/FormActions.tsx`)
+- Props: `submitLabel`, `onClose?`, `cancelLabel?`, `submitClassName?`, `disabled?`
+- When `onClose` is omitted → renders only the submit button (used in AccountForm, BudgetForm, TransactionForm)
+- When `onClose` is provided → renders Cancel + Submit row (used in DebtForm, RecurringForm, SavingsGoalForm)
+
+**`ToggleSwitch`** (`shared/ToggleSwitch.tsx`)
+- Props: `value: boolean`, `onChange`, `label`, `description?`
+- iOS-style toggle with optional description line; replaces inline toggle in `BudgetForm` and checkbox in `RecurringForm`
+
+### Forms updated
+- `AccountForm` — now uses `ColorPicker` (square), `Divider`, `FormActions`
+- `BudgetForm` — now uses `ToggleSwitch`, `FormActions`
+- `DebtForm` — now uses `ColorPicker`, `FormActions`; migrated raw inputs to `<Input>`, `<FormField>`, `<Select>`
+- `RecurringForm` — now uses `ToggleSwitch`, `FormActions`; migrated raw inputs to `<Input>`, `<FormField>`, `<Select>`
+- `SavingsGoalForm` — now uses `ColorPicker`, `FormActions`; migrated raw inputs to `<Input>`, `<FormField>`
+
+All three components are exported from `shared/index.ts`.

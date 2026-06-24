@@ -29,3 +29,30 @@
 - `SpentAmount` es calculado: `SUM(transactions)` para ese `CategoryId + Month + Year`
 - Unicidad implícita: `(UserId, CategoryId, Month, Year)` — no hay restricción de BD pero el negocio lo considera único
 - Budget no tiene soft delete — se borra físicamente (es metadata de planificación, no dato financiero)
+
+## 2026-06-23 — Refactor: extracción de formulario y simplificación de página
+
+### Qué se cambió
+- `BudgetForm` extraído de `pages/Budgets.tsx` a `components/budgets/BudgetForm.tsx`
+- `pages/Budgets.tsx` ahora importa `BudgetForm`, `SummaryCard` y `EmptyState` desde sus respectivos módulos
+- Las summary cards usan el componente `SummaryCard` (variantes `indigo`, `rose`, `amber`, `emerald`)
+- El empty state usa el componente `EmptyState`
+- Se añadieron variantes `amber` y `purple` a `components/ui/SummaryCard.tsx`
+
+## 2026-06-23 — Toggles de moneda, periodo y alerta en BudgetForm / TransactionForm
+
+**Nuevo tipo `Currency`** en `finance.ts`: `'PEN'` (S/) y `'USD'` ($). Constante `CURRENCY_SYMBOL` para resolver el símbolo. `Budget` añade `currency?: Currency` y `alertOnLimit?: boolean`. `Transaction` añade `currency?: Currency`.
+
+**Nuevo componente `ToggleGroup`** en `shared/`: pill toggle genérico de N opciones con size `sm`|`md`. Reutilizado para moneda y periodo.
+
+**BudgetForm**:
+- Label "Límite *" sin texto de moneda
+- Toggle moneda (fila completa, label "Moneda")
+- Input límite muestra símbolo como prefijo (`pl-9`, `left-3`)
+- Toggle periodo Mensual/Semanal (reemplaza `<select>`) en mismo grid 2-col
+- Switch iOS de alerta al límite — card con descripción + slider animado
+
+**TransactionForm**:
+- Toggle moneda (size sm, inline derecha del label "Monto")
+- Input monto muestra símbolo como prefijo
+- `currency` incluido en el objeto enviado a `onSave`

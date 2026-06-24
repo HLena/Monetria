@@ -106,3 +106,12 @@ Todos pasan (6/6).
 ### Fix: SavingsGoal.IsActive
 
 La entidad `SavingsGoal` no tenía campo `IsActive`, lo que causaba que el filtro `includeInactive` en el repositorio no compilara. Se agregó el campo, se actualizó la configuración de EF Core en `MonetriaDbContext`, y se cambió `DeleteAsync` de hard delete a soft delete (`IsActive = false`). Migración: `AddSavingsGoalIsActive`.
+
+## 2026-06-23 — Refactor: eliminación de duplicado y simplificación de página
+
+### Qué se cambió
+- `RecurringForm` estaba definida inline en `pages/Recurrings.tsx` Y como componente exportado en `components/recurrings/RecurringForm.tsx` — se eliminó el duplicado inline
+- `pages/Recurrings.tsx` ahora importa `RecurringForm` de `components/recurrings/RecurringForm.tsx`
+- Las summary cards usan `SummaryCard` (variantes `indigo`, `slate`)
+- El empty state usa `EmptyState`
+- Se eliminaron imports sin uso (`useFinance`, `EXPENSE_CATEGORIES`, `React`)

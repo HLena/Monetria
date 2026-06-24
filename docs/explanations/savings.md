@@ -375,3 +375,14 @@ Todos pasan (6/6). También se corrigieron 2 errores preexistentes en `GatedTran
 2. `CreateSavingsGoalAsync_WithZeroTargetAmount_ThrowsArgumentException`
 3. `CreateSavingsGoalAsync_WhenCurrentAmountMeetsTarget_IsCompleted`
 4. `ListSavingsGoalsAsync_ExcludesDeletedByDefault`
+
+## 2026-06-23 — Refactor: extracción de componentes y simplificación de página
+
+### Qué se cambió
+- `SavingsGoalForm` extraído a `components/savings/SavingsGoalForm.tsx`
+- `AddToGoalModal` extraído a `components/savings/AddToGoalModal.tsx`
+- `SavingsCalculator` extraído a `components/savings/SavingsCalculator.tsx`
+  - Ahora soporta dark mode correctamente
+  - Corrección menor: se simplificó la condición `!currentNum && currentNum !== 0` a simplemente `!targetNum`
+- `pages/Savings.tsx` usa `SummaryCard` (variantes `indigo`, `emerald`, `purple`) y `EmptyState`
+- Helpers `daysUntil` y `monthsUntil` movidos al scope del módulo

@@ -336,3 +336,37 @@ UpdateTransactionRequestBody
 8. Frontend mapper
 9. Frontend store wiring
 10. Frontend Transactions.tsx wiring
+
+## Update: 2026-06-10
+
+### Client-side pagination on Movements page
+
+**Motivation:** The transactions list had no upper bound on rendered rows, which degrades performance as the dataset grows.
+
+**Approach:** Client-side pagination (vs. server-side) so that the summary cards (Ingresos / Gastos / Balance) always reflect all filtered results, not just the current page.
+
+**Changes**
+- `components/shared/Pagination.tsx` — new reusable component; accepts `page`, `totalPages`, `onPageChange`. Returns `null` when `totalPages === 0`. Builds a compact page-number list with ellipsis for large ranges.
+- `components/shared/index.ts` — added `Pagination` export.
+- `pages/Movements.tsx`:
+  - `PAGE_SIZE = 10`
+  - `page` state resets to 1 via `useEffect` whenever any filter changes
+  - `paginated` derived via `filtered.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE)`
+  - Subtitle shows `X–Y de N movimientos`
+  - `<Pagination>` rendered inside the content card, below the transaction rows
+
+## Update: 2026-06-10 (server-side pagination)
+
+**Motivation:** With 5000+ records, loading all transactions at once is not viable. Migrated to server-side pagination with a dedicated summary endpoint for the cards.
+
+**Backend — new additions**
+- `TransactionDtos.cs` — added `TransactionSummaryResponse(TotalIncome, TotalExpenses, TotalCount)`
+- `ITransactionRepository` / `TransactionRepository` — added `GetSummaryByUserIdAsync`: runs the same filters as the list query but returns aggregate totals via three DB-level aggregations (no page/size applied)
+- `ITransactionService` / `TransactionService` — added `GetSummaryAsync` delegating to repository
+- `TransactionEndpoints.cs` — added `GET /transactions/summary` accepting the same `[AsParameters] TransactionFilterRequest`
+
+**Frontend**
+- `types/api/transactions.ts` — added `TransactionSummaryDto` and `TransactionQueryParams`
+- `api/transactions.ts` — `listTransactions(params?)` now accepts query params; added `getTransactionsSummary(params?)`; both build the query string locally (no changes to apiClient)
+- `hooks/useTransactionsPaginated.ts` (new) — self-contained hook that owns filter state, page state, debounced search (400 ms), and fetches list + summary in parallel on every change. CRUD operations call the API directly then trigger a `refreshKey` re-fetch and reload accounts/balance via the store.
+- `pages/Movements.tsx` — removed all client-side filtering logic. Now uses `useTransactionsPaginated`. Month dropdown generates last 24 months dynamically. Category filter uses `categoryId` (not category name string).
