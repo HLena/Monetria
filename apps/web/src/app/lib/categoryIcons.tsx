@@ -73,14 +73,21 @@ export function CategoryIconCircle({
   iconKey?: string | null;
   category?: string;
   color?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }) {
   const resolvedKey = iconKey ?? (category ? CATEGORY_NAME_TO_KEY[category] : null);
   const Icon = getCategoryIcon(resolvedKey);
   const box =
-    size === 'sm' ? 'w-8 h-8 rounded-lg' : size === 'lg' ? 'w-12 h-12 rounded-2xl' : 'w-10 h-10 rounded-xl';
-  const iconClass = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
+    size === 'xs' ? 'w-6 h-6 rounded-md'
+    : size === 'sm' ? 'w-8 h-8 rounded-lg'
+    : size === 'lg' ? 'w-12 h-12 rounded-2xl'
+    : 'w-10 h-10 rounded-xl';
+  const iconClass =
+    size === 'xs' ? 'w-3 h-3'
+    : size === 'sm' ? 'w-4 h-4'
+    : size === 'lg' ? 'w-6 h-6'
+    : 'w-5 h-5';
 
   return (
     <div
