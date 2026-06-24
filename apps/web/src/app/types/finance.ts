@@ -5,6 +5,12 @@ export type TransactionType = 'income' | 'expense' | 'transfer';
 export type BudgetPeriod = 'monthly' | 'weekly';
 export type FixedExpensePeriod = 'monthly' | 'weekly' | 'yearly';
 export type DebtType = 'personal_loan' | 'credit_card' | 'mortgage' | 'auto_loan' | 'other';
+export type Currency = 'PEN' | 'USD';
+
+export const CURRENCY_SYMBOL: Record<Currency, string> = {
+  PEN: 'S/',
+  USD: '$',
+};
 
 export const EXPENSE_CATEGORIES = [
   'Alimentación',
@@ -79,15 +85,18 @@ export interface Transaction {
   date: string; // ISO date string YYYY-MM-DD
   createdAt: string;
   toAccountId?: string;
+  currency?: Currency;
 }
 
 export interface Budget {
   id: string;
-  category: string;
+  categoryId: string;
   limit: number;
   period: BudgetPeriod;
   color: string;
   createdAt: string;
+  currency?: Currency;
+  alertOnLimit?: boolean;
 }
 
 export interface FixedExpense {

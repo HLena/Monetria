@@ -1,5 +1,13 @@
 export type TransactionTypeDto = 'Income' | 'Expense' | 'Transfer';
 
+export interface TransactionResponse {
+  items: TransactionDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface TransactionDto {
   id: string;
   fromAccountId: string;
@@ -32,4 +40,21 @@ export interface UpdateTransactionRequestBody {
   transactionDate: string;
   description: string | null;
   fromAccountId: string;
+}
+
+export interface TransactionSummaryDto {
+  totalIncome: number;
+  totalExpenses: number;
+  totalCount: number;
+}
+
+export interface TransactionQueryParams {
+  page?: number;
+  pageSize?: number;
+  description?: string;
+  type?: TransactionTypeDto;
+  categoryId?: string;
+  month?: number;
+  year?: number;
+  fromAccountId?: string;
 }
