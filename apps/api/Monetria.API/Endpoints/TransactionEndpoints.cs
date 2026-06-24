@@ -17,6 +17,9 @@ public static class TransactionEndpoints
         group.MapGet("/", ListTransactionsAsync)
             .WithName("ListTransactionsByUser");
 
+        group.MapGet("/summary", GetTransactionSummaryAsync)
+            .WithName("GetTransactionSummary");
+
         group.MapGet("/{id:guid}", GetTransactionByIdAsync)
             .WithName("GetTransactionById");
 
@@ -94,6 +97,17 @@ public static class TransactionEndpoints
         var transactions = await transactionService.ListByAccountIdAsync(userId, accountId, filter, cancellationToken);
 
         return Results.Ok(transactions);
+    }
+
+    private static async Task<IResult> GetTransactionSummaryAsync(
+        [AsParameters] TransactionFilterRequest filter,
+        ClaimsPrincipal user,
+        ITransactionService transactionService,
+        CancellationToken cancellationToken)
+    {
+        var userId = user.GetRequiredUserId();
+        var summary = await transactionService.GetSummaryAsync(userId, filter, cancellationToken);
+        return Results.Ok(summary);
     }
 
     private static async Task<IResult> ListTransactionsAsync(

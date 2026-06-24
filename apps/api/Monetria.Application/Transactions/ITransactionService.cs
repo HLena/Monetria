@@ -22,4 +22,9 @@ public interface ITransactionService
         Guid accountId,
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default);
+
+    Task<TransactionSummaryResponse> GetSummaryAsync(
+        Guid userId,
+        TransactionFilterRequest filter,
+        CancellationToken cancellationToken = default);
 }

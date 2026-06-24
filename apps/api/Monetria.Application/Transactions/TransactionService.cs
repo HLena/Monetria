@@ -391,6 +391,18 @@ public sealed class TransactionService(
         }
     }
 
+    public async Task<TransactionSummaryResponse> GetSummaryAsync(
+        Guid userId,
+        TransactionFilterRequest filter,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+            throw new ArgumentException("User id is required.", nameof(userId));
+
+        ValidateFilter(filter);
+        return await transactionRepository.GetSummaryByUserIdAsync(userId, filter, cancellationToken);
+    }
+
     private static void ValidateUserId(Guid userId)
     {
         if (userId == Guid.Empty)

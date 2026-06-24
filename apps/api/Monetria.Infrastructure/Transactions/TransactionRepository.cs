@@ -85,6 +85,26 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
             .FirstOrDefaultAsync(t => t.TransferPairId == transferPairId && t.Id != transactionId, cancellationToken);
     }
 
+    public async Task<TransactionSummaryResponse> GetSummaryByUserIdAsync(
+        Guid userId,
+        TransactionFilterRequest filter,
+        CancellationToken cancellationToken = default)
+    {
+        var filteredQuery = BuildUserQuery(userId, filter);
+
+        var totalIncome = await filteredQuery
+            .Where(t => t.Type == TransactionType.Income)
+            .SumAsync(t => t.Amount, cancellationToken);
+
+        var totalExpenses = await filteredQuery
+            .Where(t => t.Type == TransactionType.Expense)
+            .SumAsync(t => t.Amount, cancellationToken);
+
+        var totalCount = await filteredQuery.CountAsync(cancellationToken);
+
+        return new TransactionSummaryResponse(totalIncome, totalExpenses, totalCount);
+    }
+
     private IQueryable<Transaction> BuildUserQuery(Guid userId, TransactionFilterRequest filter)
     {
         var userAccountIds = dbContext.Accounts
@@ -122,13 +142,13 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
 
         if (filter.Month.HasValue)
         {
-            var startDate = new DateTime(filter.Year!.Value, filter.Month.Value, 1);
+            var startDate = new DateTime(filter.Year!.Value, filter.Month.Value, 1, 0, 0, 0, DateTimeKind.Utc);
             var endDate = startDate.AddMonths(1);
             query = query.Where(transaction => transaction.Date >= startDate && transaction.Date < endDate);
         }
         else if (filter.Year.HasValue)
         {
-            var startDate = new DateTime(filter.Year.Value, 1, 1);
+            var startDate = new DateTime(filter.Year.Value, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             var endDate = startDate.AddYears(1);
             query = query.Where(transaction => transaction.Date >= startDate && transaction.Date < endDate);
         }

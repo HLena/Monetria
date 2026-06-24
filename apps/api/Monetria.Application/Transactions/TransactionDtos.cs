@@ -44,3 +44,8 @@ public sealed record TransactionFilterRequest(
     int? Limit = null,
     int? Page = null,
     int? PageSize = null);
+
+public sealed record TransactionSummaryResponse(
+    decimal TotalIncome,
+    decimal TotalExpenses,
+    int TotalCount);
