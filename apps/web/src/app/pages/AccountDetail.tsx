@@ -18,23 +18,37 @@ import { useFinanceStore } from '../store/FinanceStore';
 import { Modal } from '../components/Modal';
 import { AccountForm } from '../components/accounts/AccountForm';
 import { TransactionForm } from '../components/transactions/TransactionForm';
-import { HeaderPage, PageContainer, LoadingState, ErrorBanner, EmptyState } from '../components/shared';
+import { HeaderPage, PageContainer, LoadingState, ErrorBanner, EmptyState, Pagination } from '../components/shared';
 import { useAccount } from '../hooks/useAccount';
+import { useAccountTransactions } from '../hooks/useAccountTransactions';
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 export function AccountDetail() {
-
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { account, transactions, isLoading, error, updateAccount, deleteAccount } = useAccount();
+
+  const { account, isLoading: accountLoading, error: accountError, updateAccount, deleteAccount } = useAccount();
+  const {
+    items,
+    allItems,
+    summary,
+    page,
+    totalPages,
+    setPage,
+    isLoading: txLoading,
+  } = useAccountTransactions(id ?? '');
+
   const { addTransaction } = useFinanceStore();
+
   const [showEdit, setShowEdit] = useState(false);
   const [showAddTx, setShowAddTx] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  if (isLoading && account === null) {
+  const isLoading = accountLoading && account === null;
+
+  if (isLoading) {
     return (
       <PageContainer>
         <LoadingState message="Cargando cuenta…" />
@@ -42,18 +56,16 @@ export function AccountDetail() {
     );
   }
 
-  if (error) {
+  if (accountError) {
     return (
       <PageContainer>
         <ErrorBanner
-          message={error}
+          message={accountError}
           onClose={() => useFinanceStore.setState({ error: null })}
         />
       </PageContainer>
     );
   }
-
-  // const account = accounts.find(a => a.id === id);
 
   if (!account) {
     return (
@@ -71,31 +83,24 @@ export function AccountDetail() {
   const isCard = account.type === AccountType.CreditCard || account.type === AccountType.BankAccount;
   const isCredit = account.type === AccountType.CreditCard;
 
-  const accountTransactions = transactions
-    .filter(t => t.fromAccountId === id || t.toAccountId === id)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const totalIncome = summary?.totalIncome ?? 0;
+  const totalExpenses = summary?.totalExpenses ?? 0;
 
-  const totalIncome = accountTransactions
-    .filter(t => t.type === 'income' || (t.type === 'transfer' && t.toAccountId === id))
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = accountTransactions
-    .filter(t => t.type === 'expense' || (t.type === 'transfer' && t.fromAccountId === id))
-    .reduce((sum, t) => sum + t.amount, 0);
-
+  // Analytics use allItems (all pages, no filters)
   const now = new Date();
   const monthlyData = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
     const key = getMonthKey(d);
-    const income = accountTransactions
+    const income = allItems
       .filter(t => getMonthKey(t.date) === key && t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
-    const expenses = accountTransactions
+    const expenses = allItems
       .filter(t => getMonthKey(t.date) === key && t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
     return { month: MONTHS_ES[d.getMonth()], income, expenses };
   });
 
-  const categoryBreakdown = accountTransactions
+  const categoryBreakdown = allItems
     .filter(t => t.type === 'expense')
     .reduce<Record<string, number>>((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
@@ -273,41 +278,47 @@ export function AccountDetail() {
             </div>
           )}
 
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-            <h3 className="text-slate-700 dark:text-slate-200 font-semibold mb-4">
-              Historial ({accountTransactions.length} movimientos)
-            </h3>
-            {isLoading ? (
+          {/* Transaction history — paginated */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+            <div className="p-5 pb-0">
+              <h3 className="text-slate-700 dark:text-slate-200 font-semibold">
+                Historial ({allItems.length} movimientos)
+              </h3>
+            </div>
+            {txLoading && items.length === 0 ? (
               <LoadingState message="Cargando transacciones…" />
-            ) : accountTransactions.length === 0 ? (
+            ) : items.length === 0 ? (
               <EmptyState icon={CreditCard} message="Sin movimientos en esta cuenta" />
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {accountTransactions.map(tx => {
-                  const isIncoming = tx.type === 'income' || (tx.type === 'transfer' && tx.toAccountId === id);
-                  return (
-                    <div key={tx.id} className="flex items-center gap-3">
-                      <CategoryIconCircle
-                        category={tx.category}
-                        iconKey={tx.categoryKeyIcon}
-                        color={tx.categoryColor}
-                        size="sm"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-slate-700 dark:text-slate-200 text-sm font-medium truncate">
-                          {tx.description || tx.category}
-                        </p>
-                        <p className="text-slate-400 dark:text-slate-500 text-xs">
-                          {tx.category} · {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </p>
+              <>
+                <div className="p-5 pt-4 space-y-3">
+                  {items.map(tx => {
+                    const isIncoming = tx.type === 'income' || (tx.type === 'transfer' && tx.toAccountId === id);
+                    return (
+                      <div key={tx.id} className="flex items-center gap-3">
+                        <CategoryIconCircle
+                          category={tx.category}
+                          iconKey={tx.categoryKeyIcon}
+                          color={tx.categoryColor}
+                          size="sm"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-slate-700 dark:text-slate-200 text-sm font-medium truncate">
+                            {tx.description || tx.category}
+                          </p>
+                          <p className="text-slate-400 dark:text-slate-500 text-xs">
+                            {tx.category} · {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
+                        <span className={`text-sm font-semibold flex-shrink-0 ${isIncoming ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                          {isIncoming ? '+' : '-'}{formatCurrency(tx.amount)}
+                        </span>
                       </div>
-                      <span className={`text-sm font-semibold flex-shrink-0 ${isIncoming ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                        {isIncoming ? '+' : '-'}{formatCurrency(tx.amount)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              </>
             )}
           </div>
         </div>

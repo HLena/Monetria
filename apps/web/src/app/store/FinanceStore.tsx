@@ -175,8 +175,8 @@ export const useFinanceStore = create<FinanceStoreState>()(
           return;
         }
         try {
-          const dtos = await listTransactionsApi();
-          set({ transactions: dtos.map(mapTransactionDtoToTransaction), isLoading: false, error: null });
+          const { items } = await listTransactionsApi();
+          set({ transactions: items.map(mapTransactionDtoToTransaction), isLoading: false, error: null });
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudieron cargar las transacciones';
           set({ error: msg, isLoading: false });
