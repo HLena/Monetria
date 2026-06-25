@@ -15,6 +15,7 @@ public class Transaction
     public Guid? ToAccountId { get; set; }
     public Guid? TransferPairId { get; set; }
     public bool IsActive { get; set; } = true;
+    public string CurrencyCode { get; set; } = "PEN";
 
     public DateTime Date { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -67,6 +67,7 @@ public sealed class TransactionService(
                 ToAccountId = request.ToAccountId,
                 TransferPairId = pairId,
                 IsActive = true,
+                CurrencyCode = request.CurrencyCode,
                 Date = request.Date,
                 CreatedAt = now
             };
@@ -81,6 +82,7 @@ public sealed class TransactionService(
                 ToAccountId = null,
                 TransferPairId = pairId,
                 IsActive = true,
+                CurrencyCode = request.CurrencyCode,
                 Date = request.Date,
                 CreatedAt = now
             };
@@ -101,6 +103,7 @@ public sealed class TransactionService(
             Amount = request.Amount,
             Description = request.Description?.Trim(),
             IsActive = true,
+            CurrencyCode = request.CurrencyCode,
             Date = request.Date,
             CreatedAt = DateTime.UtcNow,
             Category = category
@@ -197,6 +200,7 @@ public sealed class TransactionService(
 
         transaction.Amount = request.Amount;
         transaction.Description = request.Description?.Trim();
+        transaction.CurrencyCode = request.CurrencyCode;
         transaction.Date = request.TransactionDate;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -454,6 +458,7 @@ public sealed class TransactionService(
             transaction.ToAccountId,
             transaction.TransferPairId,
             transaction.IsActive,
+            transaction.CurrencyCode,
             transaction.Date,
             transaction.CreatedAt);
     }

@@ -9,14 +9,16 @@ public sealed record CreateTransactionRequest(
     decimal Amount,
     string? Description,
     DateTime Date,
-    Guid? ToAccountId = null);
+    Guid? ToAccountId = null,
+    string CurrencyCode = "PEN");
 
 public sealed record UpdateTransactionRequest(
     decimal Amount,
     Guid? CategoryId,
     DateTime TransactionDate,
     string? Description,
-    Guid FromAccountId);
+    Guid FromAccountId,
+    string CurrencyCode = "PEN");
 
 public sealed record TransactionResponse(
     Guid Id,
@@ -31,6 +33,7 @@ public sealed record TransactionResponse(
     Guid? ToAccountId,
     Guid? TransferPairId,
     bool IsActive,
+    string CurrencyCode,
     DateTime Date,
     DateTime CreatedAt);
 

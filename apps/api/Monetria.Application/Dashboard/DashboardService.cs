@@ -96,6 +96,7 @@ public sealed class DashboardService(
             t.ToAccountId,
             t.TransferPairId,
             t.IsActive,
+            t.CurrencyCode,
             t.Date,
             t.CreatedAt);
 
