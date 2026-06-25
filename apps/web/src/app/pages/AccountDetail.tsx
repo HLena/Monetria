@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router';
 import { TrendingUp, TrendingDown, Calendar, CreditCard, Pencil, Trash2, Plus } from 'lucide-react';
 import {
@@ -10,14 +10,17 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { formatCurrency, getMonthKey } from '../store/FinanceContext';
-import { CATEGORY_COLORS, AccountType } from '../types/finance';
+import { getMonthKey } from '../store/FinanceContext';
+import { formatAmount } from '../lib/formatAmount';
+import { AccountType } from '../types/finance';
+import type { Transaction } from '../types/finance';
 import { CreditCardVisual } from '../components/CreditCardVisual';
 import { CategoryIconCircle } from '../lib/categoryIcons';
 import { useFinanceStore } from '../store/FinanceStore';
 import { Modal } from '../components/Modal';
 import { AccountForm } from '../components/accounts/AccountForm';
 import { TransactionForm } from '../components/transactions/TransactionForm';
+import { TransactionGroupedList } from '../components/transactions/TransactionGroupedList';
 import { HeaderPage, PageContainer, LoadingState, ErrorBanner, EmptyState, Pagination } from '../components/shared';
 import { useAccount } from '../hooks/useAccount';
 import { useAccountTransactions } from '../hooks/useAccountTransactions';
@@ -37,14 +40,23 @@ export function AccountDetail() {
     totalPages,
     setPage,
     isLoading: txLoading,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
   } = useAccountTransactions(id ?? '');
 
-  const { addTransaction } = useFinanceStore();
+  const { accounts } = useFinanceStore();
 
   const [showEdit, setShowEdit] = useState(false);
   const [showAddTx, setShowAddTx] = useState(false);
+  const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteTx = async (txId: string) => {
+    if (!confirm('¿Eliminar este movimiento?')) return;
+    await deleteTransaction(txId);
+  };
 
   const isLoading = accountLoading && account === null;
 
@@ -100,13 +112,17 @@ export function AccountDetail() {
     return { month: MONTHS_ES[d.getMonth()], income, expenses };
   });
 
-  const categoryBreakdown = allItems
-    .filter(t => t.type === 'expense')
-    .reduce<Record<string, number>>((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + t.amount;
-      return acc;
-    }, {});
-  const categoryList = Object.entries(categoryBreakdown).sort(([, a], [, b]) => b - a);
+  const categoryList = Object.values(
+    allItems
+      .filter(t => t.type === 'expense' && t.categoryId)
+      .reduce<Record<string, { id: string; name: string; iconKey: string | null | undefined; color: string | null | undefined; amount: number }>>((acc, t) => {
+        if (!acc[t.categoryId!]) {
+          acc[t.categoryId!] = { id: t.categoryId!, name: t.category || t.categoryId!, iconKey: t.categoryKeyIcon, color: t.categoryColor, amount: 0 };
+        }
+        acc[t.categoryId!].amount += t.amount;
+        return acc;
+      }, {})
+  ).sort((a, b) => b.amount - a.amount);
 
   const availableCredit = isCredit ? (account.creditLimit ?? 0) + account.currentBalance : 0;
   const usagePercent =
@@ -172,15 +188,15 @@ export function AccountDetail() {
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Límite</span>
-                    <span className="text-slate-700 dark:text-slate-200 font-medium">{formatCurrency(account.creditLimit)}</span>
+                    <span className="text-slate-700 dark:text-slate-200 font-medium">{formatAmount(account.creditLimit, account.currencyCode)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Disponible</span>
-                    <span className="text-emerald-600 font-medium">{formatCurrency(availableCredit)}</span>
+                    <span className="text-emerald-600 font-medium">{formatAmount(availableCredit, account.currencyCode)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Consumido</span>
-                    <span className="text-rose-600 font-medium">{formatCurrency(account.currentBalance)}</span>
+                    <span className="text-rose-600 font-medium">{formatAmount(account.currentBalance, account.currencyCode)}</span>
                   </div>
                   <div>
                     <div className="flex justify-between text-xs mb-1">
@@ -224,12 +240,12 @@ export function AccountDetail() {
             <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-xl p-3 border border-emerald-100 dark:border-emerald-900">
               <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mb-1" />
               <p className="text-xs text-emerald-600 dark:text-emerald-400">Total ingresos</p>
-              <p className="text-emerald-700 dark:text-emerald-300 font-bold text-sm">{formatCurrency(totalIncome)}</p>
+              <p className="text-emerald-700 dark:text-emerald-300 font-bold text-sm">{formatAmount(totalIncome, account.currencyCode)}</p>
             </div>
             <div className="bg-rose-50 dark:bg-rose-950/30 rounded-xl p-3 border border-rose-100 dark:border-rose-900">
               <TrendingDown className="w-4 h-4 text-rose-600 dark:text-rose-400 mb-1" />
               <p className="text-xs text-rose-600 dark:text-rose-400">Total gastos</p>
-              <p className="text-rose-700 dark:text-rose-300 font-bold text-sm">{formatCurrency(totalExpenses)}</p>
+              <p className="text-rose-700 dark:text-rose-300 font-bold text-sm">{formatAmount(totalExpenses, account.currencyCode)}</p>
             </div>
           </div>
         </div>
@@ -243,7 +259,7 @@ export function AccountDetail() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(value: number) => [formatCurrency(value), '']} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }} />
+                <Tooltip formatter={(value: number) => [formatAmount(value, account.currencyCode), '']} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }} />
                 <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Ingresos" />
                 <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name="Gastos" />
               </BarChart>
@@ -254,22 +270,22 @@ export function AccountDetail() {
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
               <h3 className="text-slate-700 dark:text-slate-200 font-semibold mb-4">Gastos por Categoría</h3>
               <div className="space-y-3">
-                {categoryList.map(([category, amount]) => {
-                  const pct = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
+                {categoryList.map(cat => {
+                  const pct = totalExpenses > 0 ? (cat.amount / totalExpenses) * 100 : 0;
                   return (
-                    <div key={category}>
+                    <div key={cat.id}>
                       <div className="flex justify-between text-sm mb-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <CategoryIconCircle category={category} size="sm" />
-                          <span className="text-slate-600 dark:text-slate-300 truncate">{category}</span>
+                          <CategoryIconCircle iconKey={cat.iconKey ?? undefined} color={cat.color ?? undefined} size="sm" />
+                          <span className="text-slate-600 dark:text-slate-300 truncate">{cat.name}</span>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <span className="text-slate-400 dark:text-slate-500 text-xs">{pct.toFixed(0)}%</span>
-                          <span className="text-slate-700 dark:text-slate-200 font-medium">{formatCurrency(amount)}</span>
+                          <span className="text-slate-700 dark:text-slate-200 font-medium">{formatAmount(cat.amount, account.currencyCode)}</span>
                         </div>
                       </div>
                       <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: CATEGORY_COLORS[category] || '#94a3b8' }} />
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: cat.color ?? '#94a3b8' }} />
                       </div>
                     </div>
                   );
@@ -279,44 +295,24 @@ export function AccountDetail() {
           )}
 
           {/* Transaction history — paginated */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-            <div className="p-5 pb-0">
-              <h3 className="text-slate-700 dark:text-slate-200 font-semibold">
-                Historial ({allItems.length} movimientos)
-              </h3>
-            </div>
+          <div>
+            <h3 className="text-slate-700 dark:text-slate-200 font-semibold px-1 mb-3">
+              Historial ({allItems.length} movimientos)
+            </h3>
             {txLoading && items.length === 0 ? (
               <LoadingState message="Cargando transacciones…" />
             ) : items.length === 0 ? (
-              <EmptyState icon={CreditCard} message="Sin movimientos en esta cuenta" />
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+                <EmptyState icon={CreditCard} message="Sin movimientos en esta cuenta" />
+              </div>
             ) : (
               <>
-                <div className="p-5 pt-4 space-y-3">
-                  {items.map(tx => {
-                    const isIncoming = tx.type === 'income' || (tx.type === 'transfer' && tx.toAccountId === id);
-                    return (
-                      <div key={tx.id} className="flex items-center gap-3">
-                        <CategoryIconCircle
-                          category={tx.category}
-                          iconKey={tx.categoryKeyIcon}
-                          color={tx.categoryColor}
-                          size="sm"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-slate-700 dark:text-slate-200 text-sm font-medium truncate">
-                            {tx.description || tx.category}
-                          </p>
-                          <p className="text-slate-400 dark:text-slate-500 text-xs">
-                            {tx.category} · {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </p>
-                        </div>
-                        <span className={`text-sm font-semibold flex-shrink-0 ${isIncoming ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                          {isIncoming ? '+' : '-'}{formatCurrency(tx.amount)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <TransactionGroupedList
+                  items={items}
+                  accounts={accounts}
+                  onEdit={setEditTx}
+                  onDelete={id => void handleDeleteTx(id)}
+                />
                 <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
               </>
             )}
@@ -338,6 +334,16 @@ export function AccountDetail() {
           onSave={async data => { await addTransaction(data); }}
           onClose={() => setShowAddTx(false)}
         />
+      </Modal>
+
+      <Modal isOpen={!!editTx} onClose={() => setEditTx(null)} title="Editar movimiento">
+        {editTx && (
+          <TransactionForm
+            initial={editTx}
+            onSave={async data => { await updateTransaction(editTx.id, data); setEditTx(null); }}
+            onClose={() => setEditTx(null)}
+          />
+        )}
       </Modal>
 
       <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Eliminar cuenta">

@@ -23,12 +23,13 @@ import {
   Cell,
 } from 'recharts';
 import { useFinance, formatCurrency, getMonthKey, getCurrentMonthKey } from '../store/FinanceContext';
-import { CATEGORY_COLORS, AccountType } from '../types/finance';
+import { AccountType } from '../types/finance';
 import { CreditCardVisual } from '../components/CreditCardVisual';
 import { CategoryIconCircle } from '../lib/categoryIcons';
 import { useAuthStore } from '../store/AuthStore';
 import { useFinanceStore } from '../store/FinanceStore';
 import { PageContainer } from '../components/shared';
+import { TransactionGroupedList } from '../components/transactions/TransactionGroupedList';
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -61,7 +62,7 @@ function StatCard({
 
 export function Dashboard() {
   const { user } = useAuthStore();
-  const { accounts, transactions, budgets, savingsGoals } = useFinanceStore();
+  const { accounts, transactions, budgets, savingsGoals, categories } = useFinanceStore();
   const currentMonth = getCurrentMonthKey();
 
   // Calculate total net worth
@@ -96,29 +97,24 @@ export function Dashboard() {
   });
 
   // Category spending this month
-  const categorySpending = transactions
-    .filter(t => getMonthKey(t.date) === currentMonth && t.type === 'expense')
-    .reduce<Record<string, number>>((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + t.amount;
-      return acc;
-    }, {});
-
-  const pieData = Object.entries(categorySpending)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([name, value]) => ({ name, value }));
+  const pieData = Object.values(
+    transactions
+      .filter(t => getMonthKey(t.date) === currentMonth && t.type === 'expense' && t.categoryId)
+      .reduce<Record<string, { name: string; value: number; iconKey: string | null | undefined; color: string | null | undefined }>>((acc, t) => {
+        if (!acc[t.categoryId!]) {
+          acc[t.categoryId!] = { name: t.category || t.categoryId!, value: 0, iconKey: t.categoryKeyIcon, color: t.categoryColor };
+        }
+        acc[t.categoryId!].value += t.amount;
+        return acc;
+      }, {})
+  ).sort((a, b) => b.value - a.value).slice(0, 5);
 
   // Budget alerts
-  const overBudget = budgets.filter(b => {
-    const spent = transactions
-      .filter(t => getMonthKey(t.date) === currentMonth && t.category === b.category && t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-    return spent > b.limit;
-  });
+  const overBudget = budgets.filter(b => b.spentAmount > b.limitAmount);
 
   // Recent transactions
   const recentTransactions = [...transactions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 
   // Savings progress
@@ -241,7 +237,7 @@ export function Dashboard() {
                     {pieData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={CATEGORY_COLORS[entry.name] || '#94a3b8'}
+                        fill={entry.color ?? '#94a3b8'}
                       />
                     ))}
                   </Pie>
@@ -255,7 +251,7 @@ export function Dashboard() {
                 {pieData.map(entry => (
                   <div key={entry.name} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 min-w-0">
-                      <CategoryIconCircle category={entry.name} size="sm" />
+                      <CategoryIconCircle iconKey={entry.iconKey ?? undefined} color={entry.color ?? undefined} size="sm" />
                       <span className="text-slate-600 dark:text-slate-300 truncate">{entry.name}</span>
                     </div>
                     <span className="text-slate-700 dark:text-slate-200 font-medium flex-shrink-0 ml-2">{formatCurrency(entry.value)}</span>
@@ -274,35 +270,20 @@ export function Dashboard() {
       {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Recent Transactions */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-4">
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-3 px-1">
             <h2 className="text-slate-700 dark:text-slate-200 font-semibold">Transacciones Recientes</h2>
             <Link to="/transactions" className="text-indigo-600 dark:text-indigo-400 text-xs font-medium flex items-center gap-1 hover:gap-2 transition-all">
               Ver todas <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="space-y-3">
-            {recentTransactions.map(tx => {
-              const account = accounts.find(a => a.id === tx.fromAccountId);
-              return (
-                <div key={tx.id} className="flex items-center gap-3">
-                  <CategoryIconCircle category={tx.category} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-slate-700 dark:text-slate-200 text-sm font-medium truncate">{tx.description}</p>
-                    <p className="text-slate-400 dark:text-slate-500 text-xs">{tx.category} · {account?.name}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className={`text-sm font-semibold ${tx.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : tx.type === 'transfer' ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                      {tx.type === 'income' ? '+' : tx.type === 'transfer' ? '⇄' : '-'}{formatCurrency(tx.amount)}
-                    </p>
-                    <p className="text-slate-400 dark:text-slate-500 text-xs">
-                      {new Date(tx.date + 'T00:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {recentTransactions.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 text-center text-slate-400 dark:text-slate-500 text-sm">
+              Sin transacciones recientes
+            </div>
+          ) : (
+            <TransactionGroupedList items={recentTransactions} accounts={accounts} />
+          )}
         </div>
 
         {/* Right column: Alerts + Savings */}
@@ -317,7 +298,7 @@ export function Dashboard() {
               <div className="space-y-2">
                 {overBudget.map(b => (
                   <div key={b.id} className="flex items-center justify-between text-xs">
-                    <span className="text-amber-600 dark:text-amber-400">{b.category}</span>
+                    <span className="text-amber-600 dark:text-amber-400">{categories.find(c => c.id === b.categoryId)?.name ?? b.categoryId}</span>
                     <span className="text-amber-700 dark:text-amber-300 font-medium">Excedido</span>
                   </div>
                 ))}
