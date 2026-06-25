@@ -56,3 +56,43 @@
 - Toggle moneda (size sm, inline derecha del label "Monto")
 - Input monto muestra símbolo como prefijo
 - `currency` incluido en el objeto enviado a `onSave`
+
+## 2026-06-24 — Conexión al API real: BudgetForm + Budgets.tsx + FinanceStore
+
+### Qué se cambió
+
+**Tipo `Budget` en `finance.ts`** alineado con el backend:
+- Eliminados: `limit`, `period`, `color`, `currency?`, `alertOnLimit?`
+- Añadidos: `limitAmount`, `month`, `year`, `spentAmount`, `rolloverUnused`
+
+**Nuevos archivos:**
+- `types/api/budgets.ts` — DTOs: `BudgetDto`, `CreateBudgetRequestBody`, `UpdateBudgetRequestBody`
+- `api/budgets.ts` — `listBudgets(month?, year?)`, `createBudget`, `updateBudget`, `deleteBudget`
+
+**`BudgetForm.tsx`** reescrito:
+- Eliminados: toggle de moneda, toggle Mensual/Semanal, switch `alertOnLimit`, ColorPicker
+- Campos reales: `categoryId` (CategorySelect), `limitAmount` (AmountInput sin toggle de moneda), `rolloverUnused` (ToggleSwitch)
+- Periodo mostrado como pill de solo lectura con mes y año actuales
+- Validaciones con `ErrorMsg`: categoría requerida, límite > 0
+
+**`FinanceStore.tsx`** — añadidas 4 acciones de presupuesto:
+- `loadBudgets(month?, year?)` — filtra por mes/año actual al cargar
+- `addBudget` — llama `createBudget` y recarga la lista
+- `updateBudget` — llama `updateBudget` y recarga la lista
+- `deleteBudget` — llama `deleteBudget` y recarga la lista
+- Helper `mapBudgetDto(dto): Budget` para convertir DTO → modelo UI
+
+**`Budgets.tsx`** reescrito:
+- Eliminadas: referencias a `useFinance`, `formatCurrency`, `getCurrentMonthKey`, `getMonthKey` de FinanceContext
+- Eliminados: `CATEGORY_COLORS`, `budget.category`, `budget.period`, `budget.color`, `budget.limit`
+- Carga presupuestos del mes actual en `useEffect`
+- `onSave` llama `addBudget` o `updateBudget` según modo (crear/editar)
+- Delete llama `deleteBudget(budget.id)`
+- Nombre de categoría resuelto desde `categories` del store por `budget.categoryId`
+- Progress bar usa `budget.spentAmount` del backend (ya calculado)
+- Cards con estado visual: verde (ok), ámbar (>80%), rojo (excedido)
+- 3 summary cards: presupuesto total, gastado, categorías excedidas
+
+**`Dashboard.tsx` y `Reports.tsx`** — referencias a `budget.category`, `budget.limit`, `budget.color` actualizadas:
+- `overBudget` ahora usa `b.spentAmount > b.limitAmount` (antes calculaba manualmente desde transacciones)
+- `budgetPerformance` usa `b.spentAmount`, `b.limitAmount`, y resuelve nombre/color por `b.categoryId` desde el store de categorías

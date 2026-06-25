@@ -1,18 +1,9 @@
 import React, { useState } from 'react';
-import { Budget, BudgetPeriod, Currency } from '../../types/finance';
-import { FORM_COLORS } from '../../../lib/colors';
+import { Budget } from '../../types/finance';
 import { useFinanceStore } from '@/app/store/FinanceStore';
 import { AmountInput } from '../shared/AmountInput';
 import { CategorySelect } from '../shared/CategorySelect';
-import { ToggleGroup } from '../shared/ToggleGroup';
-import { ToggleSwitch } from '../shared/ToggleSwitch';
-
-const labelCls = 'text-sm text-slate-600 dark:text-slate-400 font-medium mb-1 block';
-
-const PERIOD_OPTIONS = [
-  { value: 'monthly' as BudgetPeriod, label: 'Mensual' },
-  { value: 'weekly' as BudgetPeriod, label: 'Semanal' },
-];
+import { ErrorMsg } from '../shared/ErrorMsg';
 
 export function BudgetForm({
   initial,
@@ -26,21 +17,29 @@ export function BudgetForm({
   const { categories } = useFinanceStore();
   const expenseCategories = categories.filter(c => c.isActive && c.type === 'Expense');
 
+  const now = new Date();
   const [form, setForm] = useState({
     categoryId: initial?.categoryId ?? '',
-    limit: initial?.limit ?? 0,
-    period: (initial?.period ?? 'monthly') as BudgetPeriod,
-    color: initial?.color ?? FORM_COLORS[0],
-    currency: (initial?.currency ?? 'PEN') as Currency,
-    alertOnLimit: initial?.alertOnLimit ?? false,
+    limitAmount: initial?.limitAmount ?? ('' as number | ''),
+    month: initial?.month ?? now.getMonth() + 1,
+    year: initial?.year ?? now.getFullYear(),
+    rolloverUnused: initial?.rolloverUnused ?? false,
+    spentAmount: initial?.spentAmount ?? 0,
   });
+
+  const [errors, setErrors] = useState<{ categoryId?: string; limitAmount?: string }>({});
 
   const set = (key: keyof typeof form, value: unknown) =>
     setForm(prev => ({ ...prev, [key]: value }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...form, limit: parseFloat(form.limit.toString()) || 0 });
+    const errs: typeof errors = {};
+    const limitAmount = parseFloat(form.limitAmount.toString()) || 0;
+    if (!form.categoryId) errs.categoryId = 'Selecciona una categoría';
+    if (limitAmount <= 0) errs.limitAmount = 'El límite debe ser mayor a 0';
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    onSave({ ...form, limitAmount });
     onClose();
   };
 
@@ -51,47 +50,54 @@ export function BudgetForm({
     color: c.color,
   }));
 
+  const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
 
-      <AmountInput
-        required
-        label="Límite"
-        value={form.limit}
-        onChange={val => set('limit', val)}
-        currency={form.currency}
-        onCurrencyChange={val => set('currency', val)}
-        min="1"
-      />
+      <div>
+        <AmountInput
+          label="Límite"
+          value={form.limitAmount}
+          onChange={val => {
+            set('limitAmount', val);
+            if (errors.limitAmount) setErrors(prev => ({ ...prev, limitAmount: undefined }));
+          }}
+          currency="PEN"
+        />
+        <ErrorMsg message={errors.limitAmount} />
+      </div>
 
       <div>
-        <label className={labelCls}>Categoría *</label>
+        <label className="text-sm text-slate-600 dark:text-slate-400 font-medium mb-1 block">
+          Categoría *
+        </label>
         <CategorySelect
           options={categoryOptions}
           value={form.categoryId}
-          onChange={id => set('categoryId', id)}
+          onChange={id => {
+            set('categoryId', id);
+            if (errors.categoryId) setErrors(prev => ({ ...prev, categoryId: undefined }));
+          }}
           placeholder="Selecciona categoría"
         />
+        <ErrorMsg message={errors.categoryId} />
       </div>
 
-      <div>
-        <label className={labelCls}>Periodo *</label>
-        <ToggleGroup
-          options={PERIOD_OPTIONS}
-          value={form.period}
-          onChange={val => set('period', val)}
-        />
+      <div className="flex items-center gap-2 px-1 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+        <span className="text-xs text-slate-500 dark:text-slate-400 flex-1">
+          Periodo
+        </span>
+        <span className="text-xs font-medium text-slate-700 dark:text-slate-200">
+          {MONTH_NAMES[form.month - 1]} {form.year}
+        </span>
       </div>
-
-      <ToggleSwitch
-        value={form.alertOnLimit}
-        onChange={val => set('alertOnLimit', val)}
-        label="Alerta al límite"
-        description="Notificar cuando el gasto se acerque al límite"
-      />
 
       <div className="flex gap-3 pt-2">
-        <button type="submit" className="flex-1 bg-indigo-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <button
+          type="submit"
+          className="flex-1 bg-indigo-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-indigo-700 transition-colors"
+        >
           {initial ? 'Guardar cambios' : 'Crear Presupuesto'}
         </button>
       </div>

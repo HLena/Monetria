@@ -1,11 +1,12 @@
-import React from 'react';
 import { Currency } from '../../types/finance';
+
+const CURRENCY_SYMBOL: Record<Currency, string> = { PEN: 'S/', USD: '$' };
 
 interface Props {
   value: number | '';
   onChange: (value: string) => void;
   currency: Currency;
-  onCurrencyChange: (currency: Currency) => void;
+  onCurrencyChange?: (currency: Currency) => void;
   label?: string;
   min?: string;
   required?: boolean;
@@ -35,22 +36,28 @@ export function AmountInput({
         value={value || ''}
         onChange={e => onChange(e.target.value)}
       />
-      <div className="flex items-center rounded-full border border-slate-200 dark:border-slate-600 mt-2 p-0.5 gap-0.5 bg-white dark:bg-slate-800 shadow-sm">
-        {(['PEN', 'USD'] as Currency[]).map(c => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => onCurrencyChange(c)}
-            className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
-              currency === c
-                ? 'bg-indigo-600 text-white'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
-          >
-            {c === 'PEN' ? 'S/' : '$'}
-          </button>
-        ))}
-      </div>
+      {onCurrencyChange ? (
+        <div className="flex items-center rounded-full border border-slate-200 dark:border-slate-600 mt-2 p-0.5 gap-0.5 bg-white dark:bg-slate-800 shadow-sm">
+          {(['PEN', 'USD'] as Currency[]).map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => onCurrencyChange(c)}
+              className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                currency === c
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              {CURRENCY_SYMBOL[c]}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span className="mt-2 text-xs font-bold text-slate-400 dark:text-slate-500">
+          {CURRENCY_SYMBOL[currency]}
+        </span>
+      )}
     </div>
   );
 }

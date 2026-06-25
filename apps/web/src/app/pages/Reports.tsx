@@ -57,7 +57,7 @@ function SummaryCard({ label, value, prev, icon: Icon, color }: {
 }
 
 export function Reports() {
-  const { transactions, accounts, budgets } = useFinanceStore();
+  const { transactions, accounts, budgets, categories } = useFinanceStore();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
@@ -128,11 +128,13 @@ export function Reports() {
 
   // Budget performance
   const budgetPerformance = budgets.map(b => {
-    const spent = transactions
-      .filter(t => new Date(t.date).getFullYear() === selectedYear && t.type === 'expense' && t.category === b.category)
-      .reduce((s, t) => s + t.amount, 0);
-    const limit = b.limit * 12;
-    return { category: b.category, spent, limit, color: CATEGORY_COLORS[b.category] || b.color };
+    const cat = categories.find(c => c.id === b.categoryId);
+    return {
+      category: cat?.name ?? b.categoryId,
+      spent: b.spentAmount,
+      limit: b.limitAmount,
+      color: cat?.color ?? '#6366f1',
+    };
   });
 
   const currentMonthLabel = MONTHS_ES[now.getMonth()];

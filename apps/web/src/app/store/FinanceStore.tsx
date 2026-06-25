@@ -14,6 +14,13 @@ import {
   deleteTransaction as deleteTransactionApi,
 } from '../api/transactions';
 import {
+  listBudgets as listBudgetsApi,
+  createBudget as createBudgetApi,
+  updateBudget as updateBudgetApi,
+  deleteBudget as deleteBudgetApi,
+} from '../api/budgets';
+import type { BudgetDto } from '../types/api/budgets';
+import {
   filterAccountDtosForUser,
   mapAccountDtoToFinanceAccount,
   toCreateAccountRequestBody,
@@ -48,6 +55,23 @@ interface FinanceStoreState {
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
   updateTransaction: (id: string, tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
+  loadBudgets: (month?: number, year?: number) => Promise<void>;
+  addBudget: (budget: Omit<Budget, 'id' | 'createdAt'>) => Promise<void>;
+  updateBudget: (id: string, budget: Omit<Budget, 'id' | 'createdAt'>) => Promise<void>;
+  deleteBudget: (id: string) => Promise<void>;
+}
+
+function mapBudgetDto(dto: BudgetDto): Budget {
+  return {
+    id: dto.id,
+    categoryId: dto.categoryId,
+    limitAmount: dto.limitAmount,
+    month: dto.month,
+    year: dto.year,
+    spentAmount: dto.spentAmount,
+    rolloverUnused: dto.rolloverUnused,
+    createdAt: dto.createdAt,
+  };
 }
 
 export const useFinanceStore = create<FinanceStoreState>()(
@@ -236,6 +260,67 @@ export const useFinanceStore = create<FinanceStoreState>()(
           void get().loadUserBalance().catch(() => undefined);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo eliminar la transacción';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      loadBudgets: async (month?: number, year?: number) => {
+        if (!getAuthToken()) { set({ budgets: [] }); return; }
+        set({ isLoading: true, error: null });
+        try {
+          const dtos = await listBudgetsApi(month, year);
+          set({ budgets: dtos.map(mapBudgetDto), isLoading: false, error: null });
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudieron cargar los presupuestos';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      addBudget: async (budget: Omit<Budget, 'id' | 'createdAt'>) => {
+        set({ isLoading: true, error: null });
+        try {
+          await createBudgetApi({
+            categoryId: budget.categoryId,
+            limitAmount: budget.limitAmount,
+            month: budget.month,
+            year: budget.year,
+            rolloverUnused: budget.rolloverUnused,
+          });
+          await get().loadBudgets();
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo crear el presupuesto';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      updateBudget: async (id: string, budget: Omit<Budget, 'id' | 'createdAt'>) => {
+        set({ isLoading: true, error: null });
+        try {
+          await updateBudgetApi(id, {
+            categoryId: budget.categoryId,
+            limitAmount: budget.limitAmount,
+            month: budget.month,
+            year: budget.year,
+            rolloverUnused: budget.rolloverUnused,
+          });
+          await get().loadBudgets();
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo actualizar el presupuesto';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      deleteBudget: async (id: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          await deleteBudgetApi(id);
+          await get().loadBudgets();
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo eliminar el presupuesto';
           set({ error: msg, isLoading: false });
           throw caught;
         }

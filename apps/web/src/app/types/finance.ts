@@ -91,12 +91,12 @@ export interface Transaction {
 export interface Budget {
   id: string;
   categoryId: string;
-  limit: number;
-  period: BudgetPeriod;
-  color: string;
+  limitAmount: number;
+  month: number;
+  year: number;
+  spentAmount: number;
+  rolloverUnused: boolean;
   createdAt: string;
-  currency?: Currency;
-  alertOnLimit?: boolean;
 }
 
 export interface FixedExpense {
