@@ -8,6 +8,7 @@ import { FormField } from '../shared/FormField';
 import { SectionLabel } from '../shared/SectionLabel';
 import { ColorPicker } from '../shared/ColorPicker';
 import { Divider } from '../shared/Divider';
+import { ErrorMsg } from '../shared/ErrorMsg';
 import { Landmark, CreditCard, Banknote, Smartphone } from 'lucide-react';
 
 type TypeConfig = {
@@ -90,6 +91,7 @@ export function AccountForm({
     expiryDate: initial?.expiryDate ?? '',
     institutionName: initial?.institutionName ?? '',
     currentBalance: initial?.currentBalance ?? 0,
+    initialBalance: initial?.initialBalance ?? 0,
     creditLimit: initial?.creditLimit,
     statementClosingDay: initial?.statementClosingDay,
     paymentDueDay: initial?.paymentDueDay,
@@ -98,11 +100,41 @@ export function AccountForm({
     createdAt: initial?.createdAt ?? new Date().toISOString(),
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const set = (key: keyof typeof form, value: unknown) =>
     setForm(prev => ({ ...prev, [key]: value }));
 
+  const validate = (): Record<string, string> => {
+    const errs: Record<string, string> = {};
+
+    if (!form.name.trim()) {
+      errs.name = 'El nombre de la cuenta es obligatorio';
+    }
+
+    if ((form.initialBalance ?? 0) < 0) {
+      errs.initialBalance = 'El saldo inicial no puede ser negativo';
+    }
+
+    const digits = form.cardLast4Digits?.trim() ?? '';
+    if (
+      (form.type === AccountType.CreditCard || form.type === AccountType.BankAccount) &&
+      digits.length > 0 &&
+      digits.length !== 4
+    ) {
+      errs.cardLast4Digits = 'Deben ser exactamente 4 dígitos';
+    }
+
+    return errs;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
     try {
       await onSave(form);
       onClose();
@@ -162,11 +194,14 @@ export function AccountForm({
       <SectionLabel>Información básica</SectionLabel>
       <FormField label="Nombre de la cuenta" required>
         <Input
-          required
           placeholder="Ej: Visa Santander"
           value={form.name}
-          onChange={e => set('name', e.target.value)}
+          onChange={e => {
+            set('name', e.target.value);
+            if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+          }}
         />
+        <ErrorMsg message={errors.name} />
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
@@ -186,9 +221,13 @@ export function AccountForm({
               min="0"
               step="0.01"
               placeholder="0.00"
-              value={form.currentBalance || ''}
-              onChange={e => set('currentBalance', parseFloat(e.target.value) || 0)}
+              value={form.initialBalance || ''}
+              onChange={e => {
+                set('initialBalance', parseFloat(e.target.value) || 0);
+                if (errors.initialBalance) setErrors(prev => ({ ...prev, initialBalance: '' }));
+              }}
             />
+            <ErrorMsg message={errors.initialBalance} />
           </FormField>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
             Monto que ya tenías antes de usar Monetria
@@ -234,8 +273,12 @@ export function AccountForm({
                 maxLength={4}
                 placeholder="1234"
                 value={form.cardLast4Digits ?? ''}
-                onChange={e => set('cardLast4Digits', e.target.value.replace(/\D/g, ''))}
+                onChange={e => {
+                  set('cardLast4Digits', e.target.value.replace(/\D/g, ''));
+                  if (errors.cardLast4Digits) setErrors(prev => ({ ...prev, cardLast4Digits: '' }));
+                }}
               />
+              <ErrorMsg message={errors.cardLast4Digits} />
             </FormField>
             <div className="col-span-2">
               <FormField label="Titular (mayúsculas)">
@@ -274,8 +317,12 @@ export function AccountForm({
                 maxLength={4}
                 placeholder="1234"
                 value={form.cardLast4Digits ?? ''}
-                onChange={e => set('cardLast4Digits', e.target.value.replace(/\D/g, ''))}
+                onChange={e => {
+                  set('cardLast4Digits', e.target.value.replace(/\D/g, ''));
+                  if (errors.cardLast4Digits) setErrors(prev => ({ ...prev, cardLast4Digits: '' }));
+                }}
               />
+              <ErrorMsg message={errors.cardLast4Digits} />
             </FormField>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -332,7 +379,7 @@ export function AccountForm({
         </div>
       )}
 
-      <hr className="border-t border-slate-100 dark:border-slate-800" />
+      <Divider />
 
       <SectionLabel>Color de cuenta</SectionLabel>
       <ColorPicker

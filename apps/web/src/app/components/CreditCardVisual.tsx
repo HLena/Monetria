@@ -1,7 +1,7 @@
 import React from 'react';
 import { Wifi, CreditCard } from 'lucide-react';
 import { Account, AccountType } from '../types/finance';
-import { formatCurrency } from '../store/FinanceContext';
+import { formatAmount } from '../lib/formatAmount';
 
 interface CreditCardVisualProps {
   account: Account;
@@ -34,7 +34,7 @@ export function CreditCardVisual({ account, compact = false }: CreditCardVisualP
         </div>
         <div className="mt-1">
           <p className="text-xs opacity-70">{isCredit ? 'Saldo' : 'Disponible'}</p>
-          <p className="text-lg font-bold">{formatCurrency(account.currentBalance)}</p>
+          <p className="text-lg font-bold">{formatAmount(account.currentBalance, account.currencyCode)}</p>
         </div>
         {account.cardLast4Digits && (
           <p className="text-xs opacity-60 mt-1">•••• {account.cardLast4Digits}</p>
@@ -114,15 +114,15 @@ export function CreditCardVisual({ account, compact = false }: CreditCardVisualP
           {isCredit ? (
             <>
               <p className="text-xs opacity-60">Saldo actual</p>
-              <p className="text-xl font-bold">{formatCurrency(account.currentBalance)}</p>
+              <p className="text-xl font-bold">{formatAmount(account.currentBalance, account.currencyCode)}</p>
               <p className="text-xs opacity-60">
-                Disponible: {formatCurrency(availableCredit)}
+                Disponible: {formatAmount(availableCredit, account.currencyCode)}
               </p>
             </>
           ) : (
             <>
               <p className="text-xs opacity-60">Disponible</p>
-              <p className="text-xl font-bold">{formatCurrency(account.currentBalance)}</p>
+              <p className="text-xl font-bold">{formatAmount(account.currentBalance, account.currencyCode)}</p>
             </>
           )}
         </div>

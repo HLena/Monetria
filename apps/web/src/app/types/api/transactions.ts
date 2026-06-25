@@ -20,6 +20,7 @@ export interface TransactionDto {
   description: string | null;
   toAccountId: string | null;
   isActive: boolean;
+  currencyCode: string;
   date: string;
   createdAt: string;
 }
@@ -32,6 +33,7 @@ export interface CreateTransactionRequestBody {
   description: string | null;
   date: string;
   toAccountId: string | null;
+  currencyCode: string;
 }
 
 export interface UpdateTransactionRequestBody {
@@ -40,6 +42,7 @@ export interface UpdateTransactionRequestBody {
   transactionDate: string;
   description: string | null;
   fromAccountId: string;
+  currencyCode: string;
 }
 
 export interface TransactionSummaryDto {

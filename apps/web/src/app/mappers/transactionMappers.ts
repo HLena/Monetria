@@ -4,7 +4,7 @@ import type {
   UpdateTransactionRequestBody,
   TransactionTypeDto,
 } from '../types/api/transactions';
-import type { Transaction, TransactionType } from '../types/finance';
+import type { Transaction, TransactionType, Currency } from '../types/finance';
 import type { CategoryDto } from '../types/api/categories';
 
 const TYPE_FROM_DTO: Record<TransactionTypeDto, TransactionType> = {
@@ -33,6 +33,7 @@ export function mapTransactionDtoToTransaction(dto: TransactionDto): Transaction
     date: dto.date.split('T')[0],
     createdAt: dto.createdAt,
     toAccountId: dto.toAccountId ?? undefined,
+    currency: (dto.currencyCode as Currency) ?? 'PEN',
   };
 }
 
@@ -59,6 +60,7 @@ export function toCreateTransactionRequestBody(
     description: tx.description || null,
     date: `${tx.date}T00:00:00Z`,
     toAccountId: tx.toAccountId ?? null,
+    currencyCode: tx.currency ?? 'PEN',
   };
 }
 
@@ -72,5 +74,6 @@ export function toUpdateTransactionRequestBody(
     transactionDate: `${tx.date}T00:00:00`,
     description: tx.description || null,
     fromAccountId: tx.fromAccountId,
+    currencyCode: tx.currency ?? 'PEN',
   };
 }

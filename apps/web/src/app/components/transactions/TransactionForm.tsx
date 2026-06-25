@@ -5,9 +5,16 @@ import type { CategoryDto } from '../../types/api/categories';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { FormField } from '../shared/FormField';
+import { ErrorMsg } from '../shared/ErrorMsg';
 import { CategorySelect } from '../shared/CategorySelect';
 import { AmountInput } from '../shared/AmountInput';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
+
+type FormErrors = {
+  amount?: string;
+  category?: string;
+  toAccountId?: string;
+};
 
 export function TransactionForm({
   initial,
@@ -21,11 +28,12 @@ export function TransactionForm({
   const { accounts, categories } = useFinanceStore();
   const [type, setType] = useState<TransactionType>(initial?.type ?? 'expense');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>(initial?.categoryId ?? '');
   const [form, setForm] = useState({
     fromAccountId: initial?.fromAccountId ?? accounts[0]?.id ?? '',
     toAccountId: initial?.toAccountId ?? '',
-    amount: initial?.amount ?? 0,
+    amount: initial?.amount ?? ('' as number | ''),
     description: initial?.description ?? '',
     date: initial?.date ?? new Date().toISOString().split('T')[0],
     currency: (initial?.currency ?? 'PEN') as Currency,
@@ -54,10 +62,40 @@ export function TransactionForm({
   const handleTypeChange = (next: TransactionType) => {
     setType(next);
     setSelectedCategoryId('');
+    setErrors({});
+  };
+
+  const validate = (): FormErrors => {
+    const errs: FormErrors = {};
+    const amount = parseFloat(form.amount.toString());
+
+    if (!form.amount || isNaN(amount) || amount <= 0) {
+      errs.amount = 'El monto debe ser mayor a 0';
+    }
+
+    if (type !== 'transfer' && !selectedCategoryId && visibleCategories.length > 0) {
+      errs.category = 'Selecciona una categoría';
+    }
+
+    if (type === 'transfer') {
+      if (!form.toAccountId) {
+        errs.toAccountId = 'Selecciona la cuenta destino';
+      } else if (form.toAccountId === form.fromAccountId) {
+        errs.toAccountId = 'La cuenta destino debe ser diferente a la cuenta origen';
+      }
+    }
+
+    return errs;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
     const data: Omit<Transaction, 'id' | 'createdAt'> = {
       fromAccountId: form.fromAccountId,
       type,
@@ -65,7 +103,7 @@ export function TransactionForm({
       categoryId: type === 'transfer' ? undefined : selectedCategory?.id,
       categoryColor: type === 'transfer' ? undefined : (selectedCategory?.color ?? undefined),
       categoryKeyIcon: type === 'transfer' ? undefined : (selectedCategory?.keyIcon ?? undefined),
-      amount: parseFloat(form.amount.toString()) || 0,
+      amount: parseFloat(form.amount.toString()),
       description: form.description,
       date: form.date,
       currency: form.currency,
@@ -108,14 +146,20 @@ export function TransactionForm({
         disabled={isEditMode}
       />
 
-      <AmountInput
-        required
-        value={form.amount}
-        onChange={val => set('amount', val)}
-        currency={form.currency}
-        onCurrencyChange={val => set('currency', val)}
-        min="0.01"
-      />
+      <div>
+        <AmountInput
+          required
+          value={form.amount}
+          onChange={val => {
+            set('amount', val);
+            if (errors.amount) setErrors(prev => ({ ...prev, amount: undefined }));
+          }}
+          currency={form.currency}
+          onCurrencyChange={val => set('currency', val)}
+          min="0.01"
+        />
+        <ErrorMsg message={errors.amount} />
+      </div>
 
       <FormField label="Descripción">
         <Input
@@ -126,6 +170,7 @@ export function TransactionForm({
       </FormField>
 
       {type !== 'transfer' && (
+        <div>
           <FormField label="Categoría" required>
             {visibleCategories.length === 0 ? (
               <p className="text-xs text-slate-400 dark:text-slate-500">Cargando categorías…</p>
@@ -133,10 +178,15 @@ export function TransactionForm({
               <CategorySelect
                 options={visibleCategories.map(c => ({ id: c.id, name: c.name, iconKey: c.keyIcon, color: c.color }))}
                 value={selectedCategoryId}
-                onChange={setSelectedCategoryId}
+                onChange={id => {
+                  setSelectedCategoryId(id);
+                  if (errors.category) setErrors(prev => ({ ...prev, category: undefined }));
+                }}
               />
             )}
           </FormField>
+          <ErrorMsg message={errors.category} />
+        </div>
       )}
 
       <FormField label={type === 'transfer' ? 'Cuenta origen' : 'Cuenta'} required>
@@ -152,18 +202,23 @@ export function TransactionForm({
       </FormField>
 
       {type === 'transfer' && (
-        <FormField label="Cuenta destino" required>
-          <Select
-            required
-            value={form.toAccountId}
-            onChange={e => set('toAccountId', e.target.value)}
-          >
-            <option value="">Selecciona cuenta destino</option>
-            {destinationAccounts.map(a => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </Select>
-        </FormField>
+        <div>
+          <FormField label="Cuenta destino" required>
+            <Select
+              value={form.toAccountId}
+              onChange={e => {
+                set('toAccountId', e.target.value);
+                if (errors.toAccountId) setErrors(prev => ({ ...prev, toAccountId: undefined }));
+              }}
+            >
+              <option value="">Selecciona cuenta destino</option>
+              {destinationAccounts.map(a => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </Select>
+          </FormField>
+          <ErrorMsg message={errors.toAccountId} />
+        </div>
       )}
 
       <FormField label="Fecha" required>
@@ -174,7 +229,6 @@ export function TransactionForm({
           onChange={e => set('date', e.target.value)}
         />
       </FormField>
-        
 
       <div className="flex gap-3 pt-2">
         <button

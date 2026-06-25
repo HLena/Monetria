@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { CategoryIconCircle } from '../../lib/categoryIcons';
 
@@ -21,20 +22,42 @@ const triggerCls =
 
 export function CategorySelect({ options, value, onChange, placeholder = 'Selecciona categoría' }: Props) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const selected = options.find(o => o.id === value);
+
+  const handleOpen = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 99999,
+      });
+    }
+    setOpen(o => !o);
+  };
 
   useEffect(() => {
     const handleOut = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (
+        triggerRef.current && !triggerRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleOut);
     return () => document.removeEventListener('mousedown', handleOut);
   }, []);
 
   return (
-    <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen(o => !o)} className={triggerCls}>
+    <div className="relative">
+      <button ref={triggerRef} type="button" onClick={handleOpen} className={triggerCls}>
         {selected ? (
           <CategoryIconCircle iconKey={selected.iconKey} category={selected.name} color={selected.color ?? undefined} size="xs" />
         ) : null}
@@ -44,8 +67,12 @@ export function CategorySelect({ options, value, onChange, placeholder = 'Selecc
         <ChevronDown className={`w-4 h-4 text-slate-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+      {open && createPortal(
+        <div
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg max-h-52 overflow-y-auto"
+        >
           {options.map(opt => (
             <button
               key={opt.id}
@@ -61,7 +88,8 @@ export function CategorySelect({ options, value, onChange, placeholder = 'Selecc
               <span>{opt.name}</span>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

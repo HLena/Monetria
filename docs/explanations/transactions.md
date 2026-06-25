@@ -370,3 +370,41 @@ UpdateTransactionRequestBody
 - `api/transactions.ts` — `listTransactions(params?)` now accepts query params; added `getTransactionsSummary(params?)`; both build the query string locally (no changes to apiClient)
 - `hooks/useTransactionsPaginated.ts` (new) — self-contained hook that owns filter state, page state, debounced search (400 ms), and fetches list + summary in parallel on every change. CRUD operations call the API directly then trigger a `refreshKey` re-fetch and reload accounts/balance via the store.
 - `pages/Movements.tsx` — removed all client-side filtering logic. Now uses `useTransactionsPaginated`. Month dropdown generates last 24 months dynamically. Category filter uses `categoryId` (not category name string).
+
+## 2026-06-24 — Add CurrencyCode to Transaction + form validations
+
+### CurrencyCode en Transaction (backend)
+
+- `Transaction.cs` — nuevo campo `public string CurrencyCode { get; set; } = "PEN";`
+- `TransactionDtos.cs` — `CurrencyCode` agregado a `CreateTransactionRequest` (default `"PEN"`), `UpdateTransactionRequest` y `TransactionResponse`
+- `TransactionService.cs` — `CurrencyCode` asignado en `CreateAsync` (income/expense y ambas filas de transfer), `UpdateAsync` y `MapToResponse`
+- `DashboardService.cs` — `MapTransactionResponse` actualizado para incluir `CurrencyCode`
+- Migración: `AddCurrencyCodeToTransactions`
+
+### CurrencyCode en Transaction (frontend)
+
+- `types/api/transactions.ts` — `currencyCode: string` en `TransactionDto`, `CreateTransactionRequestBody` y `UpdateTransactionRequestBody`
+- `mappers/transactionMappers.ts` — `mapTransactionDtoToTransaction` mapea `currency`, `toCreateTransactionRequestBody` y `toUpdateTransactionRequestBody` envían `currencyCode: tx.currency ?? 'PEN'`
+
+### Bug fix — AccountForm initialBalance
+
+El campo "Saldo inicial" guardaba en `form.currentBalance` pero el mapper `toCreateAccountRequestBody` leía `a.initialBalance ?? 0`, por lo que el saldo siempre llegaba como 0 al backend. Corregido: el form ahora usa `initialBalance` en su estado interno.
+
+### Validaciones en formularios
+
+**TransactionForm**
+- `amount > 0` — mensaje: "El monto debe ser mayor a 0"
+- `categoryId` requerido para income/expense — mensaje: "Selecciona una categoría"
+- `toAccountId ≠ fromAccountId` para transfer — mensaje: "La cuenta destino debe ser diferente a la cuenta origen"
+- Los errores se limpian al corregir el campo correspondiente
+
+**AccountForm**
+- `name` no vacío — mensaje: "El nombre de la cuenta es obligatorio"
+- `initialBalance >= 0` — mensaje: "El saldo inicial no puede ser negativo"
+- `cardLast4Digits` exactamente 4 dígitos cuando se ingresa (CreditCard y BankAccount) — mensaje: "Deben ser exactamente 4 dígitos"
+
+**BudgetForm**
+- `categoryId` seleccionado — mensaje: "Selecciona una categoría"
+- `limit > 0` — mensaje: "El límite debe ser mayor a 0"
+
+Todos los mensajes de error se muestran con el componente `<ErrorMsg>` (shared).
