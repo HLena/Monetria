@@ -15,4 +15,5 @@ export { ToggleGroup } from './ToggleGroup';
 export type { ToggleOption } from './ToggleGroup';
 export { ColorPicker } from './ColorPicker';
 export { ToggleSwitch } from './ToggleSwitch';
+export { MonthNavigator } from './MonthNavigator';
 export { SummaryCard } from '../ui/SummaryCard';

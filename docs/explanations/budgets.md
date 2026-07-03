@@ -96,3 +96,20 @@
 **`Dashboard.tsx` y `Reports.tsx`** — referencias a `budget.category`, `budget.limit`, `budget.color` actualizadas:
 - `overBudget` ahora usa `b.spentAmount > b.limitAmount` (antes calculaba manualmente desde transacciones)
 - `budgetPerformance` usa `b.spentAmount`, `b.limitAmount`, y resuelve nombre/color por `b.categoryId` desde el store de categorías
+
+## 2026-07-03 — MonthNavigator: navegación de mes en Presupuestos
+
+### Qué se implementó
+
+**Nuevo componente `MonthNavigator`** en `src/app/components/shared/MonthNavigator.tsx`:
+- Muestra el mes y año actual entre dos flechas (`ChevronLeft` / `ChevronRight`)
+- Flecha derecha deshabilitada cuando se está en el mes actual (no permite avanzar al futuro)
+- Flecha izquierda siempre habilitada (navega indefinidamente hacia atrás)
+- Props: `month: number`, `year: number`, `onChange: (month, year) => void`
+- Exportado desde `shared/index.ts`
+
+**`Budgets.tsx`** actualizado:
+- `filterMonth` y `filterYear` ahora tienen setters activos
+- `MonthNavigator` se renderiza en el slot `actions` del `HeaderPage`, junto al botón "Nuevo Presupuesto"
+- Cambiar el mes/año recarga los presupuestos vía el `useEffect` existente
+- Se eliminó el `subtitle` del `HeaderPage` (la información de mes queda en el navegador)

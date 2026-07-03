@@ -4,7 +4,7 @@ import { Budget } from '../types/finance';
 import { Modal } from '../components/Modal';
 import { CategoryIconCircle } from '../lib/categoryIcons';
 import { useFinanceStore } from '../store/FinanceStore';
-import { PageContainer, HeaderPage, SummaryCard, EmptyState, LoadingState, ErrorBanner } from '../components/shared';
+import { PageContainer, HeaderPage, SummaryCard, EmptyState, LoadingState, ErrorBanner, MonthNavigator } from '../components/shared';
 import { BudgetForm } from '../components/budgets/BudgetForm';
 
 function fmt(n: number) {
@@ -29,8 +29,8 @@ export function Budgets() {
   const [editBudget, setEditBudget] = useState<Budget | null>(null);
 
   const now = new Date();
-  const [filterMonth] = useState(now.getMonth() + 1);
-  const [filterYear] = useState(now.getFullYear());
+  const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(now.getFullYear());
 
   useEffect(() => {
     void loadCategories();
@@ -73,15 +73,21 @@ export function Budgets() {
     <PageContainer>
       <HeaderPage
         title="Presupuestos"
-        subtitle={`${MONTH_NAMES[filterMonth - 1]} ${filterYear}`}
         actions={
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Presupuesto
-          </button>
+          <>
+            <MonthNavigator
+              month={filterMonth}
+              year={filterYear}
+              onChange={(m, y) => { setFilterMonth(m); setFilterYear(y); }}
+            />
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
+            >
+              <Plus className="w-4 h-4" />
+              Nuevo Presupuesto
+            </button>
+          </>
         }
       />
 
