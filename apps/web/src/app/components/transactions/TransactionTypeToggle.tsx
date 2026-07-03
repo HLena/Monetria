@@ -1,5 +1,5 @@
 import { TrendingUp, TrendingDown, ArrowLeftRight } from 'lucide-react';
-import { TransactionType } from '../../types/finance';
+import { TransactionType } from '@/app/types/finance';
 
 const OPTIONS: {
   value: TransactionType;

@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/app/components/ui/Button';
-import { Input } from '@/app/components/ui/Input';
-import { Label } from '@/app/components/ui/Label';
-import { useAuthStore } from '../store/AuthStore';
+import { Button, Input, Label } from '@/app/components/ui';
+import { useAuthStore } from '@/app/store';
 
 type Tab = 'login' | 'register';
 

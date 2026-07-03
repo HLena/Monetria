@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
-import { Account } from '../../types/models';
+import { Account } from '@/app/types/models';
 import { AccountType } from '@monetria/enums';
-import { CARD_COLORS } from '../../constants/accountColors';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { FormField } from '../shared/FormField';
-import { SectionLabel } from '../shared/SectionLabel';
-import { ColorPicker } from '../shared/ColorPicker';
-import { Divider } from '../shared/Divider';
-import { ErrorMsg } from '../shared/ErrorMsg';
+import { CARD_COLORS } from '@/app/constants/accountColors';
+import { Input } from '@/app/components/ui';
+import { Select } from '@/app/components/ui';
+import { FormField, SectionLabel, ColorPicker, Divider, ErrorMsg } from '@/app/components/shared';
 import { Landmark, CreditCard, Banknote, Smartphone } from 'lucide-react';
 
 type TypeConfig = {

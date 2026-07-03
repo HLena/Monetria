@@ -4,12 +4,10 @@ import {
   CATEGORY_COLORS,
   FixedExpense,
   FixedExpensePeriod,
-} from '../../types/finance';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { FormField } from '../shared/FormField';
-import { CategorySelect } from '../shared/CategorySelect';
-import { ToggleSwitch } from '../shared/ToggleSwitch';
+} from '@/app/types/finance';
+import { Input } from '@/app/components/ui';
+import { Select } from '@/app/components/ui';
+import { FormField, CategorySelect, ToggleSwitch } from '@/app/components/shared';
 
 const CATEGORY_OPTIONS = EXPENSE_CATEGORIES.map(c => ({
   id: c,

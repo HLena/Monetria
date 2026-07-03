@@ -1,15 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Plus, Search, Filter } from 'lucide-react';
-import { formatCurrency, getMonthKey } from '../store/FinanceContext';
-import { Modal } from '../components/Modal';
-import { useFinanceStore } from '../store/FinanceStore';
-import { useTransactionsPaginated, PAGE_SIZE } from '../hooks/useTransactionsPaginated';
-import type { TransactionFilters } from '../hooks/useTransactionsPaginated';
-import { Transaction } from '../types/finance';
-import { TransactionForm } from '../components/transactions/TransactionForm';
-import { TransactionGroupedList } from '../components/transactions/TransactionGroupedList';
+import { formatCurrency, getMonthKey, useFinanceStore } from '@/app/store';
+import { Modal } from '@/app/components/Modal';
+import { useTransactionsPaginated, PAGE_SIZE } from '@/app/hooks';
+import type { TransactionFilters } from '@/app/hooks';
+import { Transaction } from '@/app/types/finance';
+import { TransactionForm, TransactionGroupedList } from '@/app/components/transactions';
 import { Select, Input } from '@/app/components/ui';
-import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard, Pagination, ToggleGroup, CategorySelect } from '../components/shared';
+import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard, Pagination, ToggleGroup, CategorySelect } from '@/app/components/shared';
 
 const MONTH_COUNT = 24;
 

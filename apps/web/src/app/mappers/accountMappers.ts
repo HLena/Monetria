@@ -1,4 +1,4 @@
-import type { AccountDto } from '../types/api/accounts';
+import type { AccountDto } from '@/app/types/api';
 import type { Account } from '@/app/types/models';
 import { AccountType } from '@monetria/enums';
 

@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import { useFinanceStore } from '../store/FinanceStore';
-import { useAuthStore } from '../store/AuthStore';
+import { useFinanceStore, useAuthStore } from '@/app/store';
 import { useParams } from 'react-router';
 
 export function useAccount() {

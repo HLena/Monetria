@@ -1,5 +1,5 @@
-import { api } from '../lib/apiClient';
-import type { BudgetDto, CreateBudgetRequestBody, UpdateBudgetRequestBody } from '../types/api/budgets';
+import { api } from '@/app/lib';
+import type { BudgetDto, CreateBudgetRequestBody, UpdateBudgetRequestBody } from '@/app/types/api';
 
 export async function listBudgets(month?: number, year?: number): Promise<BudgetDto[]> {
   const params = new URLSearchParams();

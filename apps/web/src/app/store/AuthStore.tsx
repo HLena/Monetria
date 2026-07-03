@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { api } from '../lib/apiClient';
+import { api } from '@/app/lib';
 
 /** Usuario persistido en el cliente */
 export interface AuthUser {

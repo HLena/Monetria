@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { Plus, Trash2, Edit2, PiggyBank, Calendar, Target } from 'lucide-react';
-import { formatCurrency } from '../store/FinanceContext';
-import { SavingsGoal } from '../types/finance';
-import { Modal } from '../components/Modal';
-import { useFinanceStore } from '../store/FinanceStore';
-import { PageContainer, HeaderPage, SummaryCard, EmptyState } from '../components/shared';
-import { SavingsGoalForm } from '../components/savings/SavingsGoalForm';
-import { AddToGoalModal } from '../components/savings/AddToGoalModal';
-import { SavingsCalculator } from '../components/savings/SavingsCalculator';
+import { formatCurrency, useFinanceStore } from '@/app/store';
+import { SavingsGoal } from '@/app/types/finance';
+import { Modal } from '@/app/components/Modal';
+import { PageContainer, HeaderPage, SummaryCard, EmptyState } from '@/app/components/shared';
+import { SavingsGoalForm, AddToGoalModal, SavingsCalculator } from '@/app/components/savings';
 
 const daysUntil = (dateStr: string) => {
   const target = new Date(dateStr + 'T00:00:00');

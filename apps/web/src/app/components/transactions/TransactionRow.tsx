@@ -1,8 +1,7 @@
 import { Edit2, Trash2, ArrowLeftRight } from 'lucide-react';
-import { Transaction } from '../../types/finance';
-import type { Account } from '../../types/models';
-import { formatAmount } from '../../lib/formatAmount';
-import { CategoryIconCircle } from '../../lib/categoryIcons';
+import { Transaction } from '@/app/types/finance';
+import type { Account } from '@/app/types/models';
+import { formatAmount, CategoryIconCircle } from '@/app/lib';
 
 export function TransactionRow({
   transaction: tx,

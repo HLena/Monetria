@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { SavingsGoal, CATEGORY_COLORS } from '../../types/finance';
-import { FORM_COLORS } from '../../../lib/colors';
-import { Input } from '../ui/Input';
-import { FormField } from '../shared/FormField';
-import { CategorySelect } from '../shared/CategorySelect';
-import { ColorPicker } from '../shared/ColorPicker';
+import { SavingsGoal, CATEGORY_COLORS } from '@/app/types/finance';
+import { FORM_COLORS } from '@/lib/colors';
+import { Input } from '@/app/components/ui';
+import { FormField, CategorySelect, ColorPicker } from '@/app/components/shared';
 
 const GOAL_CATEGORIES = ['Viajes', 'Tecnología', 'Hogar', 'Vehículo', 'Educación', 'Emergencia', 'Inversión', 'Retiro', 'Otro'];
 

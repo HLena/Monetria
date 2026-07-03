@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { Plus, Trash2, Edit2, TrendingDown, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { formatCurrency } from '../store/FinanceContext';
-import { Debt } from '../types/finance';
-import { Modal } from '../components/Modal';
+import { formatCurrency, useFinanceStore } from '@/app/store';
+import { Debt } from '@/app/types/finance';
+import { Modal } from '@/app/components/Modal';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-import { useFinanceStore } from '../store/FinanceStore';
-import { PageContainer, HeaderPage, SummaryCard, EmptyState } from '../components/shared';
-import { DebtForm, DEBT_TYPES } from '../components/debts/DebtForm';
-import { DebtCalculator } from '../components/debts/DebtCalculator';
+import { PageContainer, HeaderPage, SummaryCard, EmptyState } from '@/app/components/shared';
+import { DebtForm, DEBT_TYPES, DebtCalculator } from '@/app/components/debts';
 
 const daysUntilDue = (dateStr: string) => {
   const target = new Date(dateStr + 'T00:00:00');

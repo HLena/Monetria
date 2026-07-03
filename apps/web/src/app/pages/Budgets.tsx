@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Plus, AlertTriangle, CheckCircle, Edit2, Trash2, Target } from 'lucide-react';
-import { Budget } from '../types/finance';
-import { Modal } from '../components/Modal';
-import { CategoryIconCircle } from '../lib/categoryIcons';
-import { useFinanceStore } from '../store/FinanceStore';
-import { PageContainer, HeaderPage, SummaryCard, EmptyState, LoadingState, ErrorBanner, MonthNavigator } from '../components/shared';
-import { BudgetForm } from '../components/budgets/BudgetForm';
+import { Budget } from '@/app/types/finance';
+import { Modal } from '@/app/components/Modal';
+import { CategoryIconCircle } from '@/app/lib';
+import { useFinanceStore } from '@/app/store';
+import { PageContainer, HeaderPage, SummaryCard, EmptyState, LoadingState, ErrorBanner, MonthNavigator } from '@/app/components/shared';
+import { BudgetForm } from '@/app/components/budgets/BudgetForm';
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(n);

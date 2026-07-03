@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Debt, DebtType } from '../../types/finance';
-import { FORM_COLORS } from '../../../lib/colors';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { FormField } from '../shared/FormField';
-import { ColorPicker } from '../shared/ColorPicker';
+import { Debt, DebtType } from '@/app/types/finance';
+import { FORM_COLORS } from '@/lib/colors';
+import { Input } from '@/app/components/ui';
+import { Select } from '@/app/components/ui';
+import { FormField, ColorPicker } from '@/app/components/shared';
 
 export const DEBT_TYPES: { value: DebtType; label: string }[] = [
   { value: 'personal_loan', label: 'Préstamo Personal' },

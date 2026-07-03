@@ -1,4 +1,4 @@
-import { api } from '../lib/apiClient';
+import { api } from '@/app/lib';
 import type {
   TransactionDto,
   CreateTransactionRequestBody,
@@ -6,7 +6,7 @@ import type {
   TransactionResponse,
   TransactionSummaryDto,
   TransactionQueryParams,
-} from '../types/api/transactions';
+} from '@/app/types/api';
 
 function toQueryString(params: Record<string, string | number | boolean | undefined | null>): string {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');

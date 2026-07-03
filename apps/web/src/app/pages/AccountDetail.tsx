@@ -10,20 +10,16 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { getMonthKey } from '../store/FinanceContext';
-import { formatAmount } from '../lib/formatAmount';
-import { AccountType } from '../types/finance';
-import type { Transaction } from '../types/finance';
-import { CreditCardVisual } from '../components/CreditCardVisual';
-import { CategoryIconCircle } from '../lib/categoryIcons';
-import { useFinanceStore } from '../store/FinanceStore';
-import { Modal } from '../components/Modal';
-import { AccountForm } from '../components/accounts/AccountForm';
-import { TransactionForm } from '../components/transactions/TransactionForm';
-import { TransactionGroupedList } from '../components/transactions/TransactionGroupedList';
-import { HeaderPage, PageContainer, LoadingState, ErrorBanner, EmptyState, Pagination } from '../components/shared';
-import { useAccount } from '../hooks/useAccount';
-import { useAccountTransactions } from '../hooks/useAccountTransactions';
+import { getMonthKey, useFinanceStore } from '@/app/store';
+import { formatAmount, CategoryIconCircle } from '@/app/lib';
+import { AccountType } from '@/app/types/finance';
+import type { Transaction } from '@/app/types/finance';
+import { CreditCardVisual } from '@/app/components/CreditCardVisual';
+import { Modal } from '@/app/components/Modal';
+import { AccountForm } from '@/app/components/accounts';
+import { TransactionForm, TransactionGroupedList } from '@/app/components/transactions';
+import { HeaderPage, PageContainer, LoadingState, ErrorBanner, EmptyState, Pagination } from '@/app/components/shared';
+import { useAccount, useAccountTransactions } from '@/app/hooks';
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 

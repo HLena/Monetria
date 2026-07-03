@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Calculator } from 'lucide-react';
-import { formatCurrency } from '../../store/FinanceContext';
+import { formatCurrency } from '@/app/store';
 
 export function DebtCalculator() {
   const [amount, setAmount] = useState('');

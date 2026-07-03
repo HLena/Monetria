@@ -1,7 +1,7 @@
 import React from 'react';
 import { Wifi, CreditCard } from 'lucide-react';
-import { Account, AccountType } from '../types/finance';
-import { formatAmount } from '../lib/formatAmount';
+import { Account, AccountType } from '@/app/types/finance';
+import { formatAmount } from '@/app/lib';
 
 interface CreditCardVisualProps {
   account: Account;

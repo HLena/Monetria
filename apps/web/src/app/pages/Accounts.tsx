@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { Plus, Wallet } from 'lucide-react';
-import { formatCurrency } from '../store/FinanceContext';
-import { Modal } from '../components/Modal';
-import { useAuthStore } from '../store/AuthStore';
-import { useFinanceStore } from '../store/FinanceStore';
+import { formatCurrency, useAuthStore, useFinanceStore } from '@/app/store';
+import { Modal } from '@/app/components/Modal';
 import { AccountType } from '@monetria/enums';
-import { AccountCardGrid } from '../components/accounts/AccountCardGrid';
-import { AccountForm } from '../components/accounts/AccountForm';
-import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard } from '../components/shared';
-import { useAccounts } from '../hooks/useAccounts';
+import { AccountCardGrid, AccountForm } from '@/app/components/accounts';
+import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard } from '@/app/components/shared';
+import { useAccounts } from '@/app/hooks';
 
 const FILTER_TABS: [AccountType | 'all', string][] = [
   ['all', 'Todas'],

@@ -15,10 +15,9 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { useFinance, formatCurrency, getMonthKey } from '../store/FinanceContext';
-import { CATEGORY_COLORS, AccountType } from '../types/finance';
-import { useFinanceStore } from '../store/FinanceStore';
-import { PageContainer, HeaderPage } from '../components/shared';
+import { useFinance, formatCurrency, getMonthKey, useFinanceStore } from '@/app/store';
+import { CATEGORY_COLORS, AccountType } from '@/app/types/finance';
+import { PageContainer, HeaderPage } from '@/app/components/shared';
 
 const MONTHS_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const MONTHS_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];

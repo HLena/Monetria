@@ -22,14 +22,12 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { useFinance, formatCurrency, getMonthKey, getCurrentMonthKey } from '../store/FinanceContext';
-import { AccountType } from '../types/finance';
-import { CreditCardVisual } from '../components/CreditCardVisual';
-import { CategoryIconCircle } from '../lib/categoryIcons';
-import { useAuthStore } from '../store/AuthStore';
-import { useFinanceStore } from '../store/FinanceStore';
-import { PageContainer } from '../components/shared';
-import { TransactionGroupedList } from '../components/transactions/TransactionGroupedList';
+import { useFinance, formatCurrency, getMonthKey, getCurrentMonthKey, useAuthStore, useFinanceStore } from '@/app/store';
+import { AccountType } from '@/app/types/finance';
+import { CreditCardVisual } from '@/app/components/CreditCardVisual';
+import { CategoryIconCircle } from '@/app/lib';
+import { PageContainer } from '@/app/components/shared';
+import { TransactionGroupedList } from '@/app/components/transactions';
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 

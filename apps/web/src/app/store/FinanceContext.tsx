@@ -6,7 +6,7 @@ import {
   SavingsGoal,
   Debt,
   FixedExpense,
-} from '../types/finance';
+} from '@/app/types/finance';
 
 const genId = () => Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 

@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { Budget } from '../../types/finance';
-import { useFinanceStore } from '@/app/store/FinanceStore';
-import { AmountInput } from '../shared/AmountInput';
-import { CategorySelect } from '../shared/CategorySelect';
-import { ErrorMsg } from '../shared/ErrorMsg';
+import { Budget } from '@/app/types/finance';
+import { useFinanceStore } from '@/app/store';
+import { AmountInput, CategorySelect, ErrorMsg } from '@/app/components/shared';
 
 export function BudgetForm({
   initial,

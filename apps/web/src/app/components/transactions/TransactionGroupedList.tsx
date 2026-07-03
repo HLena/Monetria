@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import type { Transaction } from '../../types/finance';
-import type { Account } from '../../types/models';
+import type { Transaction } from '@/app/types/finance';
+import type { Account } from '@/app/types/models';
 import { TransactionRow } from './TransactionRow';
-import { formatDateLabel } from '../../lib/dateUtils';
+import { formatDateLabel } from '@/app/lib';
 
 interface Props {
   items: Transaction[];

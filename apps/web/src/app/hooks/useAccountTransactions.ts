@@ -1,21 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useFinanceStore } from '../store/FinanceStore';
-import { useAuthStore } from '../store/AuthStore';
-import { getAuthToken } from '../lib/apiClient';
+import { useFinanceStore, useAuthStore } from '@/app/store';
+import { getAuthToken } from '@/app/lib';
 import {
   listTransactions,
   getTransactionsSummary,
   createTransaction as createTransactionApi,
   updateTransaction as updateTransactionApi,
   deleteTransaction as deleteTransactionApi,
-} from '../api/transactions';
+} from '@/app/api';
 import {
   mapTransactionDtoToTransaction,
   toCreateTransactionRequestBody,
   toUpdateTransactionRequestBody,
-} from '../mappers/transactionMappers';
-import type { Transaction } from '../types/finance';
-import type { TransactionSummaryDto, TransactionQueryParams } from '../types/api/transactions';
+} from '@/app/mappers';
+import type { Transaction } from '@/app/types/finance';
+import type { TransactionSummaryDto, TransactionQueryParams } from '@/app/types/api';
 import { PAGE_SIZE, TYPE_TO_DTO } from './useTransactionsPaginated';
 
 export interface AccountTransactionFilters {

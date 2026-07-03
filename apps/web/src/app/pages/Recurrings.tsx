@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Plus, Trash2, Edit2, CalendarClock, PauseCircle } from 'lucide-react';
-import { formatCurrency } from '../store/FinanceContext';
-import { FixedExpense, FixedExpensePeriod, fixedExpenseMonthlyEquivalent } from '../types/finance';
-import { Modal } from '../components/Modal';
-import { CategoryIconCircle } from '../lib/categoryIcons';
-import { useFinanceStore } from '../store/FinanceStore';
-import { PageContainer, HeaderPage, SummaryCard, EmptyState } from '../components/shared';
-import { RecurringForm } from '../components/recurrings/RecurringForm';
+import { formatCurrency, useFinanceStore } from '@/app/store';
+import { FixedExpense, FixedExpensePeriod, fixedExpenseMonthlyEquivalent } from '@/app/types/finance';
+import { Modal } from '@/app/components/Modal';
+import { CategoryIconCircle } from '@/app/lib';
+import { PageContainer, HeaderPage, SummaryCard, EmptyState } from '@/app/components/shared';
+import { RecurringForm } from '@/app/components/recurrings/RecurringForm';
 
 const PERIOD_LABEL: Record<FixedExpensePeriod, string> = {
   monthly: 'Mensual',

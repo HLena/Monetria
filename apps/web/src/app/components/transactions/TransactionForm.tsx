@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Transaction, TransactionType, Currency } from '../../types/finance';
-import { useFinanceStore } from '../../store/FinanceStore';
-import type { CategoryDto } from '../../types/api/categories';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { FormField } from '../shared/FormField';
-import { ErrorMsg } from '../shared/ErrorMsg';
-import { CategorySelect } from '../shared/CategorySelect';
-import { AmountInput } from '../shared/AmountInput';
+import { Transaction, TransactionType, Currency } from '@/app/types/finance';
+import { useFinanceStore } from '@/app/store';
+import type { CategoryDto } from '@/app/types/api';
+import { Input } from '@/app/components/ui';
+import { Select } from '@/app/components/ui';
+import { FormField, ErrorMsg, CategorySelect, AmountInput } from '@/app/components/shared';
 import { TransactionTypeToggle } from './TransactionTypeToggle';
 
 type FormErrors = {

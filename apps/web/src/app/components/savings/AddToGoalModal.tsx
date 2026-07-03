@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { SavingsGoal } from '../../types/finance';
-import { formatCurrency } from '../../store/FinanceContext';
+import { SavingsGoal } from '@/app/types/finance';
+import { formatCurrency } from '@/app/store';
 
 export function AddToGoalModal({
   goal,

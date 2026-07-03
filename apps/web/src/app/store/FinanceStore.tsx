@@ -1,35 +1,35 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Account, Budget, Debt, FixedExpense, SavingsGoal, Transaction } from '../types/finance';
-import type { CategoryDto } from '../types/api/categories';
-import type { UserBalanceDto } from '../types/api/accounts';
-import { api, getAuthToken } from '../lib/apiClient';
+import { Account, Budget, Debt, FixedExpense, SavingsGoal, Transaction } from '@/app/types/finance';
+import type { CategoryDto } from '@/app/types/api';
+import type { UserBalanceDto } from '@/app/types/api';
+import { api, getAuthToken } from '@/app/lib';
 import { useAuthStore } from './AuthStore';
-import { listAccounts, getAccountById, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi, getUserBalance as getUserBalanceApi } from '../api/accounts';
-import { listCategories as listCategoriesApi } from '../api/categories';
+import { listAccounts, getAccountById, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi, getUserBalance as getUserBalanceApi } from '@/app/api';
+import { listCategories as listCategoriesApi } from '@/app/api';
 import {
   listTransactions as listTransactionsApi,
   createTransaction as createTransactionApi,
   updateTransaction as updateTransactionApi,
   deleteTransaction as deleteTransactionApi,
-} from '../api/transactions';
+} from '@/app/api';
 import {
   listBudgets as listBudgetsApi,
   createBudget as createBudgetApi,
   updateBudget as updateBudgetApi,
   deleteBudget as deleteBudgetApi,
-} from '../api/budgets';
-import type { BudgetDto } from '../types/api/budgets';
+} from '@/app/api';
+import type { BudgetDto } from '@/app/types/api';
 import {
   filterAccountDtosForUser,
   mapAccountDtoToFinanceAccount,
   toCreateAccountRequestBody,
-} from '../mappers/accountMappers';
+} from '@/app/mappers';
 import {
   mapTransactionDtoToTransaction,
   toCreateTransactionRequestBody,
   toUpdateTransactionRequestBody,
-} from '../mappers/transactionMappers';
+} from '@/app/mappers';
 
 interface FinanceStoreState {
   isLoading: boolean;

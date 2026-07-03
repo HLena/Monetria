@@ -1,7 +1,7 @@
-import { api } from '../lib/apiClient';
-import { parseAccountsListPayload, type AccountsListPayload, toUpdateAccountRequestBody } from '../mappers/accountMappers';
-import type { AccountSummaryDto, AccountDetailDto, UserBalanceDto } from '../types/api/accounts';
-import type { Account } from '../types/models';
+import { api } from '@/app/lib';
+import { parseAccountsListPayload, type AccountsListPayload, toUpdateAccountRequestBody } from '@/app/mappers';
+import type { AccountSummaryDto, AccountDetailDto, UserBalanceDto } from '@/app/types/api';
+import type { Account } from '@/app/types/models';
 
 export async function listAccounts(): Promise<AccountSummaryDto[]> {
   const data: AccountsListPayload = await api.get<AccountsListPayload>('/accounts');

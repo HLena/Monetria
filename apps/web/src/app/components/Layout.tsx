@@ -16,7 +16,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import { useAuthStore } from '../store/AuthStore';
+import { useAuthStore } from '@/app/store';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
