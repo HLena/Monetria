@@ -1713,4 +1713,93 @@ public sealed class ApplicationServiceTests
         Assert.Equal(2, page2.Items.Count);
         Assert.Equal(5, page1.TotalCount);
     }
+
+    // ── UserService ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithValidData_UpdatesNameAndPreferences()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana@example.com", Password));
+
+        var result = await userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest(
+            "María", "López", "USD", "MM/DD/YYYY"));
+
+        Assert.Equal("María", result.FirstName);
+        Assert.Equal("López", result.LastName);
+        Assert.Equal("USD", result.PreferredCurrency);
+        Assert.Equal("MM/DD/YYYY", result.DateFormat);
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithEmptyFirstName_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana2@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("  ", "García", null, null)));
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithInvalidCurrency_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana3@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", "EUR", null)));
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithCorrectCurrentPassword_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Bob", "Smith", "bob@example.com", Password));
+
+        await userService.ChangePasswordAsync(auth.UserId, new ChangePasswordRequest(Password, "NewPassword99"));
+
+        var logged = await authService.LoginAsync(new LoginRequest("bob@example.com", "NewPassword99"));
+        Assert.NotNull(logged.Token);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithWrongCurrentPassword_ThrowsUnauthorizedAccessException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Bob", "Smith", "bob2@example.com", Password));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            userService.ChangePasswordAsync(auth.UserId, new ChangePasswordRequest("WrongPass123", "NewPassword99")));
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithShortNewPassword_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Bob", "Smith", "bob3@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.ChangePasswordAsync(auth.UserId, new ChangePasswordRequest(Password, "short")));
+    }
+
+    private static UserService CreateUserService(MonetriaDbContext dbContext)
+    {
+        return new UserService(
+            new UserRepository(dbContext),
+            new PasswordService(),
+            new MonetriaUnitOfWork(dbContext));
+    }
 }
