@@ -21,6 +21,9 @@ public static class CategoryEndpoints
         group.MapPatch("/{categoryId:guid}/deactivate", DeactivateCategoryAsync)
             .WithName("DeactivateCategory");
 
+        group.MapPatch("/{categoryId:guid}/activate", ActivateCategoryAsync)
+            .WithName("ActivateCategory");
+
         group.MapGet("/", ListCategoriesAsync)
             .WithName("ListCategoriesByUser")
             .WithTags("Categories");
@@ -74,6 +77,18 @@ public static class CategoryEndpoints
     {
         var userId = user.GetRequiredUserId();
         var category = await categoryService.DeactivateAsync(userId, categoryId, cancellationToken);
+
+        return Results.Ok(category);
+    }
+
+    private static async Task<IResult> ActivateCategoryAsync(
+        Guid categoryId,
+        ClaimsPrincipal user,
+        ICategoryService categoryService,
+        CancellationToken cancellationToken)
+    {
+        var userId = user.GetRequiredUserId();
+        var category = await categoryService.ActivateAsync(userId, categoryId, cancellationToken);
 
         return Results.Ok(category);
     }

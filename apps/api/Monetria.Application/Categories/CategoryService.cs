@@ -100,8 +100,25 @@ public sealed class CategoryService(
         ValidateCategoryId(categoryId);
         ValidateUserId(userId);
 
-        var category = await GetEditableCategoryAsync(categoryId, userId, cancellationToken);
+        var category = await GetToggleableCategoryAsync(categoryId, userId, cancellationToken);
         category.IsActive = false;
+        category.UpdatedAt = DateTime.UtcNow;
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return MapToResponse(category);
+    }
+
+    public async Task<CategoryResponse> ActivateAsync(
+        Guid userId,
+        Guid categoryId,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateCategoryId(categoryId);
+        ValidateUserId(userId);
+
+        var category = await GetToggleableCategoryAsync(categoryId, userId, cancellationToken);
+        category.IsActive = true;
         category.UpdatedAt = DateTime.UtcNow;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -118,14 +135,25 @@ public sealed class CategoryService(
             ?? throw new NotFoundException($"Category '{categoryId}' was not found.");
 
         if (category.IsDefault)
-        {
             throw new InvalidOperationException("Default categories cannot be modified.");
-        }
 
         if (category.UserId != userId)
-        {
             throw new UnauthorizedAccessException("Category does not belong to the user.");
-        }
+
+        return category;
+    }
+
+    // Default categories can be toggled active/inactive but not renamed/recolored.
+    private async Task<Category> GetToggleableCategoryAsync(
+        Guid categoryId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var category = await categoryRepository.GetByIdAsync(categoryId, cancellationToken)
+            ?? throw new NotFoundException($"Category '{categoryId}' was not found.");
+
+        if (!category.IsDefault && category.UserId != userId)
+            throw new UnauthorizedAccessException("Category does not belong to the user.");
 
         return category;
     }

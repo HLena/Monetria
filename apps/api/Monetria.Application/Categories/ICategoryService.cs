@@ -22,4 +22,9 @@ public interface ICategoryService
         Guid userId,
         Guid categoryId,
         CancellationToken cancellationToken = default);
+
+    Task<CategoryResponse> ActivateAsync(
+        Guid userId,
+        Guid categoryId,
+        CancellationToken cancellationToken = default);
 }
