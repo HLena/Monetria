@@ -16,4 +16,6 @@ export type { ToggleOption } from './ToggleGroup';
 export { ColorPicker } from './ColorPicker';
 export { ToggleSwitch } from './ToggleSwitch';
 export { MonthNavigator } from './MonthNavigator';
+export { SectionCard } from './SectionCard';
+export { SaveButton } from './SaveButton';
 export { SummaryCard } from '@/app/components/ui';
