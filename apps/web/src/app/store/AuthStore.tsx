@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { api } from '@/app/lib';
+import { updateProfile as updateProfileApi, changePassword as changePasswordApi, deactivateMyAccount } from '@/app/api';
+import type { UpdateProfileRequestBody, ChangePasswordRequestBody } from '@/app/types/api';
 
 /** Usuario persistido en el cliente */
 export interface AuthUser {
@@ -8,6 +10,8 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   email: string;
+  preferredCurrency: string;
+  dateFormat: string;
 }
 
 /** Formato JSON que devuelve el backend (login / register) — camelCase o PascalCase (.NET) */
@@ -15,7 +19,6 @@ interface AuthApiResponse {
   token: string;
   user: AuthUser;
 }
-
 
 interface AuthState {
   user: AuthUser | null;
@@ -25,6 +28,9 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (data: UpdateProfileRequestBody) => Promise<void>;
+  changePassword: (data: ChangePasswordRequestBody) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -74,6 +80,42 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem('auth_token');
         set({ user: null, accessToken: null, isLoading: false, error: null });
+      },
+      updateProfile: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+          const dto = await updateProfileApi(data);
+          set(state => ({
+            isLoading: false,
+            user: state.user
+              ? { ...state.user, firstName: dto.firstName, lastName: dto.lastName, preferredCurrency: dto.preferredCurrency, dateFormat: dto.dateFormat }
+              : state.user,
+          }));
+        } catch (error) {
+          set({ error: (error as Error).message, isLoading: false });
+          throw error;
+        }
+      },
+      changePassword: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+          await changePasswordApi(data);
+          set({ isLoading: false });
+        } catch (error) {
+          set({ error: (error as Error).message, isLoading: false });
+          throw error;
+        }
+      },
+      deleteAccount: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          await deactivateMyAccount();
+          localStorage.removeItem('auth_token');
+          set({ user: null, accessToken: null, isLoading: false, error: null });
+        } catch (error) {
+          set({ error: (error as Error).message, isLoading: false });
+          throw error;
+        }
       },
     }),
     {

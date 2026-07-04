@@ -16,16 +16,16 @@ export function ToggleGroup<T extends string>({
   onChange: (val: T) => void;
   size?: 'sm' | 'md';
 }) {
-  const btnCls = size === 'sm' ? 'py-1.5 text-xs' : 'py-2 text-sm';
+  const btnCls = size === 'sm' ? 'py-1.5 px-3 text-xs' : 'py-2 px-4 text-sm';
 
   return (
-    <div className="flex rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 gap-0.5">
+    <div className="flex flex-shrink-0 rounded-xl border border-slate-200 dark:border-slate-600 p-0.5 gap-0.5">
       {options.map(opt => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`flex-1 rounded-lg font-medium transition-all ${btnCls} ${
+          className={`whitespace-nowrap rounded-lg font-medium transition-all ${btnCls} ${
             value === opt.value
               ? 'bg-indigo-600 text-white'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'

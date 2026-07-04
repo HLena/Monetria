@@ -10,6 +10,7 @@ import { Recurrings } from './pages/Recurrings';
 import { Savings } from './pages/Savings';
 import { DebtPlanning } from './pages/DebtPlanning';
 import { Reports } from './pages/Reports';
+import { Settings } from './pages/Settings';
 import { NotFound } from './pages/NotFound';
 
 export const router = createBrowserRouter([
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
       { path: 'savings', Component: Savings },
       { path: 'debts', Component: DebtPlanning },
       { path: 'reports', Component: Reports },
+      { path: 'settings', Component: Settings },
       { path: '*', Component: NotFound },
     ],
   },
