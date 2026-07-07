@@ -1,13 +1,20 @@
-import { useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useAuthStore } from '@/app/store';
 import { SectionCard, ToggleGroup } from '@/app/components/shared';
 
 export function PreferencesSection() {
-  const { user } = useAuthStore();
+  const { user, updateProfile } = useAuthStore();
   const { theme, setTheme } = useTheme();
-  const [currency, setCurrency] = useState(user?.preferredCurrency ?? 'PEN');
+
+  async function handleCurrencyChange(value: string) {
+    await updateProfile({ firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', preferredCurrency: value });
+  }
+
+  async function handleThemeChange(value: 'light' | 'dark') {
+    setTheme(value);
+    await updateProfile({ firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', theme: value });
+  }
 
   return (
     <div className="space-y-4">
@@ -22,8 +29,8 @@ export function PreferencesSection() {
               { value: 'PEN', label: 'S/ PEN' },
               { value: 'USD', label: '$ USD' },
             ]}
-            value={currency}
-            onChange={setCurrency}
+            value={user?.preferredCurrency ?? 'PEN'}
+            onChange={handleCurrencyChange}
             size="sm"
           />
         </div>
@@ -42,9 +49,9 @@ export function PreferencesSection() {
               <button
                 key={value}
                 type="button"
-                onClick={() => setTheme(value)}
+                onClick={() => handleThemeChange(value)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  theme === value
+                  (user?.theme ?? theme) === value
                     ? 'bg-indigo-600 text-white'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}

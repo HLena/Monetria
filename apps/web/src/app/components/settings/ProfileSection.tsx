@@ -8,6 +8,7 @@ export function ProfileSection() {
   const { user, updateProfile, isLoading } = useAuthStore();
   const [firstName, setFirstName] = useState(user?.firstName ?? '');
   const [lastName, setLastName] = useState(user?.lastName ?? '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber ?? '');
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -17,7 +18,7 @@ export function ProfileSection() {
     setError(null);
     setSaved(false);
     try {
-      await updateProfile({ firstName, lastName });
+      await updateProfile({ firstName, lastName, phoneNumber: phoneNumber.trim() || null });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
@@ -38,17 +39,26 @@ export function ProfileSection() {
             <p className="text-xs text-slate-400">{user?.email}</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div className='flex flex-col gap-2'>
           <FormField label="Nombre" required>
             <Input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nombre" />
           </FormField>
           <FormField label="Apellido" required>
             <Input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Apellido" />
           </FormField>
+          <FormField label="Correo electrónico">
+            <Input value={user?.email ?? ''} disabled />
+          </FormField>
+          <FormField label="Número de teléfono">
+            <Input
+              value={phoneNumber}
+              onChange={e => setPhoneNumber(e.target.value)}
+              placeholder="+51 999 000 111"
+              type="tel"
+            />
+          </FormField>
+
         </div>
-        <FormField label="Correo electrónico">
-          <Input value={user?.email ?? ''} disabled />
-        </FormField>
         <div className="flex items-center gap-3 mt-5">
           <SaveButton loading={isLoading} onClick={handleSave} />
           {saved && (

@@ -12,6 +12,8 @@ export interface AuthUser {
   email: string;
   preferredCurrency: string;
   dateFormat: string;
+  theme: string;
+  phoneNumber: string | null;
 }
 
 /** Formato JSON que devuelve el backend (login / register) — camelCase o PascalCase (.NET) */
@@ -88,7 +90,7 @@ export const useAuthStore = create<AuthState>()(
           set(state => ({
             isLoading: false,
             user: state.user
-              ? { ...state.user, firstName: dto.firstName, lastName: dto.lastName, preferredCurrency: dto.preferredCurrency, dateFormat: dto.dateFormat }
+              ? { ...state.user, firstName: dto.firstName, lastName: dto.lastName, preferredCurrency: dto.preferredCurrency, dateFormat: dto.dateFormat, theme: dto.theme, phoneNumber: dto.phoneNumber }
               : state.user,
           }));
         } catch (error) {

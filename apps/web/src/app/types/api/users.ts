@@ -5,6 +5,8 @@ export interface UserDto {
   email: string;
   preferredCurrency: string;
   dateFormat: string;
+  theme: string;
+  phoneNumber: string | null;
 }
 
 export interface UpdateProfileRequestBody {
@@ -12,6 +14,8 @@ export interface UpdateProfileRequestBody {
   lastName: string;
   preferredCurrency?: string;
   dateFormat?: string;
+  theme?: string;
+  phoneNumber?: string | null;
 }
 
 export interface ChangePasswordRequestBody {
