@@ -1725,12 +1725,14 @@ public sealed class ApplicationServiceTests
         var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana@example.com", Password));
 
         var result = await userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest(
-            "María", "López", "USD", "MM/DD/YYYY"));
+            "María", "López", "USD", "MM/DD/YYYY", "dark", "+51999000111"));
 
         Assert.Equal("María", result.FirstName);
         Assert.Equal("López", result.LastName);
         Assert.Equal("USD", result.PreferredCurrency);
         Assert.Equal("MM/DD/YYYY", result.DateFormat);
+        Assert.Equal("dark", result.Theme);
+        Assert.Equal("+51999000111", result.PhoneNumber);
     }
 
     [Fact]
@@ -1742,7 +1744,7 @@ public sealed class ApplicationServiceTests
         var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana2@example.com", Password));
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("  ", "García", null, null)));
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("  ", "García", null, null, null, null)));
     }
 
     [Fact]
@@ -1754,7 +1756,45 @@ public sealed class ApplicationServiceTests
         var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana3@example.com", Password));
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", "EUR", null)));
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", "EUR", null, null, null)));
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithInvalidTheme_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana4@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", null, null, "system", null)));
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithPhoneTooLong_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana5@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", null, null, null, "123456789012345678901")));
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithNullPhone_ClearsPhoneNumber()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana6@example.com", Password));
+
+        await userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", null, null, null, "+51999000111"));
+        var result = await userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", null, null, null, null));
+
+        Assert.Null(result.PhoneNumber);
     }
 
     [Fact]

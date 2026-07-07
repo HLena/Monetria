@@ -6,13 +6,17 @@ public record UserResponse(
     string LastName,
     string Email,
     string PreferredCurrency,
-    string DateFormat);
+    string DateFormat,
+    string Theme,
+    string? PhoneNumber);
 
 public sealed record UpdateProfileRequest(
     string FirstName,
     string LastName,
     string? PreferredCurrency,
-    string? DateFormat);
+    string? DateFormat,
+    string? Theme,
+    string? PhoneNumber);
 
 public sealed record ChangePasswordRequest(
     string CurrentPassword,

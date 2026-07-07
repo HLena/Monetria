@@ -44,6 +44,8 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(user => user.PasswordHash).HasMaxLength(500).IsRequired();
             entity.Property(user => user.PreferredCurrency).HasMaxLength(3).IsRequired().HasDefaultValue("PEN");
             entity.Property(user => user.DateFormat).HasMaxLength(20).IsRequired().HasDefaultValue("DD/MM/YYYY");
+            entity.Property(user => user.Theme).HasMaxLength(10).IsRequired().HasDefaultValue("light");
+            entity.Property(user => user.PhoneNumber).HasMaxLength(20);
             entity.HasIndex(user => user.Email).IsUnique();
         });
     }

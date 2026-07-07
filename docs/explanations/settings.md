@@ -79,6 +79,56 @@ Página de configuración con navegación lateral (sidebar) y 6 secciones:
 
 ---
 
+---
+
+## 2026-07-07 — Campos Theme, PhoneNumber y persistencia de preferencias
+
+### Backend — cambios
+
+**`User.cs` (Domain)**
+- Campo `Theme: string` (default `"light"`) — valores permitidos: `"light"`, `"dark"`
+- Campo `PhoneNumber: string?` (nullable, max 20 caracteres)
+
+**`UserDtos.cs` (Application)**
+- `UserResponse` ahora incluye `Theme` y `PhoneNumber`
+- `UpdateProfileRequest` ahora acepta `Theme?` y `PhoneNumber?`
+
+**`UserService.cs` (Application)**
+- Validación: `Theme` debe ser `"light"` o `"dark"` si se proporciona
+- Validación: `PhoneNumber` no puede exceder 20 caracteres
+- `PhoneNumber` se sobreescribe con `null` si se pasa explícitamente como `null` (permite borrar el número)
+
+**Migración:** `AddThemeAndPhoneToUser` — agrega columnas `Theme` (varchar(10), default `"light"`) y `PhoneNumber` (varchar(20), nullable) a `Users`
+
+**Tests agregados:**
+1. `UpdateProfileAsync_WithValidData_UpdatesNameAndPreferences` — actualizado para incluir `theme` y `phoneNumber`
+2. `UpdateProfileAsync_WithInvalidTheme_ThrowsArgumentException`
+3. `UpdateProfileAsync_WithPhoneTooLong_ThrowsArgumentException`
+4. `UpdateProfileAsync_WithNullPhone_ClearsPhoneNumber`
+
+---
+
+### Frontend — cambios
+
+**`types/api/users.ts`**
+- `UserDto` ahora incluye `theme: string` y `phoneNumber: string | null`
+- `UpdateProfileRequestBody` ahora acepta `theme?: string` y `phoneNumber?: string | null`
+
+**`AuthStore.tsx`**
+- `AuthUser` ahora incluye `theme` y `phoneNumber`
+- `updateProfile` sincroniza los nuevos campos tras guardar
+
+**`ProfileSection.tsx`**
+- Campo de teléfono agregado bajo el correo electrónico (type `tel`, placeholder `+51 999 000 111`)
+- Al guardar, envía `phoneNumber: null` si el campo está vacío (para borrar el número)
+
+**`PreferencesSection.tsx`**
+- Moneda y tema ahora persisten al backend mediante `updateProfile` al cambiar el toggle
+- El indicador activo del tema usa `user?.theme` (fuente de verdad del servidor) con fallback a `theme` del hook local
+- Se eliminó el estado local `currency` — se usa directamente `user?.preferredCurrency`
+
+---
+
 ### Decisiones de diseño
 
 - **Cambiar contraseña** vive solo en Seguridad (no duplicado en Perfil)

@@ -10,6 +10,7 @@ public sealed class UserService(
 {
     private static readonly HashSet<string> AllowedCurrencies = ["PEN", "USD"];
     private static readonly HashSet<string> AllowedDateFormats = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"];
+    private static readonly HashSet<string> AllowedThemes = ["light", "dark"];
 
     public async Task<UserResponse> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -41,10 +42,18 @@ public sealed class UserService(
         if (request.DateFormat is not null && !AllowedDateFormats.Contains(request.DateFormat))
             throw new ArgumentException($"Date format must be one of: {string.Join(", ", AllowedDateFormats)}.", nameof(request));
 
+        if (request.Theme is not null && !AllowedThemes.Contains(request.Theme))
+            throw new ArgumentException($"Theme must be one of: {string.Join(", ", AllowedThemes)}.", nameof(request));
+
+        if (request.PhoneNumber is not null && request.PhoneNumber.Length > 20)
+            throw new ArgumentException("Phone number must not exceed 20 characters.", nameof(request));
+
         user.FirstName = firstName;
         user.LastName = lastName;
         if (request.PreferredCurrency is not null) user.PreferredCurrency = request.PreferredCurrency;
         if (request.DateFormat is not null) user.DateFormat = request.DateFormat;
+        if (request.Theme is not null) user.Theme = request.Theme;
+        user.PhoneNumber = request.PhoneNumber;
 
         await userRepository.UpdateAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -97,6 +106,8 @@ public sealed class UserService(
             user.LastName,
             user.Email,
             user.PreferredCurrency,
-            user.DateFormat);
+            user.DateFormat,
+            user.Theme,
+            user.PhoneNumber);
     }
 }
