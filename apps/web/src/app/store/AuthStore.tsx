@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { api } from '@/app/lib';
-import { updateProfile as updateProfileApi, changePassword as changePasswordApi, deactivateMyAccount } from '@/app/api';
-import type { UpdateProfileRequestBody, ChangePasswordRequestBody } from '@/app/types/api';
+import { updateProfile as updateProfileApi, updatePreferences as updatePreferencesApi, changePassword as changePasswordApi, deactivateMyAccount } from '@/app/api';
+import type { UpdateProfileRequestBody, UpdatePreferencesRequestBody, ChangePasswordRequestBody } from '@/app/types/api';
 
 /** Usuario persistido en el cliente */
 export interface AuthUser {
@@ -31,6 +31,7 @@ interface AuthState {
   register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   updateProfile: (data: UpdateProfileRequestBody) => Promise<void>;
+  updatePreferences: (data: UpdatePreferencesRequestBody) => Promise<void>;
   changePassword: (data: ChangePasswordRequestBody) => Promise<void>;
   deleteAccount: () => Promise<void>;
 }
@@ -91,6 +92,21 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             user: state.user
               ? { ...state.user, firstName: dto.firstName, lastName: dto.lastName, preferredCurrency: dto.preferredCurrency, dateFormat: dto.dateFormat, theme: dto.theme, phoneNumber: dto.phoneNumber }
+              : state.user,
+          }));
+        } catch (error) {
+          set({ error: (error as Error).message, isLoading: false });
+          throw error;
+        }
+      },
+      updatePreferences: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+          const dto = await updatePreferencesApi(data);
+          set(state => ({
+            isLoading: false,
+            user: state.user
+              ? { ...state.user, preferredCurrency: dto.preferredCurrency, theme: dto.theme, dateFormat: dto.dateFormat }
               : state.user,
           }));
         } catch (error) {

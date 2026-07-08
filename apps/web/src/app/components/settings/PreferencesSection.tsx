@@ -1,19 +1,30 @@
 import { Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/app/store';
 import { SectionCard, ToggleGroup } from '@/app/components/shared';
 
 export function PreferencesSection() {
-  const { user, updateProfile } = useAuthStore();
+  const { user, updatePreferences } = useAuthStore();
   const { theme, setTheme } = useTheme();
 
   async function handleCurrencyChange(value: string) {
-    await updateProfile({ firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', preferredCurrency: value });
+    if (value === user?.preferredCurrency) return;
+    try {
+      await updatePreferences({ preferredCurrency: value });
+    } catch {
+      toast.error('No se pudo guardar la moneda.');
+    }
   }
 
   async function handleThemeChange(value: 'light' | 'dark') {
+    if (value === (user?.theme ?? theme)) return;
     setTheme(value);
-    await updateProfile({ firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', theme: value });
+    try {
+      await updatePreferences({ theme: value });
+    } catch {
+      toast.error('No se pudo guardar el tema.');
+    }
   }
 
   return (

@@ -18,6 +18,12 @@ export interface UpdateProfileRequestBody {
   phoneNumber?: string | null;
 }
 
+export interface UpdatePreferencesRequestBody {
+  preferredCurrency?: string;
+  theme?: string;
+  dateFormat?: string;
+}
+
 export interface ChangePasswordRequestBody {
   currentPassword: string;
   newPassword: string;

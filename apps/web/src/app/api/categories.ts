@@ -14,10 +14,10 @@ export function updateCategory(id: string, body: { name: string; color?: string;
   return api.patch<CategoryDto>(`/categories/${id}`, body);
 }
 
-export function deactivateCategory(id: string): Promise<CategoryDto> {
-  return api.patch<CategoryDto>(`/categories/${id}/deactivate`, {});
+export function deleteCategory(id: string): Promise<void> {
+  return api.delete<void>(`/categories/${id}`);
 }
 
-export function activateCategory(id: string): Promise<CategoryDto> {
-  return api.patch<CategoryDto>(`/categories/${id}/activate`, {});
+export function setSystemCategoryPreference(id: string, isActive: boolean): Promise<CategoryDto> {
+  return api.patch<CategoryDto>(`/categories/${id}/preference`, { isActive });
 }
