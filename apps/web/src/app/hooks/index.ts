@@ -1,4 +1,5 @@
 export { useAccount } from './useAccount';
+export { useSettingsCategories } from './useSettingsCategories';
 export type { AccountTransactionFilters } from './useAccountTransactions';
 export { useAccountTransactions } from './useAccountTransactions';
 export { useAccounts } from './useAccounts';

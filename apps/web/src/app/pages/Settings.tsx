@@ -18,17 +18,19 @@ const SECTIONS: { id: Section; label: string; icon: LucideIcon }[] = [
   { id: 'notifications', label: 'Notificaciones',    icon: Bell },
 ];
 
+function ActiveSection({ active }: { active: Section }) {
+  switch (active) {
+    case 'profile':       return <ProfileSection />;
+    case 'preferences':   return <PreferencesSection />;
+    case 'categories':    return <CategoriesSection />;
+    case 'institutions':  return <InstitutionsSection />;
+    case 'security':      return <SecuritySection />;
+    case 'notifications': return <NotificationsSection />;
+  }
+}
+
 export function Settings() {
   const [active, setActive] = useState<Section>('profile');
-
-  const sectionContent: Record<Section, React.ReactNode> = {
-    profile:       <ProfileSection />,
-    preferences:   <PreferencesSection />,
-    categories:    <CategoriesSection />,
-    institutions:  <InstitutionsSection />,
-    security:      <SecuritySection />,
-    notifications: <NotificationsSection />,
-  };
 
   return (
     <PageContainer>
@@ -55,7 +57,7 @@ export function Settings() {
           </ul>
         </nav>
         <div className="flex-1 min-w-0">
-          {sectionContent[active]}
+          <ActiveSection active={active} />
         </div>
       </div>
     </PageContainer>

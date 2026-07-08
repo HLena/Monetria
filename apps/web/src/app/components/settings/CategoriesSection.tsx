@@ -1,13 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Edit2, Trash2 } from 'lucide-react';
 import type { CategoryDto } from '@/app/types/api';
-import {
-  listCategories as listCategoriesApi,
-  createCategory as createCategoryApi,
-  updateCategory as updateCategoryApi,
-  deactivateCategory,
-  activateCategory,
-} from '@/app/api';
+import { useSettingsCategories } from '@/app/hooks';
 import { ErrorBanner, FormField, SectionCard, ColorPicker } from '@/app/components/shared';
 import { Input } from '@/app/components/ui';
 import { CategoryIconCircle, getCategoryIcon } from '@/app/lib/categoryIcons';
@@ -43,48 +37,6 @@ function TypePill({ type }: { type: string }) {
   );
 }
 
-function useSettingsCategories() {
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await listCategoriesApi(true);
-      setCategories(data);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const addCategory = useCallback(async (data: { name: string; type: string; color?: string; keyIcon?: string }) => {
-    await createCategoryApi({ name: data.name, type: data.type as 'Income' | 'Expense', color: data.color, keyIcon: data.keyIcon });
-    await reload();
-  }, [reload]);
-
-  const updateCategory = useCallback(async (id: string, data: { name: string; color?: string; keyIcon?: string }) => {
-    await updateCategoryApi(id, data);
-    await reload();
-  }, [reload]);
-
-  const deleteCategory = useCallback(async (id: string) => {
-    await deactivateCategory(id);
-    await reload();
-  }, [reload]);
-
-  const toggleDefaultCategory = useCallback(async (id: string, currentlyActive: boolean) => {
-    if (currentlyActive) await deactivateCategory(id);
-    else await activateCategory(id);
-    await reload();
-  }, [reload]);
-
-  return { categories, loading, error, reload, addCategory, updateCategory, deleteCategory, toggleDefaultCategory };
-}
-
 export function CategoriesSection() {
   const { categories, loading, error: catError, reload, addCategory, updateCategory, deleteCategory, toggleDefaultCategory } = useSettingsCategories();
   const [editTarget, setEditTarget] = useState<CategoryDto | null>(null);
@@ -95,7 +47,7 @@ export function CategoriesSection() {
   useEffect(() => { void reload(); }, [reload]);
 
   const defaultCats = categories.filter(c => c.isDefault);
-  const userCats = categories.filter(c => !c.isDefault && c.isActive);
+  const userCats = categories.filter(c => !c.isDefault && c.userId);
 
   function startEdit(cat: CategoryDto) {
     setForm({ name: cat.name, type: cat.type as 'Income' | 'Expense', color: cat.color ?? '#6366f1', keyIcon: cat.keyIcon ?? 'CircleDot' });
@@ -240,9 +192,7 @@ export function CategoriesSection() {
         </SectionCard>
 
         <SectionCard title="Mis categorías">
-          {userCats.length === 0 ? (
-            <p className="text-xs text-slate-400 dark:text-slate-500 py-2">Usa el formulario de arriba para crear tu primera categoría.</p>
-          ) : (
+          <p className="text-xs text-slate-400 dark:text-slate-500 py-2">Usa el formulario de arriba para crear tu primera categoría.</p>
             <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
               {userCats.map(cat => (
                 <div
@@ -271,7 +221,6 @@ export function CategoriesSection() {
                 </div>
               ))}
             </div>
-          )}
         </SectionCard>
       </div>
     </div>
