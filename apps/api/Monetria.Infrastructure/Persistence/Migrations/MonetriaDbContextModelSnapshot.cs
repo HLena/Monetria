@@ -143,9 +143,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsDefault")
                         .HasColumnType("boolean");
 
@@ -175,7 +172,7 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("\"IsDefault\" = TRUE");
 
-                    b.HasIndex("UserId", "Type", "IsActive");
+                    b.HasIndex("UserId", "Type");
 
                     b.HasIndex("UserId", "Type", "Name")
                         .IsUnique()
@@ -189,7 +186,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Color = "#f59e0b",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "ShoppingCart",
                             Name = "Alimentación",
@@ -201,7 +197,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111112"),
                             Color = "#3b82f6",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Car",
                             Name = "Transporte",
@@ -210,10 +205,19 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            Id = new Guid("11111111-1111-1111-1111-111111111113"),
+                            Color = "#14b8a6",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsDefault = true,
+                            Name = "Vivienda",
+                            Type = "Expense",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
                             Id = new Guid("11111111-1111-1111-1111-111111111114"),
                             Color = "#10b981",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Heart",
                             Name = "Salud",
@@ -225,7 +229,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111115"),
                             Color = "#8b5cf6",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Clapperboard",
                             Name = "Entretenimiento",
@@ -237,7 +240,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111116"),
                             Color = "#06b6d4",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "GraduationCap",
                             Name = "Educación",
@@ -246,10 +248,19 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            Id = new Guid("11111111-1111-1111-1111-111111111117"),
+                            Color = "#22c55e",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsDefault = true,
+                            Name = "Ahorro",
+                            Type = "Expense",
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
                             Id = new Guid("11111111-1111-1111-1111-111111111118"),
                             Color = "#94a3b8",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "CircleDot",
                             Name = "Otros",
@@ -261,7 +272,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111122"),
                             Color = "#6366f1",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Zap",
                             Name = "Servicios",
@@ -273,7 +283,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111123"),
                             Color = "#ec4899",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Laptop",
                             Name = "Tecnología",
@@ -285,7 +294,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111124"),
                             Color = "#f97316",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Shirt",
                             Name = "Ropa",
@@ -297,7 +305,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111125"),
                             Color = "#84cc16",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Home",
                             Name = "Hogar",
@@ -309,7 +316,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111126"),
                             Color = "#14b8a6",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Plane",
                             Name = "Viajes",
@@ -321,7 +327,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111127"),
                             Color = "#ef4444",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "UtensilsCrossed",
                             Name = "Restaurantes",
@@ -330,24 +335,12 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            Id = new Guid("11111111-1111-1111-1111-111111111113"),
-                            Color = "#14b8a6",
+                            Id = new Guid("11111111-1111-1111-1111-111111111119"),
+                            Color = "#10b981",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = false,
                             IsDefault = true,
-                            Name = "Vivienda",
-                            Type = "Expense",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111117"),
-                            Color = "#22c55e",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = false,
-                            IsDefault = true,
-                            Name = "Ahorro",
-                            Type = "Expense",
+                            Name = "Ingresos",
+                            Type = "Income",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
@@ -355,7 +348,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111120"),
                             Color = "#94a3b8",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "CircleDot",
                             Name = "Otros",
@@ -367,7 +359,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111128"),
                             Color = "#10b981",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Briefcase",
                             Name = "Salario",
@@ -379,7 +370,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111129"),
                             Color = "#6366f1",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Code2",
                             Name = "Freelance",
@@ -391,7 +381,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111130"),
                             Color = "#f59e0b",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "TrendingUp",
                             Name = "Inversiones",
@@ -403,7 +392,6 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111131"),
                             Color = "#3b82f6",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Store",
                             Name = "Ventas",
@@ -415,21 +403,9 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111132"),
                             Color = "#8b5cf6",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
                             IsDefault = true,
                             KeyIcon = "Gift",
                             Name = "Bonos",
-                            Type = "Income",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111119"),
-                            Color = "#10b981",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = false,
-                            IsDefault = true,
-                            Name = "Ingresos",
                             Type = "Income",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
@@ -826,6 +802,33 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Monetria.Domain.Entities.UserCategoryPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "CategoryId")
+                        .IsUnique();
+
+                    b.ToTable("UserCategoryPreferences");
+                });
+
             modelBuilder.Entity("Monetria.Domain.Entities.Account", b =>
                 {
                     b.HasOne("Monetria.Domain.Entities.User", null)
@@ -962,6 +965,21 @@ namespace Monetria.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Monetria.Domain.Entities.UserCategoryPreference", b =>
+                {
+                    b.HasOne("Monetria.Domain.Entities.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Monetria.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Monetria.Domain.Entities.Account", b =>

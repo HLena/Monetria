@@ -19,6 +19,7 @@ public interface ICategoryRepository
     Task<IReadOnlyList<Category>> ListByUserIdAsync(
         Guid userId,
         TransactionType? type = null,
-        bool includeInactive = false,
         CancellationToken cancellationToken = default);
+
+    Task DeleteAsync(Category category, CancellationToken cancellationToken = default);
 }

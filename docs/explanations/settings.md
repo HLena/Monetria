@@ -81,6 +81,31 @@ Página de configuración con navegación lateral (sidebar) y 6 secciones:
 
 ---
 
+## 2026-07-07 — Endpoint dedicado para preferencias (moneda y tema)
+
+### Backend — cambios
+
+**`UserDtos.cs`** — nuevo `UpdatePreferencesRequest(PreferredCurrency?, Theme?, DateFormat?)`
+
+**`IUserService` / `UserService`** — nuevo método `UpdatePreferencesAsync`:
+- Valida moneda, tema y formato de fecha igual que `UpdateProfileAsync`
+- Solo actualiza los campos enviados (null = sin cambio)
+
+**`UserEndpoints.cs`** — nuevo endpoint:
+- `PATCH /users/me/preferences` — actualiza preferencias sin requerir nombre/apellido
+
+### Frontend — cambios
+
+**`types/api/users.ts`** — nuevo `UpdatePreferencesRequestBody`
+
+**`api/users.ts`** — nueva función `updatePreferences` → `PATCH /users/me/preferences`
+
+**`AuthStore.tsx`** — nueva acción `updatePreferences`: llama al endpoint y sincroniza `preferredCurrency`, `theme` y `dateFormat` en el store
+
+**`PreferencesSection.tsx`** — los toggles de moneda y tema ahora usan `updatePreferences` directamente (sin enviar nombre/apellido)
+
+---
+
 ## 2026-07-07 — Campos Theme, PhoneNumber y persistencia de preferencias
 
 ### Backend — cambios

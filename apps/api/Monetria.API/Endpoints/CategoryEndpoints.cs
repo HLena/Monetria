@@ -18,15 +18,15 @@ public static class CategoryEndpoints
         group.MapPatch("/{categoryId:guid}", UpdateCategoryAsync)
             .WithName("UpdateCategory");
 
-        group.MapPatch("/{categoryId:guid}/deactivate", DeactivateCategoryAsync)
-            .WithName("DeactivateCategory");
-
-        group.MapPatch("/{categoryId:guid}/activate", ActivateCategoryAsync)
-            .WithName("ActivateCategory");
+        group.MapDelete("/{categoryId:guid}", DeleteCategoryAsync)
+            .WithName("DeleteCategory");
 
         group.MapGet("/", ListCategoriesAsync)
             .WithName("ListCategoriesByUser")
             .WithTags("Categories");
+
+        group.MapPatch("/{categoryId:guid}/preference", SetSystemCategoryPreferenceAsync)
+            .WithName("SetSystemCategoryPreference");
 
         return endpoints;
     }
@@ -69,26 +69,27 @@ public static class CategoryEndpoints
         return Results.Ok(category);
     }
 
-    private static async Task<IResult> DeactivateCategoryAsync(
+    private static async Task<IResult> DeleteCategoryAsync(
         Guid categoryId,
         ClaimsPrincipal user,
         ICategoryService categoryService,
         CancellationToken cancellationToken)
     {
         var userId = user.GetRequiredUserId();
-        var category = await categoryService.DeactivateAsync(userId, categoryId, cancellationToken);
+        await categoryService.DeleteAsync(userId, categoryId, cancellationToken);
 
-        return Results.Ok(category);
+        return Results.NoContent();
     }
 
-    private static async Task<IResult> ActivateCategoryAsync(
+    private static async Task<IResult> SetSystemCategoryPreferenceAsync(
         Guid categoryId,
+        SetSystemCategoryPreferenceRequest request,
         ClaimsPrincipal user,
         ICategoryService categoryService,
         CancellationToken cancellationToken)
     {
         var userId = user.GetRequiredUserId();
-        var category = await categoryService.ActivateAsync(userId, categoryId, cancellationToken);
+        var category = await categoryService.SetSystemCategoryPreferenceAsync(userId, categoryId, request.IsActive, cancellationToken);
 
         return Results.Ok(category);
     }

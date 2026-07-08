@@ -17,6 +17,9 @@ public static class UserEndpoints
         group.MapPatch("/me", UpdateProfileAsync)
             .WithName("UpdateProfile");
 
+        group.MapPatch("/me/preferences", UpdatePreferencesAsync)
+            .WithName("UpdatePreferences");
+
         group.MapPost("/me/change-password", ChangePasswordAsync)
             .WithName("ChangePassword");
 
@@ -48,6 +51,17 @@ public static class UserEndpoints
     {
         var userId = user.GetRequiredUserId();
         var result = await userService.UpdateProfileAsync(userId, request, cancellationToken);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> UpdatePreferencesAsync(
+        UpdatePreferencesRequest request,
+        ClaimsPrincipal user,
+        IUserService userService,
+        CancellationToken cancellationToken)
+    {
+        var userId = user.GetRequiredUserId();
+        var result = await userService.UpdatePreferencesAsync(userId, request, cancellationToken);
         return Results.Ok(result);
     }
 

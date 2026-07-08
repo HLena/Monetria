@@ -6,6 +6,7 @@ namespace Monetria.Application.Categories;
 
 public sealed class CategoryService(
     ICategoryRepository categoryRepository,
+    IUserCategoryPreferenceRepository preferenceRepository,
     IUnitOfWork unitOfWork) : ICategoryService
 {
     public async Task<CategoryResponse> CreateAsync(
@@ -33,7 +34,6 @@ public sealed class CategoryService(
             Color = NormalizeColor(request.Color),
             KeyIcon = NormalizeKeyIcon(request.KeyIcon),
             IsDefault = false,
-            IsActive = true,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -41,7 +41,7 @@ public sealed class CategoryService(
         await categoryRepository.AddAsync(category, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return MapToResponse(category);
+        return MapToResponse(category, isActive: true);
     }
 
     public async Task<IReadOnlyList<CategoryResponse>> ListByUserIdAsync(
@@ -52,14 +52,23 @@ public sealed class CategoryService(
     {
         ValidateUserId(userId);
 
-        var categories = await categoryRepository.ListByUserIdAsync(
-            userId,
-            type,
-            includeInactive,
-            cancellationToken);
+        var categories = await categoryRepository.ListByUserIdAsync(userId, type, cancellationToken);
+        var preferences = await preferenceRepository.ListByUserIdAsync(userId, cancellationToken);
+        var prefMap = preferences.ToDictionary(p => p.CategoryId);
 
         return categories
-            .Select(MapToResponse)
+            .Select(c =>
+            {
+                bool effectiveIsActive;
+                if (c.IsDefault)
+                    effectiveIsActive = !prefMap.TryGetValue(c.Id, out var pref) || pref.IsActive;
+                else
+                    effectiveIsActive = true;
+
+                return (category: c, effectiveIsActive);
+            })
+            .Where(x => includeInactive || x.effectiveIsActive)
+            .Select(x => MapToResponse(x.category, x.effectiveIsActive))
             .ToList();
     }
 
@@ -89,10 +98,10 @@ public sealed class CategoryService(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return MapToResponse(category);
+        return MapToResponse(category, isActive: true);
     }
 
-    public async Task<CategoryResponse> DeactivateAsync(
+    public async Task DeleteAsync(
         Guid userId,
         Guid categoryId,
         CancellationToken cancellationToken = default)
@@ -100,30 +109,46 @@ public sealed class CategoryService(
         ValidateCategoryId(categoryId);
         ValidateUserId(userId);
 
-        var category = await GetToggleableCategoryAsync(categoryId, userId, cancellationToken);
-        category.IsActive = false;
-        category.UpdatedAt = DateTime.UtcNow;
+        var category = await GetEditableCategoryAsync(categoryId, userId, cancellationToken);
 
+        await categoryRepository.DeleteAsync(category, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return MapToResponse(category);
     }
 
-    public async Task<CategoryResponse> ActivateAsync(
+    public async Task<CategoryResponse> SetSystemCategoryPreferenceAsync(
         Guid userId,
         Guid categoryId,
+        bool isActive,
         CancellationToken cancellationToken = default)
     {
-        ValidateCategoryId(categoryId);
         ValidateUserId(userId);
+        ValidateCategoryId(categoryId);
 
-        var category = await GetToggleableCategoryAsync(categoryId, userId, cancellationToken);
-        category.IsActive = true;
-        category.UpdatedAt = DateTime.UtcNow;
+        var category = await categoryRepository.GetByIdAsync(categoryId, cancellationToken)
+            ?? throw new NotFoundException($"Category '{categoryId}' was not found.");
+
+        if (!category.IsDefault)
+            throw new InvalidOperationException("Only system categories can be toggled via preference.");
+
+        var existing = await preferenceRepository.GetAsync(userId, categoryId, cancellationToken);
+        if (existing is not null)
+        {
+            existing.IsActive = isActive;
+        }
+        else
+        {
+            await preferenceRepository.AddAsync(new UserCategoryPreference
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                CategoryId = categoryId,
+                IsActive = isActive
+            }, cancellationToken);
+        }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return MapToResponse(category);
+        return MapToResponse(category, isActive);
     }
 
     private async Task<Category> GetEditableCategoryAsync(
@@ -138,21 +163,6 @@ public sealed class CategoryService(
             throw new InvalidOperationException("Default categories cannot be modified.");
 
         if (category.UserId != userId)
-            throw new UnauthorizedAccessException("Category does not belong to the user.");
-
-        return category;
-    }
-
-    // Default categories can be toggled active/inactive but not renamed/recolored.
-    private async Task<Category> GetToggleableCategoryAsync(
-        Guid categoryId,
-        Guid userId,
-        CancellationToken cancellationToken)
-    {
-        var category = await categoryRepository.GetByIdAsync(categoryId, cancellationToken)
-            ?? throw new NotFoundException($"Category '{categoryId}' was not found.");
-
-        if (!category.IsDefault && category.UserId != userId)
             throw new UnauthorizedAccessException("Category does not belong to the user.");
 
         return category;
@@ -181,40 +191,30 @@ public sealed class CategoryService(
     private static void ValidateUserId(Guid userId)
     {
         if (userId == Guid.Empty)
-        {
             throw new ArgumentException("User id is required.", nameof(userId));
-        }
     }
 
     private static void ValidateCategoryId(Guid categoryId)
     {
         if (categoryId == Guid.Empty)
-        {
             throw new ArgumentException("Category id is required.", nameof(categoryId));
-        }
     }
 
     private static string NormalizeName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
-        {
             throw new ArgumentException("Category name is required.", nameof(name));
-        }
 
         return name.Trim();
     }
 
-    private static string? NormalizeColor(string? color)
-    {
-        return string.IsNullOrWhiteSpace(color) ? null : color.Trim();
-    }
+    private static string? NormalizeColor(string? color) =>
+        string.IsNullOrWhiteSpace(color) ? null : color.Trim();
 
-    private static string? NormalizeKeyIcon(string? keyIcon)
-    {
-        return string.IsNullOrWhiteSpace(keyIcon) ? null : keyIcon.Trim();
-    }
+    private static string? NormalizeKeyIcon(string? keyIcon) =>
+        string.IsNullOrWhiteSpace(keyIcon) ? null : keyIcon.Trim();
 
-    private static CategoryResponse MapToResponse(Category category)
+    private static CategoryResponse MapToResponse(Category category, bool isActive)
     {
         return new CategoryResponse(
             category.Id,
@@ -222,7 +222,7 @@ public sealed class CategoryService(
             category.Name,
             category.Type,
             category.IsDefault,
-            category.IsActive,
+            isActive,
             category.Color,
             category.KeyIcon,
             category.CreatedAt,

@@ -37,9 +37,6 @@ public sealed class RecurringService(
             category = await categoryRepository.GetByIdAsync(request.CategoryId.Value, cancellationToken)
                 ?? throw new NotFoundException($"Category '{request.CategoryId}' was not found.");
 
-            if (!category.IsActive)
-                throw new InvalidOperationException("Category is inactive.");
-
             if (category.UserId.HasValue && category.UserId.Value != userId)
                 throw new UnauthorizedAccessException("Category does not belong to the user.");
         }
@@ -110,9 +107,6 @@ public sealed class RecurringService(
         {
             category = await categoryRepository.GetByIdAsync(request.CategoryId.Value, cancellationToken)
                 ?? throw new NotFoundException($"Category '{request.CategoryId}' was not found.");
-
-            if (!category.IsActive)
-                throw new InvalidOperationException("Category is inactive.");
 
             if (category.UserId.HasValue && category.UserId.Value != userId)
                 throw new UnauthorizedAccessException("Category does not belong to the user.");

@@ -9,7 +9,6 @@ public class Category
     public string Name { get; set; } = null!;
     public TransactionType Type { get; set; }
     public bool IsDefault { get; set; }
-    public bool IsActive { get; set; } = true;
     public string? Color { get; set; }
     public string? KeyIcon { get; set; }
     public DateTime CreatedAt { get; set; }

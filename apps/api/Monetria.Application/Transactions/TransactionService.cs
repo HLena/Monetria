@@ -166,11 +166,6 @@ public sealed class TransactionService(
             var category = await categoryRepository.GetByIdAsync(request.CategoryId.Value, cancellationToken)
                 ?? throw new NotFoundException($"Category '{request.CategoryId}' was not found.");
 
-            if (!category.IsActive)
-            {
-                throw new InvalidOperationException("Transaction category is inactive.");
-            }
-
             if (category.UserId.HasValue && category.UserId.Value != userId)
             {
                 throw new UnauthorizedAccessException("Category does not belong to the user.");
@@ -359,11 +354,6 @@ public sealed class TransactionService(
 
     private static void ValidateCategory(Guid userId, CreateTransactionRequest request, Category category)
     {
-        if (!category.IsActive)
-        {
-            throw new InvalidOperationException("Transaction category is inactive.");
-        }
-
         if (category.UserId.HasValue && category.UserId.Value != userId)
         {
             throw new UnauthorizedAccessException("Category does not belong to the user.");

@@ -318,21 +318,6 @@ public sealed class ApplicationServiceTests
     }
 
     [Fact]
-    public async Task CreateTransactionAsync_WithInactiveCategory_ThrowsInvalidOperationException()
-    {
-        await using var dbContext = CreateDbContext();
-        var userId = Guid.NewGuid();
-        var account = AddAccount(dbContext, userId, AccountType.Cash);
-        var category = AddCategory(dbContext, userId, TransactionType.Expense);
-        category.IsActive = false;
-        await dbContext.SaveChangesAsync();
-        var service = CreateTransactionService(dbContext);
-        var request = CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(userId, request));
-    }
-
-    [Fact]
     public async Task CreateTransactionAsync_WithTransferMissingTransferAccountId_ThrowsArgumentException()
     {
         await using var dbContext = CreateDbContext();
@@ -552,7 +537,6 @@ public sealed class ApplicationServiceTests
             Name = name,
             Type = type,
             Color = "#64748B",
-            IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

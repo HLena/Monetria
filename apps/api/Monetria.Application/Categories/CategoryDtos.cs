@@ -13,6 +13,8 @@ public sealed record UpdateCategoryRequest(
     string? Color,
     string? KeyIcon = null);
 
+public sealed record SetSystemCategoryPreferenceRequest(bool IsActive);
+
 public sealed record CategoryResponse(
     Guid Id,
     Guid? UserId,

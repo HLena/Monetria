@@ -18,13 +18,14 @@ public interface ICategoryService
         UpdateCategoryRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<CategoryResponse> DeactivateAsync(
+    Task DeleteAsync(
         Guid userId,
         Guid categoryId,
         CancellationToken cancellationToken = default);
 
-    Task<CategoryResponse> ActivateAsync(
+    Task<CategoryResponse> SetSystemCategoryPreferenceAsync(
         Guid userId,
         Guid categoryId,
+        bool isActive,
         CancellationToken cancellationToken = default);
 }

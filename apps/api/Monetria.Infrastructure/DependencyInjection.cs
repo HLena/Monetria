@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IBudgetRepository, BudgetRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IUserCategoryPreferenceRepository, UserCategoryPreferenceRepository>();
         services.AddScoped<IDebtRepository, DebtRepository>();
         services.AddScoped<IRecurringRepository, RecurringRepository>();
         services.AddScoped<IRecurringOccurrenceRepository, RecurringOccurrenceRepository>();

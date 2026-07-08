@@ -61,6 +61,33 @@ public sealed class UserService(
         return MapToResponse(user);
     }
 
+    public async Task<UserResponse> UpdatePreferencesAsync(
+        Guid userId,
+        UpdatePreferencesRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new NotFoundException("User not found.");
+
+        if (request.PreferredCurrency is not null && !AllowedCurrencies.Contains(request.PreferredCurrency))
+            throw new ArgumentException($"Currency must be one of: {string.Join(", ", AllowedCurrencies)}.", nameof(request));
+
+        if (request.Theme is not null && !AllowedThemes.Contains(request.Theme))
+            throw new ArgumentException($"Theme must be one of: {string.Join(", ", AllowedThemes)}.", nameof(request));
+
+        if (request.DateFormat is not null && !AllowedDateFormats.Contains(request.DateFormat))
+            throw new ArgumentException($"Date format must be one of: {string.Join(", ", AllowedDateFormats)}.", nameof(request));
+
+        if (request.PreferredCurrency is not null) user.PreferredCurrency = request.PreferredCurrency;
+        if (request.Theme is not null) user.Theme = request.Theme;
+        if (request.DateFormat is not null) user.DateFormat = request.DateFormat;
+
+        await userRepository.UpdateAsync(user, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return MapToResponse(user);
+    }
+
     public async Task ChangePasswordAsync(
         Guid userId,
         ChangePasswordRequest request,
