@@ -5,6 +5,7 @@ import { FixedExpense, FixedExpensePeriod, fixedExpenseMonthlyEquivalent } from 
 import { Modal } from '@/app/components/Modal';
 import { CategoryIconCircle } from '@/app/lib';
 import { PageContainer, HeaderPage, SummaryCard, EmptyState } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
 import { RecurringForm } from '@/app/components/recurrings/RecurringForm';
 
 const PERIOD_LABEL: Record<FixedExpensePeriod, string> = {
@@ -33,14 +34,10 @@ export function Recurrings() {
         title="Recurrentes"
         subtitle="Compromisos recurrentes (equivalente mensual estimado)"
         actions={
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-          >
+          <Button onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4" />
             Nuevo recurrente
-          </button>
+          </Button>
         }
       />
 
@@ -66,13 +63,7 @@ export function Recurrings() {
             message="No hay recurrentes"
             description="Agrega renta, servicios o suscripciones"
             action={
-              <button
-                type="button"
-                onClick={() => setShowForm(true)}
-                className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
-              >
-                Agregar el primero
-              </button>
+              <Button onClick={() => setShowForm(true)}>Agregar el primero</Button>
             }
           />
         </div>

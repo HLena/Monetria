@@ -4,6 +4,7 @@ import { FORM_COLORS } from '@/lib/colors';
 import { Input } from '@/app/components/ui';
 import { Select } from '@/app/components/ui';
 import { FormField, ColorPicker } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
 
 export const DEBT_TYPES: { value: DebtType; label: string }[] = [
   { value: 'personal_loan', label: 'Préstamo Personal' },
@@ -139,9 +140,9 @@ export function DebtForm({
       </FormField>
 
       <div className="flex gap-3 pt-2">
-        <button type="submit" className="flex-1 bg-indigo-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <Button type="submit" className="flex-1 rounded-xl h-11">
           {initial ? 'Guardar cambios' : 'Registrar deuda'}
-        </button>
+        </Button>
       </div>
     </form>
   );

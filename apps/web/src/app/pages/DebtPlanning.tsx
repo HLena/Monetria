@@ -7,6 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import { PageContainer, HeaderPage, SummaryCard, EmptyState } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
 import { DebtForm, DEBT_TYPES, DebtCalculator } from '@/app/components/debts';
 
 const daysUntilDue = (dateStr: string) => {
@@ -41,13 +42,10 @@ export function DebtPlanning() {
         title="Planificación de Deudas"
         subtitle={`${debts.length} deudas registradas`}
         actions={
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-          >
+          <Button onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4" />
             Nueva Deuda
-          </button>
+          </Button>
         }
       />
 
@@ -90,9 +88,7 @@ export function DebtPlanning() {
                 message="¡Sin deudas registradas!"
                 description="Registra tus deudas para hacer un seguimiento"
                 action={
-                  <button onClick={() => setShowForm(true)} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors">
-                    Registrar deuda
-                  </button>
+                  <Button onClick={() => setShowForm(true)}>Registrar deuda</Button>
                 }
               />
             </div>

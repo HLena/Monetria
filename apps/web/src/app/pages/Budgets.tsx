@@ -5,6 +5,7 @@ import { Modal } from '@/app/components/Modal';
 import { CategoryIconCircle } from '@/app/lib';
 import { useFinanceStore } from '@/app/store';
 import { PageContainer, HeaderPage, SummaryCard, EmptyState, LoadingState, ErrorBanner, MonthNavigator } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
 import { BudgetForm } from '@/app/components/budgets/BudgetForm';
 
 function fmt(n: number) {
@@ -80,13 +81,10 @@ export function Budgets() {
               year={filterYear}
               onChange={(m, y) => { setFilterMonth(m); setFilterYear(y); }}
             />
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-            >
+            <Button onClick={() => setShowForm(true)}>
               <Plus className="w-4 h-4" />
               Nuevo Presupuesto
-            </button>
+            </Button>
           </>
         }
       />
@@ -121,9 +119,7 @@ export function Budgets() {
             message="No hay presupuestos para este mes"
             description="Crea tu primer presupuesto para controlar tus gastos"
             action={
-              <button onClick={() => setShowForm(true)} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors">
-                Crear presupuesto
-              </button>
+              <Button onClick={() => setShowForm(true)}>Crear presupuesto</Button>
             }
           />
         </div>

@@ -4,6 +4,7 @@ import { formatCurrency, useFinanceStore } from '@/app/store';
 import { SavingsGoal } from '@/app/types/finance';
 import { Modal } from '@/app/components/Modal';
 import { PageContainer, HeaderPage, SummaryCard, EmptyState } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
 import { SavingsGoalForm, AddToGoalModal, SavingsCalculator } from '@/app/components/savings';
 
 const daysUntil = (dateStr: string) => {
@@ -31,13 +32,10 @@ export function Savings() {
         title="Metas de Ahorro"
         subtitle={`${savingsGoals.length} metas activas`}
         actions={
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-          >
+          <Button onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4" />
             Nueva Meta
-          </button>
+          </Button>
         }
       />
 
@@ -59,9 +57,7 @@ export function Savings() {
                 icon={PiggyBank}
                 message="No hay metas de ahorro"
                 action={
-                  <button onClick={() => setShowForm(true)} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors">
-                    Crear primera meta
-                  </button>
+                  <Button onClick={() => setShowForm(true)}>Crear primera meta</Button>
                 }
               />
             </div>

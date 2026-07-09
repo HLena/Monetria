@@ -6,6 +6,7 @@ import {
   FixedExpensePeriod,
 } from '@/app/types/finance';
 import { Input } from '@/app/components/ui';
+import { Button } from '@/app/components/ui/Button';
 import { Select } from '@/app/components/ui';
 import { FormField, CategorySelect, ToggleSwitch } from '@/app/components/shared';
 
@@ -139,9 +140,9 @@ export function RecurringForm({
       </FormField>
 
       <div className="flex gap-3 pt-2">
-        <button type="submit" className="flex-1 bg-indigo-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <Button type="submit" className="flex-1 rounded-xl h-11">
           {initial ? 'Guardar' : 'Agregar'}
-        </button>
+        </Button>
       </div>
     </form>
   );

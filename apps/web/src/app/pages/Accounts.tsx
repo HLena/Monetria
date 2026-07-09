@@ -5,6 +5,7 @@ import { Modal } from '@/app/components/Modal';
 import { AccountType } from '@monetria/enums';
 import { AccountCardGrid, AccountForm } from '@/app/components/accounts';
 import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
 import { useAccounts } from '@/app/hooks';
 
 import { FILTER_TABS } from '@/app/constants/account';
@@ -38,13 +39,10 @@ export function Accounts() {
         title="Mis Cuentas"
         subtitle={isLoading ? 'Cargando cuentas…' : `${accounts.length} cuentas registradas`}
         actions={
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-          >
+          <Button onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4" />
             Nueva Cuenta
-          </button>
+          </Button>
         }
       />
 
