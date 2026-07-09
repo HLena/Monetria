@@ -83,3 +83,21 @@ Three components were extracted after identifying repeated patterns across all f
 - `SavingsGoalForm` — now uses `ColorPicker`, `FormActions`; migrated raw inputs to `<Input>`, `<FormField>`
 
 All three components are exported from `shared/index.ts`.
+
+## 2026-07-08 — AccountsSection redesign: list view with active/inactive separation
+
+### What changed
+- Added `isActive: boolean` to frontend `Account` model (`types/models/account.ts`)
+- Updated `mapAccountDtoToFinanceAccount` to map `dto.isActive`
+- Added `reactivateAccount(id)` to `api/accounts.ts` — calls `PUT /accounts/:id` with `{ isActive: true }`; the backend `UpdateAccountRequest.IsActive` is nullable so this is a partial update
+- Added `reactivateAccount` action to `FinanceStore` and exposed it from `useAccounts` hook
+- Rewrote `AccountsSection.tsx` with full redesign:
+  - **Summary row**: active count + inactive hint + net worth cards (Disponible / Deuda / Neto)
+  - **Filter tabs**: All / Credit / Bank / Cash / Wallet
+  - **Active list**: rows with color dot, name, institution, balance (red for credit debt), currency code, "Editar" + "Desactivar" inline actions
+  - **Inactive section**: same rows at 50% opacity, only "Reactivar" action shown
+  - Deactivation calls existing `deleteAccount` (which soft-deletes via `DELETE /accounts/:id`)
+  - Reactivation calls new `reactivateAccount` (which PATCHes `isActive: true`)
+
+### Key decision
+The backend `AccountRepository.ListByUserIdAsync` has no `IsActive` filter — it already returns all accounts. `AccountSummaryDto` already included `isActive`. Only the frontend model and mapper were missing the field.
