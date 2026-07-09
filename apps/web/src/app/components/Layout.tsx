@@ -21,7 +21,6 @@ import { useAuthStore } from '@/app/store';
 const NAV_ITEMS = [
   { path: '/', label: 'Inicio', icon: Home, exact: true },
   { path: '/reports', label: 'Reportes', icon: BarChart3 },
-  { path: '/accounts', label: 'Cuentas', icon: Wallet },
   { path: '/movements', label: 'Movimientos', icon: ArrowLeftRight },
   { path: '/budgets', label: 'Presupuestos', icon: PieChart },
   { path: '/recurrings', label: 'Recurrentes', icon: Repeat },

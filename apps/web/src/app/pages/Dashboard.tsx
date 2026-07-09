@@ -28,6 +28,7 @@ import { CreditCardVisual } from '@/app/components/CreditCardVisual';
 import { CategoryIconCircle } from '@/app/lib';
 import { PageContainer } from '@/app/components/shared';
 import { TransactionGroupedList } from '@/app/components/transactions';
+import { AccountCardGrid } from '@/app/components/accounts';
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -265,6 +266,23 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* Accounts widgets */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h2 className="text-slate-700 dark:text-slate-200 font-semibold">Mis Cuentas</h2>
+          <Link to="/settings" className="text-indigo-600 dark:text-indigo-400 text-xs font-medium flex items-center gap-1 hover:gap-2 transition-all">
+            Administrar <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+        {accounts.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 text-center text-slate-400 dark:text-slate-500 text-sm">
+            Sin cuentas registradas
+          </div>
+        ) : (
+          <AccountCardGrid accounts={accounts} />
+        )}
+      </div>
+
       {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Recent Transactions */}
@@ -337,33 +355,6 @@ export function Dashboard() {
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Quick accounts */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-slate-700 dark:text-slate-200 font-semibold text-sm">Mis Cuentas</h2>
-              <Link to="/accounts" className="text-indigo-600 dark:text-indigo-400 text-xs font-medium flex items-center gap-1">
-                Ver <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-            <div className="space-y-2">
-              {accounts.slice(0, 4).map(account => (
-                <Link key={account.id} to={`/accounts/${account.id}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
-                  <div
-                    className="w-8 h-8 rounded-lg flex-shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${account.colorCode}cc, ${account.colorCode}66)` }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-slate-700 dark:text-slate-200 text-xs font-medium truncate">{account.name}</p>
-                    <p className="text-slate-400 dark:text-slate-500 text-xs">{account.type === AccountType.CreditCard ? 'Crédito' : account.type === AccountType.Wallet ? 'Efectivo' : 'Débito'}</p>
-                  </div>
-                  <span className={`text-xs font-semibold ${account.type === AccountType.CreditCard ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {formatCurrency(account.currentBalance)}
-                  </span>
-                </Link>
-              ))}
             </div>
           </div>
         </div>

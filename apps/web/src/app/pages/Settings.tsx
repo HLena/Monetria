@@ -1,17 +1,18 @@
 import { useState } from 'react';
-import { User, SlidersHorizontal, Tag, Building2, ShieldCheck, Bell } from 'lucide-react';
+import { User, SlidersHorizontal, Tag, Building2, ShieldCheck, Bell, Wallet } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { PageContainer, HeaderPage } from '@/app/components/shared';
 import {
-  ProfileSection, PreferencesSection, CategoriesSection,
+  AccountsSection, ProfileSection, PreferencesSection, CategoriesSection,
   InstitutionsSection, SecuritySection, NotificationsSection,
 } from '@/app/components/settings';
 
-type Section = 'profile' | 'preferences' | 'categories' | 'institutions' | 'security' | 'notifications';
+type Section = 'accounts' | 'profile' | 'preferences' | 'categories' | 'institutions' | 'security' | 'notifications';
 
 const SECTIONS: { id: Section; label: string; icon: LucideIcon }[] = [
-  { id: 'profile',       label: 'Perfil',           icon: User },
+  { id: 'profile',       label: 'Perfil',            icon: User },
   { id: 'preferences',   label: 'Preferencias',      icon: SlidersHorizontal },
+  { id: 'accounts',      label: 'Cuentas',           icon: Wallet },
   { id: 'categories',    label: 'Categorías',        icon: Tag },
   { id: 'institutions',  label: 'Instituciones',     icon: Building2 },
   { id: 'security',      label: 'Seguridad y datos', icon: ShieldCheck },
@@ -22,6 +23,7 @@ function ActiveSection({ active }: { active: Section }) {
   switch (active) {
     case 'profile':       return <ProfileSection />;
     case 'preferences':   return <PreferencesSection />;
+    case 'accounts':      return <AccountsSection />;
     case 'categories':    return <CategoriesSection />;
     case 'institutions':  return <InstitutionsSection />;
     case 'security':      return <SecuritySection />;
