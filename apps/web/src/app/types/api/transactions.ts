@@ -60,4 +60,6 @@ export interface TransactionQueryParams {
   month?: number;
   year?: number;
   fromAccountId?: string;
+  startDate?: string;
+  endDate?: string;
 }

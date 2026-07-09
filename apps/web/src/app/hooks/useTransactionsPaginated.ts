@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useFinanceStore, useAuthStore, getCurrentMonthKey } from '@/app/store';
+import { useFinanceStore, useAuthStore } from '@/app/store';
 import { getAuthToken } from '@/app/lib';
 import {
   listTransactions,
@@ -19,11 +19,11 @@ import type { TransactionSummaryDto, TransactionQueryParams, TransactionTypeDto 
 export const PAGE_SIZE = 10;
 
 export interface TransactionFilters {
-  search: string;
   type: 'all' | 'income' | 'expense' | 'transfer';
   categoryId: string;
   accountId: string;
-  month: string;
+  startDate: string;
+  endDate: string;
 }
 
 export const TYPE_TO_DTO: Record<string, TransactionTypeDto | undefined> = {
@@ -33,25 +33,20 @@ export const TYPE_TO_DTO: Record<string, TransactionTypeDto | undefined> = {
   all: undefined,
 };
 
-function buildParams(filters: TransactionFilters, debouncedSearch: string, page: number): TransactionQueryParams {
+function buildParams(filters: TransactionFilters, page: number): TransactionQueryParams {
   const params: TransactionQueryParams = { page, pageSize: PAGE_SIZE };
 
-  if (debouncedSearch.trim()) params.description = debouncedSearch.trim();
   if (filters.type !== 'all') params.type = TYPE_TO_DTO[filters.type];
   if (filters.categoryId !== 'all') params.categoryId = filters.categoryId;
   if (filters.accountId !== 'all') params.fromAccountId = filters.accountId;
-
-  if (filters.month) {
-    const [year, month] = filters.month.split('-').map(Number);
-    params.year = year;
-    params.month = month;
-  }
+  if (filters.startDate) params.startDate = filters.startDate;
+  if (filters.endDate) params.endDate = filters.endDate;
 
   return params;
 }
 
-function buildSummaryParams(filters: TransactionFilters, debouncedSearch: string): Omit<TransactionQueryParams, 'page' | 'pageSize'> {
-  const { page: _p, pageSize: _ps, ...rest } = buildParams(filters, debouncedSearch, 1);
+function buildSummaryParams(filters: TransactionFilters): Omit<TransactionQueryParams, 'page' | 'pageSize'> {
+  const { page: _p, pageSize: _ps, ...rest } = buildParams(filters, 1);
   return rest;
 }
 
@@ -63,16 +58,15 @@ export function useTransactionsPaginated() {
   const loadCategories = useFinanceStore(s => s.loadCategories);
 
   const [filters, setFiltersState] = useState<TransactionFilters>({
-    search: '',
     type: 'all',
     categoryId: 'all',
     accountId: 'all',
-    month: getCurrentMonthKey(),
+    startDate: '',
+    endDate: '',
   });
 
   const [page, setPageState] = useState(1);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const [items, setItems] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<TransactionSummaryDto | null>(null);
@@ -80,18 +74,9 @@ export function useTransactionsPaginated() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(filters.search);
-      setPageState(1);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [filters.search]);
-
   const setFilter = useCallback(<K extends keyof TransactionFilters>(key: K, value: TransactionFilters[K]) => {
     setFiltersState(prev => ({ ...prev, [key]: value }));
-    if (key !== 'search') setPageState(1);
+    setPageState(1);
   }, []);
 
   const setPage = useCallback((p: number) => setPageState(p), []);
@@ -120,8 +105,8 @@ export function useTransactionsPaginated() {
     setIsLoading(true);
     setError(null);
 
-    const params = buildParams(filters, debouncedSearch, page);
-    const summaryParams = buildSummaryParams(filters, debouncedSearch);
+    const params = buildParams(filters, page);
+    const summaryParams = buildSummaryParams(filters);
 
     Promise.all([listTransactions(params), getTransactionsSummary(summaryParams)])
       .then(([listResult, summaryResult]) => {
@@ -136,7 +121,7 @@ export function useTransactionsPaginated() {
         setIsLoading(false);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.type, filters.categoryId, filters.accountId, filters.month, debouncedSearch, page, refreshKey]);
+  }, [filters.type, filters.categoryId, filters.accountId, filters.startDate, filters.endDate, page, refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 

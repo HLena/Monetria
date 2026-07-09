@@ -408,3 +408,36 @@ El campo "Saldo inicial" guardaba en `form.currentBalance` pero el mapper `toCre
 - `limit > 0` — mensaje: "El límite debe ser mayor a 0"
 
 Todos los mensajes de error se muestran con el componente `<ErrorMsg>` (shared).
+
+---
+
+## Update: 2026-07-08
+
+### Rediseño de filtros en página de Movimientos + soporte de rango de fechas
+
+**Motivación:** El filtro de mes seleccionaba un mes fijo, limitando la visibilidad. Se reemplaza por un rango de fechas libre (`startDate`/`endDate`). Sin fechas seleccionadas se muestran todos los movimientos. También se rediseña la UI de filtros siguiendo el estilo de pills de `AccountsSection`.
+
+**Backend — `Monetria.Application/Transactions/TransactionDtos.cs`**
+- `TransactionFilterRequest` ahora incluye `DateOnly? StartDate` y `DateOnly? EndDate`
+- Son mutuamente excluyentes con `Month`/`Year` (se aplican solo si `Month` es null)
+
+**Backend — `Monetria.Infrastructure/Transactions/TransactionRepository.cs`**
+- `ApplyFilters` agrega bloque `else` tras los filtros de mes/año:
+  - Si `StartDate` tiene valor → `t.Date >= StartDate.ToDateTime(...)`
+  - Si `EndDate` tiene valor → `t.Date < (EndDate + 1 día).ToDateTime(...)`
+
+**Frontend — `apps/web/src/app/types/api/transactions.ts`**
+- `TransactionQueryParams` tiene nuevos campos opcionales `startDate?: string` y `endDate?: string`
+
+**Frontend — `apps/web/src/app/hooks/useTransactionsPaginated.ts`**
+- `TransactionFilters.month: string` reemplazado por `startDate: string` y `endDate: string`
+- Estado inicial: `startDate: ''`, `endDate: ''` → sin filtro de fecha por defecto
+- `buildParams` pasa `startDate`/`endDate` al API cuando no están vacíos
+- Dependencias del `useEffect` actualizadas (`filters.startDate`, `filters.endDate`)
+
+**Frontend — `apps/web/src/app/pages/Movements.tsx`**
+- Eliminado: `ToggleGroup`, `Select` de meses, `useMemo`, `generateRecentMonths`, `formatMonthLabel`
+- Añadido: pills de tipo siempre visibles (mismo estilo que `AccountsSection`)
+- Añadido: botón "Filtros" con contador de filtros activos
+- Panel expandible con: `CategorySelect`, cuenta (`Select`), rango de fechas (`input[type=date]`)
+- Botón "Limpiar filtros" visible cuando hay algún filtro activo en el panel
