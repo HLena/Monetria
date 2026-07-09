@@ -101,23 +101,29 @@ public static class TransactionEndpoints
 
     private static async Task<IResult> GetTransactionSummaryAsync(
         [AsParameters] TransactionFilterRequest filter,
+        string? startDate,
+        string? endDate,
         ClaimsPrincipal user,
         ITransactionService transactionService,
         CancellationToken cancellationToken)
     {
         var userId = user.GetRequiredUserId();
-        var summary = await transactionService.GetSummaryAsync(userId, filter, cancellationToken);
+        var resolvedFilter = filter with { StartDate = startDate, EndDate = endDate };
+        var summary = await transactionService.GetSummaryAsync(userId, resolvedFilter, cancellationToken);
         return Results.Ok(summary);
     }
 
     private static async Task<IResult> ListTransactionsAsync(
         [AsParameters] TransactionFilterRequest filter,
+        string? startDate,
+        string? endDate,
         ClaimsPrincipal user,
         ITransactionService transactionService,
         CancellationToken cancellationToken)
     {
         var userId = user.GetRequiredUserId();
-        var paged = await transactionService.ListByUserIdAsync(userId, filter, cancellationToken);
+        var resolvedFilter = filter with { StartDate = startDate, EndDate = endDate };
+        var paged = await transactionService.ListByUserIdAsync(userId, resolvedFilter, cancellationToken);
 
         return Results.Ok(paged);
     }

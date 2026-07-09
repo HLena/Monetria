@@ -46,7 +46,9 @@ public sealed record TransactionFilterRequest(
     Guid? FromAccountId = null,
     int? Limit = null,
     int? Page = null,
-    int? PageSize = null);
+    int? PageSize = null,
+    string? StartDate = null,
+    string? EndDate = null);
 
 public sealed record TransactionSummaryResponse(
     decimal TotalIncome,

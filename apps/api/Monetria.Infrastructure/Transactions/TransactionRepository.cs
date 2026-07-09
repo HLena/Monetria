@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Monetria.Application.Transactions;
 using Monetria.Domain.Entities;
@@ -151,6 +152,35 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
             var startDate = new DateTime(filter.Year.Value, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             var endDate = startDate.AddYears(1);
             query = query.Where(transaction => transaction.Date >= startDate && transaction.Date < endDate);
+        }
+        else
+        {
+            Console.Error.WriteLine($"[DateFilter] StartDate='{filter.StartDate}' EndDate='{filter.EndDate}'");
+
+            if (!string.IsNullOrEmpty(filter.StartDate) &&
+                DateOnly.TryParseExact(filter.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var startDateOnly))
+            {
+                var start = new DateTime(startDateOnly.Year, startDateOnly.Month, startDateOnly.Day, 0, 0, 0, DateTimeKind.Utc);
+                Console.Error.WriteLine($"[DateFilter] Applying start >= {start:O}");
+                query = query.Where(transaction => transaction.Date >= start);
+            }
+            else if (!string.IsNullOrEmpty(filter.StartDate))
+            {
+                Console.Error.WriteLine($"[DateFilter] FAILED to parse StartDate: '{filter.StartDate}'");
+            }
+
+            if (!string.IsNullOrEmpty(filter.EndDate) &&
+                DateOnly.TryParseExact(filter.EndDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var endDateOnly))
+            {
+                var nextDay = endDateOnly.AddDays(1);
+                var end = new DateTime(nextDay.Year, nextDay.Month, nextDay.Day, 0, 0, 0, DateTimeKind.Utc);
+                Console.Error.WriteLine($"[DateFilter] Applying end < {end:O}");
+                query = query.Where(transaction => transaction.Date < end);
+            }
+            else if (!string.IsNullOrEmpty(filter.EndDate))
+            {
+                Console.Error.WriteLine($"[DateFilter] FAILED to parse EndDate: '{filter.EndDate}'");
+            }
         }
 
         return query;
