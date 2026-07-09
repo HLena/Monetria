@@ -28,18 +28,56 @@ export function useSettingsCategories() {
   }, []);
 
   async function addCategory(data: { name: string; type: string; color?: string; keyIcon?: string }) {
-    await createCategoryApi({ name: data.name, type: data.type as 'Income' | 'Expense', color: data.color, keyIcon: data.keyIcon });
-    await reload();
+    const tempId = `temp-${Date.now()}`;
+    const tempCategory: CategoryDto = {
+      id: tempId,
+      userId: 'pending',
+      name: data.name.trim(),
+      type: data.type as 'Income' | 'Expense',
+      isDefault: false,
+      isActive: true,
+      color: data.color ?? null,
+      keyIcon: data.keyIcon ?? null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setCategories(prev => [...prev, tempCategory]);
+    try {
+      const created = await createCategoryApi({
+        name: data.name,
+        type: data.type as 'Income' | 'Expense',
+        color: data.color,
+        keyIcon: data.keyIcon,
+      });
+      setCategories(prev => prev.map(c => c.id === tempId ? created : c));
+    } catch (e) {
+      setCategories(prev => prev.filter(c => c.id !== tempId));
+      throw e;
+    }
   }
 
   async function updateCategory(id: string, data: { name: string; color?: string; keyIcon?: string }) {
-    await updateCategoryApi(id, data);
-    await reload();
+    const previous = categories.find(c => c.id === id);
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, ...data, name: data.name.trim() } : c));
+    try {
+      const updated = await updateCategoryApi(id, data);
+      setCategories(prev => prev.map(c => c.id === id ? updated : c));
+    } catch (e) {
+      if (previous) setCategories(prev => prev.map(c => c.id === id ? previous : c));
+      throw e;
+    }
   }
 
   async function deleteCategory(id: string) {
-    await deleteCategoryApi(id);
-    await reload();
+    const previous = categories.find(c => c.id === id);
+    setCategories(prev => prev.filter(c => c.id !== id));
+    try {
+      await deleteCategoryApi(id);
+    } catch (e) {
+      if (previous) setCategories(prev => [...prev, previous]);
+      throw e;
+    }
   }
 
   async function toggleDefaultCategory(id: string, currentlyActive: boolean) {

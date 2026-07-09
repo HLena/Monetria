@@ -41,6 +41,7 @@ export function CategoriesSection() {
   const { categories, loading, error: catError, reload, addCategory, updateCategory, deleteCategory, toggleDefaultCategory } = useSettingsCategories();
   const [editTarget, setEditTarget] = useState<CategoryDto | null>(null);
   const [form, setForm] = useState<CategoryFormState>({ name: '', type: 'Expense', color: '#6366f1', keyIcon: 'CircleDot' });
+  const [nameError, setNameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -58,12 +59,23 @@ export function CategoriesSection() {
   function cancelForm() {
     setEditTarget(null);
     setForm({ name: '', type: 'Expense', color: '#6366f1', keyIcon: 'CircleDot' });
+    setNameError(null);
     setFormError(null);
   }
 
+  function validateName(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed) return 'El nombre es requerido.';
+    if (trimmed.length < 2) return 'El nombre debe tener al menos 2 caracteres.';
+    if (trimmed.length > 120) return 'El nombre no puede exceder 120 caracteres.';
+    return null;
+  }
+
   async function handleSave() {
-    if (!form.name.trim()) { setFormError('El nombre es requerido.'); return; }
+    const nameErr = validateName(form.name);
+    if (nameErr) { setNameError(nameErr); return; }
     setSaving(true);
+    setNameError(null);
     setFormError(null);
     try {
       if (editTarget) {
@@ -90,9 +102,12 @@ export function CategoriesSection() {
             <FormField label="Nombre" required>
               <Input
                 value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setNameError(null); }}
+                onBlur={() => setNameError(validateName(form.name))}
                 placeholder="Ej. Mascotas"
+                className={nameError ? 'border-rose-400 focus-visible:ring-rose-400' : ''}
               />
+              {nameError && <p className="text-xs text-rose-500 mt-1">{nameError}</p>}
             </FormField>
             {!editTarget && (
               <FormField label="Tipo">
@@ -207,13 +222,13 @@ export function CategoriesSection() {
                   <div className="flex gap-1 flex-shrink-0">
                     <button
                       onClick={() => startEdit(cat)}
-                      className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors"
+                      className="cursor-pointer p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => deleteCategory(cat.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                      className="cursor-pointer p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
