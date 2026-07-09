@@ -198,8 +198,8 @@ export const useFinanceStore = create<FinanceStoreState>()(
       loadCategories: async () => {
         if (!getAuthToken()) return;
         try {
-          const dtos = await listCategoriesApi();
-          set({ categories: dtos.filter(c => c.isActive) });
+          const dtos = await listCategoriesApi(true);
+          set({ categories: dtos });
         } catch {
           // non-critical — category resolution falls back gracefully
         }
@@ -301,7 +301,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
             year: budget.year,
             rolloverUnused: budget.rolloverUnused,
           });
-          await get().loadBudgets();
+          await get().loadBudgets(budget.month, budget.year);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo crear el presupuesto';
           set({ error: msg, isLoading: false });
