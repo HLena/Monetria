@@ -4,7 +4,7 @@ import { formatCurrency } from '@/app/store';
 import { Account } from '@/app/types/models';
 import { AccountType } from '@monetria/enums';
 import { AccountTypeIcon } from '@/app/components/icons/AccountTypeIcon';
-import { usageColor } from '@/app/constants/accountColors';
+import { usageColor } from '@/app/constants/account';
 
 export function AccountCardGrid({ accounts }: { accounts: Account[] }) {
   const netWorth = accounts.reduce(

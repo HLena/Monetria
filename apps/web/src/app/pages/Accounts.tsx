@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Plus, Wallet } from 'lucide-react';
 import { formatCurrency, useAuthStore, useFinanceStore } from '@/app/store';
 import { Modal } from '@/app/components/Modal';
@@ -7,13 +7,7 @@ import { AccountCardGrid, AccountForm } from '@/app/components/accounts';
 import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard } from '@/app/components/shared';
 import { useAccounts } from '@/app/hooks';
 
-const FILTER_TABS: [AccountType | 'all', string][] = [
-  ['all', 'Todas'],
-  [AccountType.CreditCard, 'Crédito'],
-  [AccountType.BankAccount, 'Bancaria'],
-  [AccountType.Cash, 'Efectivo'],
-  [AccountType.Wallet, 'Billetera'],
-];
+import { FILTER_TABS } from '@/app/constants/account';
 
 export function Accounts() {
   const user = useAuthStore(s => s.user);
