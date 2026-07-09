@@ -5,7 +5,7 @@ import type { CategoryDto } from '@/app/types/api';
 import type { UserBalanceDto } from '@/app/types/api';
 import { api, getAuthToken } from '@/app/lib';
 import { useAuthStore } from './AuthStore';
-import { listAccounts, getAccountById, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi, getUserBalance as getUserBalanceApi } from '@/app/api';
+import { listAccounts, getAccountById, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi, reactivateAccount as reactivateAccountApi, getUserBalance as getUserBalanceApi } from '@/app/api';
 import { listCategories as listCategoriesApi } from '@/app/api';
 import {
   listTransactions as listTransactionsApi,
@@ -46,6 +46,7 @@ interface FinanceStoreState {
   addAccount: (account: Omit<Account, 'id'>, userId: string) => Promise<void>;
   updateAccount: (id: string, account: Omit<Account, 'id'>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
+  reactivateAccount: (id: string) => Promise<void>;
   /** Requires non-blank userId and a valid token; otherwise leaves accounts empty and does not call the API. */
   listAccounts: (userId: string) => Promise<void>;
   getAccountById: (id: string) => Promise<void>;
@@ -132,6 +133,18 @@ export const useFinanceStore = create<FinanceStoreState>()(
           await get().listAccounts(useAuthStore.getState().user?.userId ?? '');
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo eliminar la cuenta';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      reactivateAccount: async (id: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          await reactivateAccountApi(id);
+          await get().listAccounts(useAuthStore.getState().user?.userId ?? '');
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo reactivar la cuenta';
           set({ error: msg, isLoading: false });
           throw caught;
         }

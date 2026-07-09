@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Account } from '@/app/types/models';
 import { AccountType } from '@monetria/enums';
-import { CARD_COLORS } from '@/app/constants/accountColors';
+import { CARD_COLORS } from '@/app/constants/account';
 import { Input } from '@/app/components/ui';
 import { Select } from '@/app/components/ui';
 import { FormField, SectionLabel, ColorPicker, Divider, ErrorMsg } from '@/app/components/shared';
@@ -82,6 +82,7 @@ export function AccountForm({
   const [form, setForm] = useState<Omit<Account, 'id'>>({
     name: initial?.name ?? '',
     type: initial?.type ?? AccountType.Cash,
+    isActive: initial?.isActive ?? true,
     cardLast4Digits: initial?.cardLast4Digits ?? '',
     cardHolderName: initial?.cardHolderName ?? '',
     expiryDate: initial?.expiryDate ?? '',

@@ -23,3 +23,7 @@ export async function updateAccount(id: string, data: Omit<Account, 'id'>): Prom
 export async function deleteAccount(id: string): Promise<void> {
   await api.delete(`/accounts/${id}`);
 }
+
+export async function reactivateAccount(id: string): Promise<void> {
+  await api.put(`/accounts/${id}`, { isActive: true });
+}

@@ -4,7 +4,8 @@ export interface Account {
   id: string;
   name: string;
   type: AccountType;
-  cardLast4Digits?: string; // Last 4 digits
+  isActive: boolean;
+  cardLast4Digits?: string;
   cardHolderName?: string;
   expiryDate?: string; // MM/YY
   institutionName?: string;

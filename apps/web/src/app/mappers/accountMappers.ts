@@ -30,6 +30,7 @@ export function mapAccountDtoToFinanceAccount(dto: AccountDto): Account {
     id: dto.id,
     name: dto.name?.trim() ? dto.name.trim() : '',
     type,
+    isActive: dto.isActive,
     currentBalance: dto.currentBalance,
     currencyCode: dto.currencyCode,
     colorCode: dto.colorCode || '#000000',

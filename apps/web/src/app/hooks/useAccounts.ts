@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useFinanceStore, useAuthStore } from '@/app/store';
 
 export function useAccounts() {
-  const { accounts, isLoading, error, listAccounts, addAccount, updateAccount, deleteAccount } =
+  const { accounts, isLoading, error, listAccounts, addAccount, updateAccount, deleteAccount, reactivateAccount } =
     useFinanceStore();
 
   useEffect(() => {
@@ -14,5 +14,5 @@ export function useAccounts() {
     return useAuthStore.persist.onFinishHydration(load);
   }, [listAccounts]);
 
-  return { accounts, isLoading, error, addAccount, updateAccount, deleteAccount };
+  return { accounts, isLoading, error, addAccount, updateAccount, deleteAccount, reactivateAccount };
 }
