@@ -34,7 +34,7 @@ public sealed record BudgetSummaryEntry(
     decimal SpentAmount,
     int Month,
     int Year,
-    bool RolloverUnused);
+    bool IsRecurring);
 
 public sealed record UpcomingRecurringEntry(
     Guid Id,

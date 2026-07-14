@@ -18,6 +18,7 @@ using Monetria.Infrastructure.Auth;
 using Monetria.Infrastructure.Budgets;
 using Monetria.Infrastructure.Categories;
 using Monetria.Infrastructure.Debts;
+using Monetria.Infrastructure.Jobs;
 using Monetria.Infrastructure.Recurrings;
 using Monetria.Infrastructure.Persistence;
 using Monetria.Infrastructure.SavingsGoals;
@@ -58,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IBudgetService, BudgetService>();
+        services.AddScoped<IBudgetRecurrenceService, BudgetRecurrenceService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IDebtService, DebtService>();
         services.AddScoped<IRecurringService, RecurringService>();
@@ -68,6 +70,8 @@ public static class DependencyInjection
         services.AddScoped<ISavingsPocketService, SavingsPocketService>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<IUserService, UserService>();
+
+        services.AddHostedService<BudgetRecurrenceHostedService>();
 
         return services;
     }

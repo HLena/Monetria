@@ -60,6 +60,31 @@ public sealed class BudgetRepository(MonetriaDbContext dbContext) : IBudgetRepos
         ).SumAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Budget>> ListLatestRecurringBeforePeriodAsync(
+        int month, int year, CancellationToken cancellationToken = default)
+    {
+        var periodValue = year * 12 + month;
+
+        var candidates = await dbContext.Budgets
+            .AsNoTracking()
+            .Where(budget => budget.IsRecurring && (budget.Year * 12 + budget.Month) < periodValue)
+            .ToListAsync(cancellationToken);
+
+        return candidates
+            .GroupBy(budget => new { budget.UserId, budget.CategoryId })
+            .Select(group => group.OrderByDescending(budget => budget.Year * 12 + budget.Month).First())
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<Budget>> ListByPeriodAsync(
+        int month, int year, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Budgets
+            .AsNoTracking()
+            .Where(budget => budget.Month == month && budget.Year == year)
+            .ToListAsync(cancellationToken);
+    }
+
     public void Remove(Budget budget)
     {
         dbContext.Budgets.Remove(budget);

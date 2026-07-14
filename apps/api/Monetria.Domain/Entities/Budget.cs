@@ -13,7 +13,7 @@ public class Budget
     public int Month { get; set; }
     public int Year { get; set; }
 
-    public bool RolloverUnused { get; set; }
+    public bool IsRecurring { get; set; }
 
     public DateTime CreatedAt { get; set; }
 }

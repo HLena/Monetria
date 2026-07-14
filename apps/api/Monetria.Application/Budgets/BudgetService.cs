@@ -21,7 +21,7 @@ public sealed class BudgetService(IBudgetRepository budgetRepository, IUnitOfWor
             LimitAmount = request.LimitAmount,
             Month = request.Month,
             Year = request.Year,
-            RolloverUnused = request.RolloverUnused,
+            IsRecurring = request.IsRecurring,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -35,7 +35,7 @@ public sealed class BudgetService(IBudgetRepository budgetRepository, IUnitOfWor
             budget.LimitAmount,
             budget.Month,
             budget.Year,
-            budget.RolloverUnused,
+            budget.IsRecurring,
             SpentAmount: 0,
             budget.CreatedAt);
     }
@@ -76,7 +76,7 @@ public sealed class BudgetService(IBudgetRepository budgetRepository, IUnitOfWor
         budget.LimitAmount = request.LimitAmount;
         budget.Month = request.Month;
         budget.Year = request.Year;
-        budget.RolloverUnused = request.RolloverUnused;
+        budget.IsRecurring = request.IsRecurring;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -141,7 +141,7 @@ public sealed class BudgetService(IBudgetRepository budgetRepository, IUnitOfWor
             budget.LimitAmount,
             budget.Month,
             budget.Year,
-            budget.RolloverUnused,
+            budget.IsRecurring,
             spentAmount,
             budget.CreatedAt);
 }

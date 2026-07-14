@@ -129,7 +129,7 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
             entity.Property(budget => budget.LimitAmount).HasPrecision(18, 2);
             entity.Property(budget => budget.Month).IsRequired();
             entity.Property(budget => budget.Year).IsRequired();
-            entity.Property(budget => budget.RolloverUnused).IsRequired();
+            entity.Property(budget => budget.IsRecurring).IsRequired();
             entity.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(budget => budget.UserId)

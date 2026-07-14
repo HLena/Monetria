@@ -55,7 +55,7 @@ public sealed class DashboardService(
                 userId, budget.CategoryId, budget.Month, budget.Year, cancellationToken);
             budgetEntries.Add(new BudgetSummaryEntry(
                 budget.Id, budget.CategoryId, budget.LimitAmount, spent,
-                budget.Month, budget.Year, budget.RolloverUnused));
+                budget.Month, budget.Year, budget.IsRecurring));
         }
 
         var recurrings = await recurringRepository.ListByUserIdAsync(userId, new RecurringFilterRequest(PageSize: 100), cancellationToken);
