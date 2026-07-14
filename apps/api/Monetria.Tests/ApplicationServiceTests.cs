@@ -1409,6 +1409,101 @@ public sealed class ApplicationServiceTests
         Assert.Equal(1, result[0].Month);
     }
 
+    // ── BudgetRecurrence ─────────────────────────────────────────────────
+
+    private static BudgetRecurrenceService CreateBudgetRecurrenceService(MonetriaDbContext dbContext) =>
+        new(new BudgetRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+
+    [Fact]
+    public async Task GenerateForCurrentPeriodAsync_WithRecurringBudgetFromPreviousMonth_CreatesBudgetForCurrentMonth()
+    {
+        await using var dbContext = CreateDbContext();
+        var budgetService = CreateBudgetService(dbContext);
+        var recurrenceService = CreateBudgetRecurrenceService(dbContext);
+        var userId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var previousMonth = now.AddMonths(-1);
+
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 300, previousMonth.Month, previousMonth.Year, IsRecurring: true));
+
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+
+        var current = await budgetService.ListByUserIdAsync(userId, now.Month, now.Year);
+
+        Assert.Single(current);
+        Assert.Equal(300, current[0].LimitAmount);
+        Assert.True(current[0].IsRecurring);
+    }
+
+    [Fact]
+    public async Task GenerateForCurrentPeriodAsync_WhenBudgetAlreadyExistsForCurrentMonth_DoesNotDuplicate()
+    {
+        await using var dbContext = CreateDbContext();
+        var budgetService = CreateBudgetService(dbContext);
+        var recurrenceService = CreateBudgetRecurrenceService(dbContext);
+        var userId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var previousMonth = now.AddMonths(-1);
+
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 300, previousMonth.Month, previousMonth.Year, IsRecurring: true));
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 400, now.Month, now.Year, IsRecurring: true));
+
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+
+        var current = await budgetService.ListByUserIdAsync(userId, now.Month, now.Year);
+
+        Assert.Single(current);
+        Assert.Equal(400, current[0].LimitAmount);
+    }
+
+    [Fact]
+    public async Task GenerateForCurrentPeriodAsync_WithNonRecurringBudget_DoesNotCreateNewBudget()
+    {
+        await using var dbContext = CreateDbContext();
+        var budgetService = CreateBudgetService(dbContext);
+        var recurrenceService = CreateBudgetRecurrenceService(dbContext);
+        var userId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var previousMonth = now.AddMonths(-1);
+
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 300, previousMonth.Month, previousMonth.Year, IsRecurring: false));
+
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+
+        var current = await budgetService.ListByUserIdAsync(userId, now.Month, now.Year);
+
+        Assert.Empty(current);
+    }
+
+    [Fact]
+    public async Task GenerateForCurrentPeriodAsync_CalledTwice_IsIdempotent()
+    {
+        await using var dbContext = CreateDbContext();
+        var budgetService = CreateBudgetService(dbContext);
+        var recurrenceService = CreateBudgetRecurrenceService(dbContext);
+        var userId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var previousMonth = now.AddMonths(-1);
+
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 300, previousMonth.Month, previousMonth.Year, IsRecurring: true));
+
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+
+        var current = await budgetService.ListByUserIdAsync(userId, now.Month, now.Year);
+
+        Assert.Single(current);
+    }
+
     // ── Debt ──────────────────────────────────────────────────────────────
 
     private static DebtService CreateDebtService(MonetriaDbContext dbContext) =>
