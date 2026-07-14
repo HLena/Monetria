@@ -70,7 +70,7 @@ function mapBudgetDto(dto: BudgetDto): Budget {
     month: dto.month,
     year: dto.year,
     spentAmount: dto.spentAmount,
-    rolloverUnused: dto.rolloverUnused,
+    isRecurring: dto.isRecurring,
     createdAt: dto.createdAt,
   };
 }
@@ -299,7 +299,7 @@ export const useFinanceStore = create<FinanceStoreState>()(
             limitAmount: budget.limitAmount,
             month: budget.month,
             year: budget.year,
-            rolloverUnused: budget.rolloverUnused,
+            isRecurring: budget.isRecurring,
           });
           await get().loadBudgets(budget.month, budget.year);
         } catch (caught) {
@@ -317,9 +317,9 @@ export const useFinanceStore = create<FinanceStoreState>()(
             limitAmount: budget.limitAmount,
             month: budget.month,
             year: budget.year,
-            rolloverUnused: budget.rolloverUnused,
+            isRecurring: budget.isRecurring,
           });
-          await get().loadBudgets();
+          await get().loadBudgets(budget.month, budget.year);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo actualizar el presupuesto';
           set({ error: msg, isLoading: false });

@@ -5,7 +5,7 @@ export interface BudgetDto {
   limitAmount: number;
   month: number;
   year: number;
-  rolloverUnused: boolean;
+  isRecurring: boolean;
   spentAmount: number;
   createdAt: string;
 }
@@ -15,7 +15,7 @@ export interface CreateBudgetRequestBody {
   limitAmount: number;
   month: number;
   year: number;
-  rolloverUnused: boolean;
+  isRecurring: boolean;
 }
 
 export interface UpdateBudgetRequestBody {
@@ -23,5 +23,5 @@ export interface UpdateBudgetRequestBody {
   limitAmount: number;
   month: number;
   year: number;
-  rolloverUnused: boolean;
+  isRecurring: boolean;
 }

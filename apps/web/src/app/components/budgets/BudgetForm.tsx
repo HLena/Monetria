@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Budget } from '@/app/types/finance';
 import { useFinanceStore } from '@/app/store';
-import { AmountInput, CategorySelect, ErrorMsg } from '@/app/components/shared';
+import { AmountInput, CategorySelect, ErrorMsg, ToggleSwitch } from '@/app/components/shared';
 import { Button } from '@/app/components/ui/Button';
 
 export function BudgetForm({
@@ -22,7 +22,7 @@ export function BudgetForm({
     limitAmount: initial?.limitAmount ?? ('' as number | ''),
     month: initial?.month ?? now.getMonth() + 1,
     year: initial?.year ?? now.getFullYear(),
-    rolloverUnused: initial?.rolloverUnused ?? false,
+    isRecurring: initial?.isRecurring ?? false,
     spentAmount: initial?.spentAmount ?? 0,
   });
 
@@ -91,6 +91,13 @@ export function BudgetForm({
           {MONTH_NAMES[form.month - 1]} {form.year}
         </span>
       </div>
+
+      <ToggleSwitch
+        label="Es recurrente"
+        description="Se creará automáticamente el mismo presupuesto cada mes"
+        value={form.isRecurring}
+        onChange={val => set('isRecurring', val)}
+      />
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" className="flex-1 rounded-xl h-11">

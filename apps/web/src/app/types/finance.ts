@@ -95,7 +95,7 @@ export interface Budget {
   month: number;
   year: number;
   spentAmount: number;
-  rolloverUnused: boolean;
+  isRecurring: boolean;
   createdAt: string;
 }
 
