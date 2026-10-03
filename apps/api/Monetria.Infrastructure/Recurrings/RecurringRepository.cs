@@ -42,6 +42,14 @@ public sealed class RecurringRepository(MonetriaDbContext dbContext) : IRecurrin
         return BuildQuery(userId, filter).CountAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Recurring>> ListActiveDueAsync(
+        DateOnly today, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Recurrings
+            .Where(r => r.IsActive && r.NextDueDate <= today)
+            .ToListAsync(cancellationToken);
+    }
+
     private IQueryable<Recurring> BuildQuery(Guid userId, RecurringFilterRequest filter)
     {
         var query = dbContext.Recurrings

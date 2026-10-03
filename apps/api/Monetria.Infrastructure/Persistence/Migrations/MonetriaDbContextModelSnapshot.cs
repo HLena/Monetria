@@ -576,7 +576,8 @@ namespace Monetria.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RecurringId");
+                    b.HasIndex("RecurringId", "ScheduledDate")
+                        .IsUnique();
 
                     b.ToTable("RecurringOccurrences");
                 });

@@ -245,6 +245,7 @@ public class MonetriaDbContext(DbContextOptions<MonetriaDbContext> options) : Db
                 .WithMany(r => r.Occurrences)
                 .HasForeignKey(o => o.RecurringId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(o => new { o.RecurringId, o.ScheduledDate }).IsUnique();
         });
     }
 

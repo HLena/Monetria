@@ -64,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IDebtService, DebtService>();
         services.AddScoped<IRecurringService, RecurringService>();
         services.AddScoped<IRecurringOccurrenceService, RecurringOccurrenceService>();
+        services.AddScoped<IRecurringOccurrenceGenerationService, RecurringOccurrenceGenerationService>();
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ISavingsGoalService, SavingsGoalService>();
@@ -72,6 +73,7 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
 
         services.AddHostedService<BudgetRecurrenceHostedService>();
+        services.AddHostedService<RecurringOccurrenceGenerationHostedService>();
 
         return services;
     }

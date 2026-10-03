@@ -47,11 +47,11 @@ public sealed class RecurringOccurrenceService(
 
             var transferPairId = Guid.NewGuid();
 
-            var outgoing = BuildTransaction(
+            var outgoing = RecurringTransactionBuilder.Build(
                 recurring.AccountId, recurring.Type, recurring.CategoryId,
                 realAmount, recurring.Name, recurring.ToAccountId, transferPairId, now);
 
-            var incoming = BuildTransaction(
+            var incoming = RecurringTransactionBuilder.Build(
                 recurring.ToAccountId.Value, recurring.Type, recurring.CategoryId,
                 realAmount, recurring.Name, null, transferPairId, now);
 
@@ -62,7 +62,7 @@ public sealed class RecurringOccurrenceService(
         }
         else
         {
-            var transaction = BuildTransaction(
+            var transaction = RecurringTransactionBuilder.Build(
                 recurring.AccountId, recurring.Type, recurring.CategoryId,
                 realAmount, recurring.Name, null, null, now);
 
@@ -155,30 +155,6 @@ public sealed class RecurringOccurrenceService(
             _ => throw new InvalidOperationException($"Unknown AmountType '{amountType}'.")
         };
     }
-
-    private static Transaction BuildTransaction(
-        Guid fromAccountId,
-        TransactionType type,
-        Guid? categoryId,
-        decimal amount,
-        string description,
-        Guid? toAccountId,
-        Guid? transferPairId,
-        DateTime now) =>
-        new()
-        {
-            Id = Guid.NewGuid(),
-            FromAccountId = fromAccountId,
-            Type = type,
-            CategoryId = categoryId,
-            Amount = amount,
-            Description = description,
-            ToAccountId = toAccountId,
-            TransferPairId = transferPairId,
-            IsActive = true,
-            Date = now,
-            CreatedAt = now
-        };
 
     private static void ValidateUserId(Guid userId)
     {
