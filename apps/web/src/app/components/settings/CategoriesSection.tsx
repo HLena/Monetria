@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Save, Edit2, Trash2 } from 'lucide-react';
 import type { CategoryDto } from '@/app/types/api';
-import { useSettingsCategories } from '@/app/hooks';
+import { useCategories } from '@/app/hooks';
 import { ErrorBanner, FormField, SectionCard, ColorPicker } from '@/app/components/shared';
 import { Input } from '@/app/components/ui';
 import { CategoryIconCircle, getCategoryIcon } from '@/app/lib/categoryIcons';
@@ -38,14 +38,12 @@ function TypePill({ type }: { type: string }) {
 }
 
 export function CategoriesSection() {
-  const { categories, loading, error: catError, reload, addCategory, updateCategory, deleteCategory, toggleDefaultCategory } = useSettingsCategories();
+  const { categories, loading, error: catError, addCategory, updateCategory, deleteCategory, toggleDefaultCategory } = useCategories();
   const [editTarget, setEditTarget] = useState<CategoryDto | null>(null);
   const [form, setForm] = useState<CategoryFormState>({ name: '', type: 'Expense', color: '#6366f1', keyIcon: 'CircleDot' });
   const [nameError, setNameError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => { void reload(); }, [reload]);
 
   const defaultCats = categories.filter(c => c.isDefault);
   const userCats = categories.filter(c => !c.isDefault && c.userId);

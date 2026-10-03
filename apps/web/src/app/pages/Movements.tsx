@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Filter, SlidersHorizontal, X } from 'lucide-react';
 import { formatCurrency, useFinanceStore } from '@/app/store';
 import { Modal } from '@/app/components/Modal';
-import { useTransactionsPaginated, PAGE_SIZE } from '@/app/hooks';
+import { useTransactions, PAGE_SIZE } from '@/app/hooks';
 import type { TransactionFilters } from '@/app/hooks';
 import { Transaction } from '@/app/types/finance';
 import { TransactionForm, TransactionGroupedList } from '@/app/components/transactions';
@@ -33,7 +33,7 @@ export function Movements() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
-  } = useTransactionsPaginated();
+  } = useTransactions();
 
   const [showForm, setShowForm] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);

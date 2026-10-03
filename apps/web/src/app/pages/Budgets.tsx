@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, AlertTriangle, CheckCircle, Edit2, Trash2, Target } from 'lucide-react';
 import { Budget } from '@/app/types/finance';
 import { Modal } from '@/app/components/Modal';
 import { CategoryIconCircle } from '@/app/lib';
-import { useFinanceStore } from '@/app/store';
+import { useCategories, useBudgets } from '@/app/hooks';
 import { PageContainer, HeaderPage, SummaryCard, EmptyState, LoadingState, ErrorBanner, MonthNavigator } from '@/app/components/shared';
 import { Button } from '@/app/components/ui/Button';
 import { BudgetForm } from '@/app/components/budgets/BudgetForm';
@@ -25,7 +25,6 @@ interface BudgetWithMeta extends Budget {
 }
 
 export function Budgets() {
-  const { budgets, categories, isLoading, error, loadBudgets, addBudget, updateBudget, deleteBudget, loadCategories } = useFinanceStore();
   const [showForm, setShowForm] = useState(false);
   const [editBudget, setEditBudget] = useState<Budget | null>(null);
 
@@ -33,10 +32,8 @@ export function Budgets() {
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
   const [filterYear, setFilterYear] = useState(now.getFullYear());
 
-  useEffect(() => {
-    void loadCategories();
-    loadBudgets(filterMonth, filterYear);
-  }, [filterMonth, filterYear]);
+  const { categories } = useCategories();
+  const { budgets, isLoading, error, addBudget, updateBudget, deleteBudget } = useBudgets(filterMonth, filterYear);
 
   const budgetsWithMeta: BudgetWithMeta[] = budgets.map(b => {
     const cat = categories.find(c => c.id === b.categoryId);

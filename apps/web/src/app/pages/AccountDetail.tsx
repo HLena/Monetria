@@ -27,7 +27,7 @@ export function AccountDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { account, isLoading: accountLoading, error: accountError, updateAccount, deleteAccount } = useAccount();
+  const { account, isLoading: accountLoading, error: accountError, updateAccount, deleteAccount } = useAccount(id ?? '');
   const {
     items,
     allItems,
