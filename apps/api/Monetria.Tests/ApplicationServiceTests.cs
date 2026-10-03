@@ -146,7 +146,7 @@ public sealed class ApplicationServiceTests
     public async Task CreateCategoryAsync_WhenNameExistsForUserAndType_ThrowsInvalidOperationException()
     {
         await using var dbContext = CreateDbContext();
-        var service = new CategoryService(new CategoryRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var service = new CategoryService(new CategoryRepository(dbContext), new UserCategoryPreferenceRepository(dbContext), new MonetriaUnitOfWork(dbContext));
         var userId = Guid.NewGuid();
         var request = new CreateCategoryRequest("Food", TransactionType.Expense, "#F97316");
         await service.CreateAsync(userId, request);
@@ -1090,6 +1090,9 @@ public sealed class ApplicationServiceTests
 
         public Task<int> CountByUserIdAsync(Guid userId, TransactionFilterRequest filter, CancellationToken ct = default)
             => Task.FromResult(0);
+
+        public Task<TransactionSummaryResponse> GetSummaryByUserIdAsync(Guid userId, TransactionFilterRequest filter, CancellationToken ct = default)
+            => Task.FromResult(new TransactionSummaryResponse(0, 0, 0));
     }
 
     private sealed class TestJwtTokenGenerator : IJwtTokenGenerator
@@ -1114,8 +1117,12 @@ public sealed class ApplicationServiceTests
         Guid accountId,
         RecurringAmountType amountType,
         decimal? amount = 100,
-        decimal? estimatedAmount = null)
+        decimal? estimatedAmount = null,
+        RecurringFrequency frequency = RecurringFrequency.Monthly,
+        DateOnly? nextDueDate = null,
+        DateOnly? endDate = null)
     {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var recurring = new Recurring
         {
             Id = Guid.NewGuid(),
@@ -1126,9 +1133,10 @@ public sealed class ApplicationServiceTests
             AmountType = amountType,
             Amount = amount,
             EstimatedAmount = estimatedAmount,
-            Frequency = RecurringFrequency.Monthly,
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            NextDueDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            Frequency = frequency,
+            StartDate = today,
+            NextDueDate = nextDueDate ?? today,
+            EndDate = endDate,
             IsActive = true
         };
         dbContext.Recurrings.Add(recurring);
@@ -1250,6 +1258,134 @@ public sealed class ApplicationServiceTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.ConfirmAsync(userId, occurrence.Id, new ConfirmOccurrenceRequest(100)));
+    }
+
+    // ── RecurringOccurrenceGeneration ───────────────────────────────────────
+
+    private static RecurringOccurrenceGenerationService CreateGenerationService(MonetriaDbContext dbContext) =>
+        new(new RecurringRepository(dbContext),
+            new RecurringOccurrenceRepository(dbContext),
+            new TransactionRepository(dbContext),
+            new MonetriaUnitOfWork(dbContext));
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WithFixedRecurringDue_CreatesTransactionAndAutoRegisteredOccurrence()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.Fixed, amount: 150);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrences = await dbContext.RecurringOccurrences
+            .Where(o => o.RecurringId == recurring.Id).ToListAsync();
+        Assert.Single(occurrences);
+        Assert.Equal(RecurringOccurrenceStatus.AutoRegistered, occurrences[0].Status);
+        Assert.Equal(150, occurrences[0].RealAmount);
+        Assert.NotNull(occurrences[0].TransactionId);
+        Assert.True(await dbContext.Transactions.AnyAsync(t => t.Id == occurrences[0].TransactionId));
+
+        var updated = await dbContext.Recurrings.FindAsync(recurring.Id);
+        Assert.True(updated!.NextDueDate > DateOnly.FromDateTime(DateTime.UtcNow));
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WithEstimatedRecurringDue_CreatesPendingOccurrenceWithSuggestedAmount()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(
+            dbContext, userId, account.Id, RecurringAmountType.Estimated, amount: null, estimatedAmount: 220);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrence = await dbContext.RecurringOccurrences.SingleAsync(o => o.RecurringId == recurring.Id);
+        Assert.Equal(RecurringOccurrenceStatus.Pending, occurrence.Status);
+        Assert.Equal(220, occurrence.SuggestedAmount);
+        Assert.Null(occurrence.TransactionId);
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WithVariableFreeRecurringDue_CreatesPendingOccurrenceWithoutSuggestedAmount()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.VariableFree, amount: null);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrence = await dbContext.RecurringOccurrences.SingleAsync(o => o.RecurringId == recurring.Id);
+        Assert.Equal(RecurringOccurrenceStatus.Pending, occurrence.Status);
+        Assert.Null(occurrence.SuggestedAmount);
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WithMultipleMissedPeriods_CatchesUpAllOccurrences()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var recurring = AddRecurring(
+            dbContext, userId, account.Id, RecurringAmountType.Fixed, amount: 10,
+            frequency: RecurringFrequency.Daily, nextDueDate: today.AddDays(-3));
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrences = await dbContext.RecurringOccurrences
+            .Where(o => o.RecurringId == recurring.Id).ToListAsync();
+        Assert.Equal(4, occurrences.Count);
+
+        var updated = await dbContext.Recurrings.FindAsync(recurring.Id);
+        Assert.Equal(today.AddDays(1), updated!.NextDueDate);
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WhenNextDueDateExceedsEndDate_DeactivatesRecurring()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var recurring = AddRecurring(
+            dbContext, userId, account.Id, RecurringAmountType.Fixed, amount: 10,
+            frequency: RecurringFrequency.Monthly, nextDueDate: today, endDate: today);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var updated = await dbContext.Recurrings.FindAsync(recurring.Id);
+        Assert.False(updated!.IsActive);
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_CalledTwice_DoesNotDuplicate()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.Fixed, amount: 10);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrences = await dbContext.RecurringOccurrences
+            .Where(o => o.RecurringId == recurring.Id).ToListAsync();
+        Assert.Single(occurrences);
     }
 
     // ── SavingsPocket ──────────────────────────────────────────────────────
