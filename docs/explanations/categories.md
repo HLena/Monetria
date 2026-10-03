@@ -1,5 +1,27 @@
 # Categories
 
+## 2026-07-14 — Unificación de useCategories + useSettingsCategories
+
+### Contexto
+
+Existían dos hooks de categorías con estados desincronizados: `useCategories()` (solo lectura, leía del `FinanceStore` global) y `useSettingsCategories()` (CRUD completo para la pantalla de Ajustes, con su **propio** `useState<CategoryDto[]>` local, totalmente aislado del store). Si el usuario renombraba/desactivaba una categoría en Ajustes, el resto de la app (Budgets, Recurrings, Transactions, Dashboard, Reports) no se enteraba hasta un refetch manual.
+
+### Qué se cambió
+
+**`FinanceStore.tsx`** — se movió el CRUD de categorías (antes vivía solo en `useSettingsCategories`) al store global, operando sobre `state.categories` con el mismo patrón optimista (update inmediato + rollback si falla la API):
+- `addCategory({ name, type, color?, keyIcon? })` — inserta un registro temporal (`temp-{timestamp}`) y lo reemplaza con la respuesta real; en error, lo remueve.
+- `updateCategory(id, { name, color?, keyIcon? })` — aplica el cambio optimista; en error, restaura el valor previo.
+- `deleteCategory(id)` — remueve optimistamente; en error, re-inserta.
+- `toggleDefaultCategory(id, currentlyActive)` — togglea `isActive` optimistamente contra `POST /categories/{id}/preference`.
+
+**`hooks/categories/useCategories.ts`** — ahora es el único hook de categorías: expone `{ categories, loading, error, reload, addCategory, updateCategory, deleteCategory, toggleDefaultCategory }`, todo store-backed. `useSettingsCategories.ts` se eliminó.
+
+**`CategoriesSection.tsx`** — cambia `useSettingsCategories()` por `useCategories()`; se quitó su `useEffect(() => reload())` propio porque `useCategories` ya carga en su propio efecto (evita doble fetch al montar).
+
+### Trade-off aceptado
+
+`loading`/`error` de `useCategories` ahora son el `isLoading`/`error` **globales** del `FinanceStore` (compartidos con cuentas, presupuestos, recurrentes, etc.), no un estado aislado como antes. Si dos hooks de dominio están montados a la vez, comparten el mismo booleano/mensaje — limitación ya documentada en `docs/explanations/recurrings.md` (2026-07-14, "Reorganización de hooks por dominio"), no introducida por este cambio pero ahora también aplica a categorías.
+
 ## 2026-05-20 — Fix 500 error on GET /categories
 
 **Problem:** `GET /categories` returned a 500 Internal Server Error for every authenticated request.

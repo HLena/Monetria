@@ -140,3 +140,7 @@
 2. `GenerateForCurrentPeriodAsync_WhenBudgetAlreadyExistsForCurrentMonth_DoesNotDuplicate`
 3. `GenerateForCurrentPeriodAsync_WithNonRecurringBudget_DoesNotCreateNewBudget`
 4. `GenerateForCurrentPeriodAsync_CalledTwice_IsIdempotent`
+
+## 2026-07-14 — Hooks por dominio: `useBudgets`
+
+`Budgets.tsx` llamaba `useFinanceStore()` directo y disparaba `loadBudgets`/`loadCategories` en un `useEffect` propio de la página (violando la regla del proyecto "No API calls inside components — use hooks"). Se creó `hooks/budgets/useBudgets(month, year)` que encapsula esa carga y expone `{ budgets, isLoading, error, addBudget, updateBudget, deleteBudget }`. Las categorías se resuelven ahora con el nuevo `hooks/categories/useCategories()` (hook de solo lectura, distinto de `useSettingsCategories` que hace CRUD con estado local para la pantalla de ajustes). Ver `docs/explanations/recurrings.md` (2026-07-14) para el detalle completo de la reorganización de `hooks/` en carpetas por dominio.

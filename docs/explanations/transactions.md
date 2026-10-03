@@ -1,5 +1,9 @@
 # Transactions — Implementation Log
 
+## Update: 2026-07-14 — Limpieza de hooks duplicados
+
+`hooks/useTransactions.ts` (envolvía `useFinanceStore` con `transactions` sin paginar) no tenía consumidores — `Movements.tsx` ya usaba `useTransactionsPaginated` desde que se agregó paginación/filtros/resumen, y nadie migró de vuelta. Se borró el archivo muerto y se renombró `useTransactionsPaginated` → `useTransactions` (archivo y función), ya que pasa a ser el único hook de transacciones. `Movements.tsx` y el barrel `hooks/transactions/index.ts` actualizados; `PAGE_SIZE`/`TYPE_TO_DTO`/`TransactionFilters` se re-exportan igual que antes.
+
 ## Update: 2026-06-02
 
 ### Rename FixedExpense → Recurring + RecurringOccurrence entity
