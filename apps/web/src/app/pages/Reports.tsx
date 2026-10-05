@@ -15,12 +15,18 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { useFinance, formatCurrency, getMonthKey, useFinanceStore } from '@/app/store';
-import { CATEGORY_COLORS, AccountType } from '@/app/types/finance';
-import { PageContainer, HeaderPage } from '@/app/components/shared';
+import { formatCurrency, useFinanceStore } from '@/app/store';
+import { PageContainer, HeaderPage, LoadingState, ErrorBanner, ToggleGroup } from '@/app/components/shared';
+import type { ToggleOption } from '@/app/components/shared';
+import { useReports } from '@/app/hooks';
 
-const MONTHS_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const MONTHS_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+type MonthsStr = '3' | '6' | '12';
+
+const PERIOD_OPTIONS: ToggleOption<MonthsStr>[] = [
+  { value: '3', label: '3 meses' },
+  { value: '6', label: '6 meses' },
+  { value: '12', label: '12 meses' },
+];
 
 function SummaryCard({ label, value, prev, icon: Icon, color }: {
   label: string;
@@ -56,76 +62,46 @@ function SummaryCard({ label, value, prev, icon: Icon, color }: {
 }
 
 export function Reports() {
-  const { transactions, accounts, budgets, categories } = useFinanceStore();
-  const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const { budgets, categories, accounts } = useFinanceStore();
+  const [monthsStr, setMonthsStr] = useState<MonthsStr>('3');
+  const months = parseInt(monthsStr) as 3 | 6 | 12;
+  const { data, isLoading, error } = useReports(months);
 
-  const availableYears = useMemo(() => {
-    const years = new Set(transactions.map(t => new Date(t.date).getFullYear()));
-    years.add(now.getFullYear());
-    return Array.from(years).sort().reverse();
-  }, [transactions]);
+  const flowData = data?.monthlyFlow.data ?? [];
+  const totalExpensesPeriod = data?.spendingByCategory.totalExpenses ?? 0;
+  const totalIncomePeriod = useMemo(() => flowData.reduce((s, m) => s + m.income, 0), [flowData]);
 
-  // Monthly data for selected year
-  const monthlyData = useMemo(() => {
-    return Array.from({ length: 12 }, (_, i) => {
-      const key = `${selectedYear}-${String(i + 1).padStart(2, '0')}`;
-      const income = transactions
-        .filter(t => getMonthKey(t.date) === key && t.type === 'income')
-        .reduce((s, t) => s + t.amount, 0);
-      const expenses = transactions
-        .filter(t => getMonthKey(t.date) === key && t.type === 'expense')
-        .reduce((s, t) => s + t.amount, 0);
-      return { month: MONTHS_SHORT[i], income, expenses, balance: income - expenses };
-    });
-  }, [transactions, selectedYear]);
+  const lastEntry = flowData[flowData.length - 1];
+  const prevEntry = flowData[flowData.length - 2];
+  const currentIncome = lastEntry?.income ?? 0;
+  const currentExpenses = lastEntry?.expenses ?? 0;
+  const prevIncome = prevEntry?.income ?? 0;
+  const prevExpenses = prevEntry?.expenses ?? 0;
+  const currentMonthLabel = lastEntry?.label ?? '';
 
-  // Current month stats
-  const currentMonthKey = getMonthKey(now);
-  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const prevMonthKey = getMonthKey(prevMonthDate);
+  const categoryData = useMemo(
+    () => data?.spendingByCategory.data.map(e => ({
+      name: e.categoryName,
+      value: e.amount,
+      color: e.color ?? '#94a3b8',
+      percentage: e.percentage,
+    })) ?? [],
+    [data],
+  );
 
-  const currentIncome = transactions.filter(t => getMonthKey(t.date) === currentMonthKey && t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const currentExpenses = transactions.filter(t => getMonthKey(t.date) === currentMonthKey && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const prevIncome = transactions.filter(t => getMonthKey(t.date) === prevMonthKey && t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const prevExpenses = transactions.filter(t => getMonthKey(t.date) === prevMonthKey && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const balanceTrend = useMemo(
+    () => flowData.map((entry, i, arr) => ({
+      month: entry.label,
+      cumulative: arr.slice(0, i + 1).reduce((sum, e) => sum + (e.income - e.expenses), 0),
+    })),
+    [flowData],
+  );
 
-  // Category data for current year
-  const categoryData = useMemo(() => {
-    const cats: Record<string, number> = {};
-    transactions
-      .filter(t => new Date(t.date).getFullYear() === selectedYear && t.type === 'expense')
-      .forEach(t => { cats[t.category] = (cats[t.category] || 0) + t.amount; });
-    return Object.entries(cats)
-      .sort(([, a], [, b]) => b - a)
-      .map(([name, value]) => ({ name, value }));
-  }, [transactions, selectedYear]);
+  const topMonths = useMemo(
+    () => [...flowData].filter(m => m.expenses > 0).sort((a, b) => b.expenses - a.expenses).slice(0, 3),
+    [flowData],
+  );
 
-  const totalExpensesYear = categoryData.reduce((s, c) => s + c.value, 0);
-
-  // Account distribution
-  const accountData = accounts.map(a => ({
-    name: a.name,
-    value: a.type === AccountType.CreditCard ? a.currentBalance : a.currentBalance,
-    color: a.colorCode,
-  }));
-
-  // Monthly balance trend
-  const balanceTrend = useMemo(() => {
-    let running = 0;
-    return monthlyData.map(d => {
-      running += d.balance;
-      return { ...d, cumulative: running };
-    });
-  }, [monthlyData]);
-
-  // Top spending months
-  const topMonths = [...monthlyData]
-    .filter(m => m.expenses > 0)
-    .sort((a, b) => b.expenses - a.expenses)
-    .slice(0, 3);
-
-  // Budget performance
   const budgetPerformance = budgets.map(b => {
     const cat = categories.find(c => c.id === b.categoryId);
     return {
@@ -136,7 +112,11 @@ export function Reports() {
     };
   });
 
-  const currentMonthLabel = MONTHS_ES[now.getMonth()];
+  const accountData = accounts.map(a => ({
+    name: a.name,
+    value: a.currentBalance,
+    color: a.colorCode,
+  }));
 
   return (
     <PageContainer>
@@ -144,43 +124,44 @@ export function Reports() {
         title="Reportes y Analytics"
         subtitle="Análisis detallado de tus finanzas"
         actions={
-          <select
-            className="border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-            value={selectedYear}
-            onChange={e => setSelectedYear(parseInt(e.target.value))}
-          >
-            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+          <ToggleGroup
+            options={PERIOD_OPTIONS}
+            value={monthsStr}
+            onChange={setMonthsStr}
+            size="sm"
+          />
         }
       />
+
+      {error && <ErrorBanner message={error} />}
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <SummaryCard
-          label={`Ingresos - ${currentMonthLabel}`}
+          label={`Ingresos — ${currentMonthLabel}`}
           value={currentIncome}
           prev={prevIncome}
           icon={TrendingUp}
           color="bg-emerald-50 text-emerald-600"
         />
         <SummaryCard
-          label={`Gastos - ${currentMonthLabel}`}
+          label={`Gastos — ${currentMonthLabel}`}
           value={currentExpenses}
           prev={prevExpenses}
           icon={TrendingDown}
           color="bg-rose-50 text-rose-600"
         />
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-          <p className="text-slate-500 text-sm mb-3">Total gastos {selectedYear}</p>
-          <p className="text-slate-800 dark:text-slate-100 text-2xl font-bold">{formatCurrency(totalExpensesYear)}</p>
+          <p className="text-slate-500 text-sm mb-3">Total gastos del período</p>
+          <p className="text-slate-800 dark:text-slate-100 text-2xl font-bold">{formatCurrency(totalExpensesPeriod)}</p>
           <p className="text-slate-400 text-xs mt-1">{categoryData.length} categorías</p>
         </div>
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-          <p className="text-slate-500 text-sm mb-3">Ahorro anual {selectedYear}</p>
+          <p className="text-slate-500 text-sm mb-3">Ahorro del período</p>
           <p className="text-slate-800 dark:text-slate-100 text-2xl font-bold">
-            {formatCurrency(monthlyData.reduce((s, m) => s + m.income, 0) - totalExpensesYear)}
+            {formatCurrency(totalIncomePeriod - totalExpensesPeriod)}
           </p>
-          <p className="text-slate-400 text-xs mt-1">Ingresos - Gastos</p>
+          <p className="text-slate-400 text-xs mt-1">Ingresos − Gastos</p>
         </div>
       </div>
 
@@ -188,32 +169,38 @@ export function Reports() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
         {/* Income vs Expenses bar */}
         <div className="xl:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-          <h2 className="text-slate-700 font-semibold mb-4">Ingresos vs Gastos por Mes ({selectedYear})</h2>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis
-                tick={{ fontSize: 11, fill: '#94a3b8' }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                formatter={(value: number) => [formatCurrency(value), '']}
-                contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}
-              />
-              <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Ingresos" />
-              <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name="Gastos" />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-            </BarChart>
-          </ResponsiveContainer>
+          <h2 className="text-slate-700 font-semibold mb-4">Ingresos vs Gastos por Mes</h2>
+          {isLoading ? (
+            <LoadingState message="Cargando gráfico…" />
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={flowData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis
+                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  formatter={(value: number) => [formatCurrency(value), '']}
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}
+                />
+                <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} name="Ingresos" />
+                <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} name="Gastos" />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Category pie */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
           <h2 className="text-slate-700 font-semibold mb-4">Gastos por Categoría</h2>
-          {categoryData.length > 0 ? (
+          {isLoading ? (
+            <LoadingState message="Cargando…" />
+          ) : categoryData.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
@@ -227,7 +214,7 @@ export function Reports() {
                     dataKey="value"
                   >
                     {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#94a3b8'} />
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -240,11 +227,11 @@ export function Reports() {
                 {categoryData.map(entry => (
                   <div key={entry.name} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: CATEGORY_COLORS[entry.name] || '#94a3b8' }} />
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: entry.color }} />
                       <span className="text-slate-600 truncate">{entry.name}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className="text-slate-400">{totalExpensesYear > 0 ? ((entry.value / totalExpensesYear) * 100).toFixed(0) : 0}%</span>
+                      <span className="text-slate-400">{entry.percentage.toFixed(0)}%</span>
                       <span className="text-slate-700 font-medium">{formatCurrency(entry.value)}</span>
                     </div>
                   </div>
@@ -257,53 +244,58 @@ export function Reports() {
         </div>
       </div>
 
-      {/* Balance trend + More charts */}
+      {/* Balance trend + Monthly balance */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-        {/* Cumulative balance trend */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
           <h2 className="text-slate-700 font-semibold mb-4">Tendencia de Balance Acumulado</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={balanceTrend}>
-              <defs>
-                <linearGradient id="balGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(value: number) => [formatCurrency(value), 'Balance']} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }} />
-              <Area type="monotone" dataKey="cumulative" stroke="#6366f1" strokeWidth={2} fill="url(#balGrad)" name="Balance" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {isLoading ? (
+            <LoadingState message="Cargando…" />
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={balanceTrend}>
+                <defs>
+                  <linearGradient id="balGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number) => [formatCurrency(value), 'Balance']} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }} />
+                <Area type="monotone" dataKey="cumulative" stroke="#6366f1" strokeWidth={2} fill="url(#balGrad)" name="Balance" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
-        {/* Monthly balance bars */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
           <h2 className="text-slate-700 font-semibold mb-4">Balance Mensual (Ahorro/Déficit)</h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(value: number) => [formatCurrency(value), 'Balance']} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }} />
-              <Bar dataKey="balance" name="Balance" radius={[4, 4, 0, 0]}>
-                {monthlyData.map((entry, index) => (
-                  <Cell key={index} fill={entry.balance >= 0 ? '#10b981' : '#ef4444'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {isLoading ? (
+            <LoadingState message="Cargando…" />
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={flowData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number) => [formatCurrency(value), 'Balance']} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }} />
+                <Bar dataKey={(d) => d.income - d.expenses} name="Balance" radius={[4, 4, 0, 0]}>
+                  {flowData.map((entry, index) => (
+                    <Cell key={index} fill={(entry.income - entry.expenses) >= 0 ? '#10b981' : '#ef4444'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
       {/* Budget performance + Top spending */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Budget performance */}
         {budgetPerformance.length > 0 && (
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-            <h2 className="text-slate-700 font-semibold mb-4">Cumplimiento de Presupuesto ({selectedYear})</h2>
+            <h2 className="text-slate-700 font-semibold mb-4">Cumplimiento de Presupuesto (mes actual)</h2>
             <div className="space-y-4">
               {budgetPerformance.map(b => {
                 const pct = Math.min((b.spent / b.limit) * 100, 150);
@@ -325,10 +317,7 @@ export function Reports() {
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full"
-                        style={{
-                          width: `${Math.min(pct, 100)}%`,
-                          background: isOver ? '#ef4444' : b.color,
-                        }}
+                        style={{ width: `${Math.min(pct, 100)}%`, background: isOver ? '#ef4444' : b.color }}
                       />
                     </div>
                   </div>
@@ -338,20 +327,19 @@ export function Reports() {
           </div>
         )}
 
-        {/* Top spending months + stats */}
         <div className="space-y-4">
           {topMonths.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
               <h2 className="text-slate-700 font-semibold mb-4">Meses con Mayor Gasto</h2>
               <div className="space-y-3">
                 {topMonths.map((m, i) => (
-                  <div key={m.month} className="flex items-center gap-4">
+                  <div key={m.label} className="flex items-center gap-4">
                     <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {i + 1}
                     </span>
                     <div className="flex-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-700">{m.month}</span>
+                        <span className="text-slate-700">{m.label}</span>
                         <span className="text-rose-600 font-semibold">{formatCurrency(m.expenses)}</span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
@@ -367,33 +355,28 @@ export function Reports() {
             </div>
           )}
 
-          {/* Year summary */}
           <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 text-white">
             <div className="flex items-center gap-2 mb-4">
               <BarChart2 className="w-5 h-5 opacity-80" />
-              <h2 className="font-semibold">Resumen {selectedYear}</h2>
+              <h2 className="font-semibold">Resumen — últimos {months} meses</h2>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-white/60 text-xs">Total ingresos</p>
-                <p className="text-white text-lg font-bold">
-                  {formatCurrency(monthlyData.reduce((s, m) => s + m.income, 0))}
-                </p>
+                <p className="text-white text-lg font-bold">{formatCurrency(totalIncomePeriod)}</p>
               </div>
               <div>
                 <p className="text-white/60 text-xs">Total gastos</p>
-                <p className="text-white text-lg font-bold">{formatCurrency(totalExpensesYear)}</p>
+                <p className="text-white text-lg font-bold">{formatCurrency(totalExpensesPeriod)}</p>
               </div>
               <div>
                 <p className="text-white/60 text-xs">Balance neto</p>
-                <p className="text-white text-lg font-bold">
-                  {formatCurrency(monthlyData.reduce((s, m) => s + m.income, 0) - totalExpensesYear)}
-                </p>
+                <p className="text-white text-lg font-bold">{formatCurrency(totalIncomePeriod - totalExpensesPeriod)}</p>
               </div>
               <div>
                 <p className="text-white/60 text-xs">Meses activos</p>
                 <p className="text-white text-lg font-bold">
-                  {monthlyData.filter(m => m.income > 0 || m.expenses > 0).length}
+                  {flowData.filter(m => m.income > 0 || m.expenses > 0).length}
                 </p>
               </div>
             </div>

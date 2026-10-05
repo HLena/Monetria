@@ -476,3 +476,37 @@ Gastos (Expense) del período agrupados por categoría. Retorna `percentage` pre
 ### `GET /dashboard` — cambio
 
 Añadido `creditCardDebt`: suma de los balances negativos de cuentas `CreditCard` activas. Calculado sin queries adicionales (reutiliza el loop de balances existente).
+
+## Update: 2026-10-02 — Integración frontend de endpoints de reportes
+
+### Nuevos tipos (`types/api/`)
+
+- `types/api/transactions.ts`: añadidos `FlowEntry`, `MonthlyFlowResponse`, `CategorySpendingEntry`, `SpendingByCategoryResponse`.
+- `types/api/dashboard.ts`: nuevo archivo con `DashboardDto`, `DashboardMonthSummary`, `DashboardAccountEntry`, `DashboardBudgetEntry`, `DashboardRecurringEntry`.
+
+### Nuevas funciones API (`api/`)
+
+- `api/transactions.ts`: añadidos `getMonthlyFlow(months, granularity)` y `getSpendingByCategory(months)`.
+- `api/dashboard.ts`: nuevo archivo con `getDashboard()`.
+
+### Nuevos hooks (`hooks/`)
+
+- `useDashboard()`: ejecuta en paralelo `getDashboard()`, `getMonthlyFlow(1, 'week')` y `getSpendingByCategory(1)`. Retorna `{ data, isLoading, error }`.
+- `useReports(months)`: ejecuta en paralelo `getMonthlyFlow(months, 'month')` y `getSpendingByCategory(months)`. Se re-ejecuta cuando `months` cambia.
+
+### Cambios en páginas
+
+**Dashboard.tsx:**
+- Stats cards (Patrimonio Neto, Ingresos, Gastos, Deuda Tarjetas) ahora usan datos del servidor (`useDashboard`).
+- Gráfico de área muestra flujo semanal del mes actual (Sem 1–4/5) en lugar de los últimos 6 meses computados localmente.
+- Gráfico de torta usa `SpendingByCategoryResponse` del servidor (color por categoría incluido).
+- Accounts grid, transacciones recientes, metas de ahorro y alertas de presupuesto siguen usando el store local.
+- Loading state con skeleton en stat cards y spinner en gráficos.
+
+**Reports.tsx:**
+- Selector de año reemplazado por `ToggleGroup` con opciones `3 | 6 | 12 meses`.
+- Gráfico de barras mensual usa `MonthlyFlowResponse` del servidor.
+- Gráfico de torta por categoría usa `SpendingByCategoryResponse` (con `percentage` precalculado).
+- Balance acumulado y balance mensual derivados del `MonthlyFlowResponse`.
+- Budget performance sigue usando el store (mes actual).
+- Summary cards usan el último y penúltimo entry del flujo mensual para comparar vs mes anterior.

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router';
 import {
   TrendingUp,
@@ -7,7 +7,6 @@ import {
   CreditCard,
   ArrowRight,
   AlertTriangle,
-  Target,
   PiggyBank,
 } from 'lucide-react';
 import {
@@ -22,15 +21,13 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { useFinance, formatCurrency, getMonthKey, getCurrentMonthKey, useAuthStore, useFinanceStore } from '@/app/store';
-import { AccountType } from '@/app/types/finance';
-import { CreditCardVisual } from '@/app/components/CreditCardVisual';
+import { formatCurrency, useAuthStore, useFinanceStore } from '@/app/store';
 import { CategoryIconCircle } from '@/app/lib';
-import { PageContainer } from '@/app/components/shared';
+import { mapTransactionDtoToTransaction } from '@/app/mappers';
+import { PageContainer, LoadingState, ErrorBanner } from '@/app/components/shared';
 import { TransactionGroupedList } from '@/app/components/transactions';
 import { AccountCardGrid } from '@/app/components/accounts';
-
-const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+import { useDashboard } from '@/app/hooks';
 
 function StatCard({
   label,
@@ -38,12 +35,14 @@ function StatCard({
   icon: Icon,
   color,
   subLabel,
+  loading,
 }: {
   label: string;
   value: string;
   icon: React.ElementType;
   color: string;
   subLabel?: string;
+  loading?: boolean;
 }) {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
@@ -53,7 +52,11 @@ function StatCard({
           <Icon className="w-4.5 h-4.5" />
         </div>
       </div>
-      <p className="text-slate-800 dark:text-slate-100 text-2xl font-bold">{value}</p>
+      {loading ? (
+        <div className="h-8 w-28 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse" />
+      ) : (
+        <p className="text-slate-800 dark:text-slate-100 text-2xl font-bold">{value}</p>
+      )}
       {subLabel && <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">{subLabel}</p>}
     </div>
   );
@@ -61,62 +64,19 @@ function StatCard({
 
 export function Dashboard() {
   const { user } = useAuthStore();
-  const { accounts, transactions, budgets, savingsGoals, categories } = useFinanceStore();
-  const currentMonth = getCurrentMonthKey();
+  const { accounts, savingsGoals, categories } = useFinanceStore();
+  const { data, isLoading, error } = useDashboard();
 
-  // Calculate total net worth
-  const totalDebitCash = accounts
-    .filter(a => a.type !== AccountType.CreditCard)
-    .reduce((sum, a) => sum + a.currentBalance, 0);
-  const totalCreditDebt = accounts
-    .filter(a => a.type === AccountType.CreditCard)
-    .reduce((sum, a) => sum + a.currentBalance, 0);
-  const netWorth = totalDebitCash - totalCreditDebt;
+  const netWorth = data?.dashboard.netWorth ?? 0;
+  const creditCardDebt = data?.dashboard.creditCardDebt ?? 0;
+  const monthlyIncome = data?.dashboard.currentMonth.income ?? 0;
+  const monthlyExpenses = data?.dashboard.currentMonth.expenses ?? 0;
 
-  // Monthly income and expenses
-  const monthlyIncome = transactions
-    .filter(t => getMonthKey(t.date) === currentMonth && t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-  const monthlyExpenses = transactions
-    .filter(t => getMonthKey(t.date) === currentMonth && t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const flowChartData = data?.monthlyFlow.data ?? [];
+  const pieData = data?.spendingByCategory.data ?? [];
 
-  // Last 6 months data for chart
-  const now = new Date();
-  const last6Months = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-    const key = getMonthKey(d);
-    const income = transactions
-      .filter(t => getMonthKey(t.date) === key && t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-    const expenses = transactions
-      .filter(t => getMonthKey(t.date) === key && t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-    return { month: MONTHS_ES[d.getMonth()], income, expenses };
-  });
-
-  // Category spending this month
-  const pieData = Object.values(
-    transactions
-      .filter(t => getMonthKey(t.date) === currentMonth && t.type === 'expense' && t.categoryId)
-      .reduce<Record<string, { name: string; value: number; iconKey: string | null | undefined; color: string | null | undefined }>>((acc, t) => {
-        if (!acc[t.categoryId!]) {
-          acc[t.categoryId!] = { name: t.category || t.categoryId!, value: 0, iconKey: t.categoryKeyIcon, color: t.categoryColor };
-        }
-        acc[t.categoryId!].value += t.amount;
-        return acc;
-      }, {})
-  ).sort((a, b) => b.value - a.value).slice(0, 5);
-
-  // Budget alerts
-  const overBudget = budgets.filter(b => b.spentAmount > b.limitAmount);
-
-  // Recent transactions
-  const recentTransactions = [...transactions]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
-
-  // Savings progress
+  const overBudget = (data?.dashboard.budgets ?? []).filter(b => b.spentAmount > b.limitAmount);
+  const recentTransactions = (data?.dashboard.recentTransactions ?? []).map(mapTransactionDtoToTransaction);
   const topSavings = savingsGoals.slice(0, 3);
 
   const currentMonthLabel = new Date()
@@ -134,6 +94,8 @@ export function Dashboard() {
         </p>
       </div>
 
+      {error && <ErrorBanner message={error} />}
+
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard
@@ -142,6 +104,7 @@ export function Dashboard() {
           icon={Wallet}
           color="bg-indigo-50 text-indigo-600"
           subLabel={`${accounts.length} cuentas activas`}
+          loading={isLoading}
         />
         <StatCard
           label="Ingresos del Mes"
@@ -149,6 +112,7 @@ export function Dashboard() {
           icon={TrendingUp}
           color="bg-emerald-50 text-emerald-600"
           subLabel={currentMonthLabel}
+          loading={isLoading}
         />
         <StatCard
           label="Gastos del Mes"
@@ -156,71 +120,81 @@ export function Dashboard() {
           icon={TrendingDown}
           color="bg-rose-50 text-rose-600"
           subLabel={`Balance: ${formatCurrency(monthlyIncome - monthlyExpenses)}`}
+          loading={isLoading}
         />
         <StatCard
           label="Deuda Total Tarjetas"
-          value={formatCurrency(totalCreditDebt)}
+          value={formatCurrency(creditCardDebt)}
           icon={CreditCard}
           color="bg-amber-50 text-amber-600"
           subLabel="Saldo a pagar"
+          loading={isLoading}
         />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
-        {/* Income vs Expenses chart */}
+        {/* Weekly income vs expenses */}
         <div className="xl:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-slate-700 dark:text-slate-200 font-semibold">Ingresos vs Gastos</h2>
-            <span className="text-slate-400 dark:text-slate-500 text-xs">Últimos 6 meses</span>
+            <span className="text-slate-400 dark:text-slate-500 text-xs">Este mes por semana</span>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={last6Months}>
-              <defs>
-                <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis
-                tick={{ fontSize: 11, fill: '#94a3b8' }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                formatter={(value: number) => [formatCurrency(value), '']}
-                contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}
-              />
-              <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} fill="url(#incomeGrad)" name="Ingresos" />
-              <Area type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} fill="url(#expenseGrad)" name="Gastos" />
-            </AreaChart>
-          </ResponsiveContainer>
-          <div className="flex gap-4 mt-2 justify-center">
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              <div className="w-3 h-3 rounded-full bg-emerald-500" />
-              Ingresos
-            </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              <div className="w-3 h-3 rounded-full bg-rose-500" />
-              Gastos
-            </div>
-          </div>
+          {isLoading ? (
+            <LoadingState message="Cargando gráfico…" />
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={flowChartData}>
+                  <defs>
+                    <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [formatCurrency(value), '']}
+                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)' }}
+                  />
+                  <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} fill="url(#incomeGrad)" name="Ingresos" />
+                  <Area type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} fill="url(#expenseGrad)" name="Gastos" />
+                </AreaChart>
+              </ResponsiveContainer>
+              <div className="flex gap-4 mt-2 justify-center">
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  Ingresos
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="w-3 h-3 rounded-full bg-rose-500" />
+                  Gastos
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Pie chart */}
+        {/* Spending by category pie */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-slate-700 dark:text-slate-200 font-semibold">Gastos por Categoría</h2>
             <span className="text-slate-400 dark:text-slate-500 text-xs">Este mes</span>
           </div>
-          {pieData.length > 0 ? (
+          {isLoading ? (
+            <LoadingState message="Cargando…" />
+          ) : pieData.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={160}>
                 <PieChart>
@@ -231,13 +205,10 @@ export function Dashboard() {
                     innerRadius={45}
                     outerRadius={75}
                     paddingAngle={3}
-                    dataKey="value"
+                    dataKey="amount"
                   >
                     {pieData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.color ?? '#94a3b8'}
-                      />
+                      <Cell key={`cell-${index}`} fill={entry.color ?? '#94a3b8'} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -248,12 +219,12 @@ export function Dashboard() {
               </ResponsiveContainer>
               <div className="space-y-2 mt-2">
                 {pieData.map(entry => (
-                  <div key={entry.name} className="flex items-center justify-between text-xs">
+                  <div key={entry.categoryName} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 min-w-0">
-                      <CategoryIconCircle iconKey={entry.iconKey ?? undefined} color={entry.color ?? undefined} size="sm" />
-                      <span className="text-slate-600 dark:text-slate-300 truncate">{entry.name}</span>
+                      <CategoryIconCircle iconKey={entry.keyIcon ?? undefined} color={entry.color ?? undefined} size="sm" />
+                      <span className="text-slate-600 dark:text-slate-300 truncate">{entry.categoryName}</span>
                     </div>
-                    <span className="text-slate-700 dark:text-slate-200 font-medium flex-shrink-0 ml-2">{formatCurrency(entry.value)}</span>
+                    <span className="text-slate-700 dark:text-slate-200 font-medium flex-shrink-0 ml-2">{formatCurrency(entry.amount)}</span>
                   </div>
                 ))}
               </div>
@@ -266,7 +237,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Accounts widgets */}
+      {/* Accounts */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-slate-700 dark:text-slate-200 font-semibold">Mis Cuentas</h2>
@@ -293,7 +264,11 @@ export function Dashboard() {
               Ver todas <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          {recentTransactions.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
+              <LoadingState message="Cargando transacciones…" />
+            </div>
+          ) : recentTransactions.length === 0 ? (
             <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 text-center text-slate-400 dark:text-slate-500 text-sm">
               Sin transacciones recientes
             </div>
@@ -304,7 +279,6 @@ export function Dashboard() {
 
         {/* Right column: Alerts + Savings */}
         <div className="space-y-4">
-          {/* Budget Alerts */}
           {overBudget.length > 0 && (
             <div className="bg-amber-50 dark:bg-amber-950/30 rounded-2xl p-4 border border-amber-100 dark:border-amber-900">
               <div className="flex items-center gap-2 mb-3">
@@ -322,7 +296,6 @@ export function Dashboard() {
             </div>
           )}
 
-          {/* Savings Goals */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -333,29 +306,33 @@ export function Dashboard() {
                 Ver <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
-            <div className="space-y-3">
-              {topSavings.map(goal => {
-                const percent = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
-                return (
-                  <div key={goal.id}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium truncate">{goal.name}</span>
-                      <span className="text-slate-500 dark:text-slate-400 flex-shrink-0 ml-2">{percent.toFixed(0)}%</span>
+            {topSavings.length === 0 ? (
+              <p className="text-slate-400 dark:text-slate-500 text-xs text-center py-4">Sin metas de ahorro</p>
+            ) : (
+              <div className="space-y-3">
+                {topSavings.map(goal => {
+                  const percent = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
+                  return (
+                    <div key={goal.id}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-slate-600 dark:text-slate-300 font-medium truncate">{goal.name}</span>
+                        <span className="text-slate-500 dark:text-slate-400 flex-shrink-0 ml-2">{percent.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${percent}%`, background: goal.color }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs mt-0.5">
+                        <span className="text-slate-400 dark:text-slate-500">{formatCurrency(goal.currentAmount)}</span>
+                        <span className="text-slate-400 dark:text-slate-500">{formatCurrency(goal.targetAmount)}</span>
+                      </div>
                     </div>
-                    <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${percent}%`, background: goal.color }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-xs mt-0.5">
-                      <span className="text-slate-400 dark:text-slate-500">{formatCurrency(goal.currentAmount)}</span>
-                      <span className="text-slate-400 dark:text-slate-500">{formatCurrency(goal.targetAmount)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
