@@ -445,3 +445,34 @@ Todos los mensajes de error se muestran con el componente `<ErrorMsg>` (shared).
 - Añadido: botón "Filtros" con contador de filtros activos
 - Panel expandible con: `CategorySelect`, cuenta (`Select`), rango de fechas (`input[type=date]`)
 - Botón "Limpiar filtros" visible cuando hay algún filtro activo en el panel
+
+## 2026-10-04 — Endpoints de reportes (`/reports`)
+
+### Nuevos endpoints
+
+```
+GET /reports/monthly-flow?months={1|3|6|12}&granularity={month|week}
+GET /reports/spending-by-category?months={1|3|6|12}
+```
+
+Diseñados para ser reutilizables: el dashboard los consume con valores por defecto (`months=1&granularity=week` y `months=1`), la página de reportes permite al usuario seleccionar el período.
+
+### `GET /reports/monthly-flow`
+
+| Parámetro | Valores | Default |
+|---|---|---|
+| `months` | 1, 3, 6, 12 | 6 |
+| `granularity` | `month`, `week` | `month` |
+
+- `granularity=week` solo válido con `months=1` (mes actual, agrupado por semanas 1–4/5).
+- `granularity=month` devuelve N entradas mensuales, siempre rellenas (meses sin movimientos aparecen con `income=0, expenses=0`).
+- Transfers excluidos.
+- Labels generados en el servidor: `"Oct"` (si months=1), `"Oct 2026"` (multi-mes), `"Sem 1"` (semanal).
+
+### `GET /reports/spending-by-category`
+
+Gastos (Expense) del período agrupados por categoría. Retorna `percentage` precalculado. Ordenado por `amount` descendente. Transactions sin categoría aparecen como `"Sin categoría"`.
+
+### `GET /dashboard` — cambio
+
+Añadido `creditCardDebt`: suma de los balances negativos de cuentas `CreditCard` activas. Calculado sin queries adicionales (reutiliza el loop de balances existente).

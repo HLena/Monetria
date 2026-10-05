@@ -397,6 +397,89 @@ public sealed class TransactionService(
         return await transactionRepository.GetSummaryByUserIdAsync(userId, filter, cancellationToken);
     }
 
+    private static readonly string[] MonthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    private static readonly int[] ValidMonths = [1, 3, 6, 12];
+
+    public async Task<MonthlyFlowResponse> GetMonthlyFlowAsync(
+        Guid userId, int months, CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(userId);
+        if (!ValidMonths.Contains(months))
+            throw new ArgumentException("months must be 1, 3, 6, or 12.", nameof(months));
+
+        var now = DateTime.UtcNow;
+        var periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-(months - 1));
+        var periodEnd   = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1);
+
+        var points = await transactionRepository.GetMonthlyFlowAsync(userId, periodStart, periodEnd, cancellationToken);
+        var lookup = points.ToDictionary(p => (p.Month, p.Year));
+
+        var entries = new List<FlowEntry>(months);
+        for (var i = 0; i < months; i++)
+        {
+            var date  = periodStart.AddMonths(i);
+            var key   = (date.Month, date.Year);
+            var label = months == 1
+                ? MonthLabels[date.Month - 1]
+                : $"{MonthLabels[date.Month - 1]} {date.Year}";
+            var (income, expenses) = lookup.TryGetValue(key, out var p) ? (p.Income, p.Expenses) : (0m, 0m);
+            entries.Add(new FlowEntry(label, income, expenses));
+        }
+
+        return new MonthlyFlowResponse(months, "month", entries);
+    }
+
+    public async Task<MonthlyFlowResponse> GetWeeklyFlowAsync(
+        Guid userId, CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(userId);
+
+        var now   = DateTime.UtcNow;
+        var weeks = (DateTime.DaysInMonth(now.Year, now.Month) - 1) / 7 + 1;
+
+        var points = await transactionRepository.GetWeeklyFlowAsync(userId, now.Month, now.Year, cancellationToken);
+        var lookup = points.ToDictionary(p => p.WeekOfMonth);
+
+        var entries = new List<FlowEntry>(weeks);
+        for (var w = 1; w <= weeks; w++)
+        {
+            var (income, expenses) = lookup.TryGetValue(w, out var p) ? (p.Income, p.Expenses) : (0m, 0m);
+            entries.Add(new FlowEntry($"Sem {w}", income, expenses));
+        }
+
+        return new MonthlyFlowResponse(1, "week", entries);
+    }
+
+    public async Task<SpendingByCategoryResponse> GetSpendingByCategoryAsync(
+        Guid userId, int months, CancellationToken cancellationToken = default)
+    {
+        ValidateUserId(userId);
+        if (!ValidMonths.Contains(months))
+            throw new ArgumentException("months must be 1, 3, 6, or 12.", nameof(months));
+
+        var now         = DateTime.UtcNow;
+        var periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-(months - 1));
+        var periodEnd   = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1);
+
+        var points        = await transactionRepository.GetSpendingByCategoryAsync(userId, periodStart, periodEnd, cancellationToken);
+        var totalExpenses = points.Sum(p => p.Amount);
+
+        var data = points.Select(p => new CategorySpendingEntry(
+            p.CategoryId,
+            p.CategoryName ?? "Sin categoría",
+            p.Color,
+            p.KeyIcon,
+            p.Amount,
+            totalExpenses > 0 ? Math.Round(p.Amount / totalExpenses * 100, 1) : 0m)).ToList();
+
+        return new SpendingByCategoryResponse(
+            months,
+            periodStart.ToString("yyyy-MM-dd"),
+            periodEnd.AddDays(-1).ToString("yyyy-MM-dd"),
+            totalExpenses,
+            data);
+    }
+
     private static void ValidateUserId(Guid userId)
     {
         if (userId == Guid.Empty)

@@ -106,6 +106,105 @@ public sealed class TransactionRepository(MonetriaDbContext dbContext) : ITransa
         return new TransactionSummaryResponse(totalIncome, totalExpenses, totalCount);
     }
 
+    public async Task<IReadOnlyList<MonthFlowPoint>> GetMonthlyFlowAsync(
+        Guid userId, DateTime periodStart, DateTime periodEnd, CancellationToken cancellationToken = default)
+    {
+        var userAccountIds = dbContext.Accounts
+            .Where(a => a.UserId == userId && a.IsActive)
+            .Select(a => a.Id);
+
+        var raw = await dbContext.Transactions
+            .AsNoTracking()
+            .Where(t => t.IsActive
+                && userAccountIds.Contains(t.FromAccountId)
+                && t.Type != TransactionType.Transfer
+                && t.Date >= periodStart && t.Date < periodEnd)
+            .GroupBy(t => new { t.Date.Year, t.Date.Month })
+            .Select(g => new
+            {
+                g.Key.Year,
+                g.Key.Month,
+                Income   = g.Where(t => t.Type == TransactionType.Income).Sum(t => t.Amount),
+                Expenses = g.Where(t => t.Type == TransactionType.Expense).Sum(t => t.Amount),
+            })
+            .ToListAsync(cancellationToken);
+
+        return raw.Select(x => new MonthFlowPoint(x.Month, x.Year, x.Income, x.Expenses)).ToList();
+    }
+
+    public async Task<IReadOnlyList<WeekFlowPoint>> GetWeeklyFlowAsync(
+        Guid userId, int month, int year, CancellationToken cancellationToken = default)
+    {
+        var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end   = start.AddMonths(1);
+
+        var userAccountIds = dbContext.Accounts
+            .Where(a => a.UserId == userId && a.IsActive)
+            .Select(a => a.Id);
+
+        var transactions = await dbContext.Transactions
+            .AsNoTracking()
+            .Where(t => t.IsActive
+                && userAccountIds.Contains(t.FromAccountId)
+                && t.Type != TransactionType.Transfer
+                && t.Date >= start && t.Date < end)
+            .Select(t => new { t.Date.Day, t.Type, t.Amount })
+            .ToListAsync(cancellationToken);
+
+        return transactions
+            .GroupBy(t => (t.Day - 1) / 7 + 1)
+            .OrderBy(g => g.Key)
+            .Select(g => new WeekFlowPoint(
+                g.Key,
+                g.Where(t => t.Type == TransactionType.Income).Sum(t => t.Amount),
+                g.Where(t => t.Type == TransactionType.Expense).Sum(t => t.Amount)))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<CategorySpendingPoint>> GetSpendingByCategoryAsync(
+        Guid userId, DateTime periodStart, DateTime periodEnd, CancellationToken cancellationToken = default)
+    {
+        var userAccountIds = dbContext.Accounts
+            .Where(a => a.UserId == userId && a.IsActive)
+            .Select(a => a.Id);
+
+        var grouped = await dbContext.Transactions
+            .AsNoTracking()
+            .Where(t => t.IsActive
+                && userAccountIds.Contains(t.FromAccountId)
+                && t.Type == TransactionType.Expense
+                && t.Date >= periodStart && t.Date < periodEnd)
+            .GroupBy(t => t.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Amount = g.Sum(t => t.Amount) })
+            .ToListAsync(cancellationToken);
+
+        var categoryIds = grouped
+            .Where(g => g.CategoryId.HasValue)
+            .Select(g => g.CategoryId!.Value)
+            .Distinct()
+            .ToList();
+
+        var categories = await dbContext.Categories
+            .AsNoTracking()
+            .Where(c => categoryIds.Contains(c.Id))
+            .Select(c => new { c.Id, c.Name, c.Color, c.KeyIcon })
+            .ToDictionaryAsync(c => c.Id, cancellationToken);
+
+        return grouped
+            .Select(g =>
+            {
+                var cat = g.CategoryId.HasValue && categories.TryGetValue(g.CategoryId.Value, out var c) ? c : null;
+                return new CategorySpendingPoint(
+                    g.CategoryId,
+                    cat?.Name ?? "Sin categoría",
+                    cat?.Color,
+                    cat?.KeyIcon,
+                    g.Amount);
+            })
+            .OrderByDescending(x => x.Amount)
+            .ToList();
+    }
+
     private IQueryable<Transaction> BuildUserQuery(Guid userId, TransactionFilterRequest filter)
     {
         var userAccountIds = dbContext.Accounts

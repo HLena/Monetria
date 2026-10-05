@@ -1093,6 +1093,15 @@ public sealed class ApplicationServiceTests
 
         public Task<TransactionSummaryResponse> GetSummaryByUserIdAsync(Guid userId, TransactionFilterRequest filter, CancellationToken ct = default)
             => Task.FromResult(new TransactionSummaryResponse(0, 0, 0));
+
+        public Task<IReadOnlyList<MonthFlowPoint>> GetMonthlyFlowAsync(Guid userId, DateTime periodStart, DateTime periodEnd, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<MonthFlowPoint>>(new List<MonthFlowPoint>());
+
+        public Task<IReadOnlyList<WeekFlowPoint>> GetWeeklyFlowAsync(Guid userId, int month, int year, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<WeekFlowPoint>>(new List<WeekFlowPoint>());
+
+        public Task<IReadOnlyList<CategorySpendingPoint>> GetSpendingByCategoryAsync(Guid userId, DateTime periodStart, DateTime periodEnd, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CategorySpendingPoint>>(new List<CategorySpendingPoint>());
     }
 
     private sealed class TestJwtTokenGenerator : IJwtTokenGenerator

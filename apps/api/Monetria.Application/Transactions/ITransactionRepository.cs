@@ -31,4 +31,22 @@ public interface ITransactionRepository
         Guid userId,
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MonthFlowPoint>> GetMonthlyFlowAsync(
+        Guid userId,
+        DateTime periodStart,
+        DateTime periodEnd,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<WeekFlowPoint>> GetWeeklyFlowAsync(
+        Guid userId,
+        int month,
+        int year,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CategorySpendingPoint>> GetSpendingByCategoryAsync(
+        Guid userId,
+        DateTime periodStart,
+        DateTime periodEnd,
+        CancellationToken cancellationToken = default);
 }

@@ -29,6 +29,12 @@ public static class TransactionEndpoints
         group.MapDelete("/{id:guid}", DeleteTransactionAsync)
             .WithName("DeleteTransaction");
 
+        group.MapGet("/monthly-flow", GetMonthlyFlowAsync)
+            .WithName("GetMonthlyFlow");
+
+        group.MapGet("/spending-by-category", GetSpendingByCategoryAsync)
+            .WithName("GetSpendingByCategory");
+
         endpoints.MapGet("/accounts/{accountId:guid}/transactions", ListTransactionsByAccountAsync)
             .WithName("ListTransactionsByAccount")
             .WithTags("Transactions")
@@ -84,6 +90,44 @@ public static class TransactionEndpoints
         await transactionService.DeleteAsync(userId, id, cancellationToken);
 
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> GetMonthlyFlowAsync(
+        ClaimsPrincipal user,
+        ITransactionService transactionService,
+        int months = 6,
+        string granularity = "month",
+        CancellationToken cancellationToken = default)
+    {
+        if (!new[] { 1, 3, 6, 12 }.Contains(months))
+            return Results.BadRequest("months must be 1, 3, 6, or 12.");
+
+        if (granularity != "month" && granularity != "week")
+            return Results.BadRequest("granularity must be 'month' or 'week'.");
+
+        if (granularity == "week" && months != 1)
+            return Results.BadRequest("granularity 'week' requires months=1.");
+
+        var userId = user.GetRequiredUserId();
+        var result = granularity == "week"
+            ? await transactionService.GetWeeklyFlowAsync(userId, cancellationToken)
+            : await transactionService.GetMonthlyFlowAsync(userId, months, cancellationToken);
+
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> GetSpendingByCategoryAsync(
+        ClaimsPrincipal user,
+        ITransactionService transactionService,
+        int months = 1,
+        CancellationToken cancellationToken = default)
+    {
+        if (!new[] { 1, 3, 6, 12 }.Contains(months))
+            return Results.BadRequest("months must be 1, 3, 6, or 12.");
+
+        var userId = user.GetRequiredUserId();
+        var result = await transactionService.GetSpendingByCategoryAsync(userId, months, cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> ListTransactionsByAccountAsync(

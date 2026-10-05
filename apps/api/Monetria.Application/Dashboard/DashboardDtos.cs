@@ -5,6 +5,7 @@ namespace Monetria.Application.Dashboard;
 
 public sealed record DashboardResponse(
     decimal NetWorth,
+    decimal CreditCardDebt,
     MonthSummary CurrentMonth,
     IReadOnlyList<AccountBalanceEntry> Accounts,
     IReadOnlyList<TransactionResponse> RecentTransactions,
