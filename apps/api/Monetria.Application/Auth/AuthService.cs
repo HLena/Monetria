@@ -55,15 +55,16 @@ public sealed class AuthService(
         return CreateAuthResponse(user);
     }
 
-    private AuthResponse CreateAuthResponse(User user)
-    {
-        return new AuthResponse(
-            user.Id,
+    private AuthResponse CreateAuthResponse(User user) =>
+        new(user.Id,
             user.FirstName,
             user.LastName,
             user.Email,
+            user.PreferredCurrency,
+            user.DateFormat,
+            user.Theme,
+            user.PhoneNumber,
             jwtTokenGenerator.GenerateToken(user));
-    }
 
     private static void ValidateRegisterRequest(RegisterRequest request)
     {
