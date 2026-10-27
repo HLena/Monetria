@@ -29,6 +29,11 @@ export function Login() {
   const { login, register, accessToken } = useAuthStore();
   const navigate = useNavigate();
 
+  const loginForm = useForm<LoginFormValues>({ defaultValues: { email: '', password: '' } });
+  const registerForm = useForm<RegisterFormValues>({
+    defaultValues: { firstName: '', lastName: '', email: '', password: '', confirmPassword: '' },
+  });
+
   if (accessToken) return <Navigate to="/" replace />;
 
   const handleTabChange = (tab: Tab) => {
@@ -36,11 +41,6 @@ export function Login() {
     setShowPassword(false);
     setShowConfirmPassword(false);
   };
-
-  const loginForm = useForm<LoginFormValues>({ defaultValues: { email: '', password: '' } });
-  const registerForm = useForm<RegisterFormValues>({
-    defaultValues: { firstName: '', lastName: '', email: '', password: '', confirmPassword: '' },
-  });
 
   const onLogin = async (data: LoginFormValues) => {
     try {
