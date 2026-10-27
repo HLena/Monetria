@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
-import { CategoryIconCircle } from '../../lib/categoryIcons';
+import { CategoryIconCircle } from '@/app/lib';
 
 export interface CategoryOption {
   id: string;

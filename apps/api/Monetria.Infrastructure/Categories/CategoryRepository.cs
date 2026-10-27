@@ -40,7 +40,6 @@ public sealed class CategoryRepository(MonetriaDbContext dbContext) : ICategoryR
     public async Task<IReadOnlyList<Category>> ListByUserIdAsync(
         Guid userId,
         TransactionType? type = null,
-        bool includeInactive = false,
         CancellationToken cancellationToken = default)
     {
         var query = dbContext.Categories
@@ -52,15 +51,16 @@ public sealed class CategoryRepository(MonetriaDbContext dbContext) : ICategoryR
             query = query.Where(category => category.Type == type.Value);
         }
 
-        if (!includeInactive)
-        {
-            query = query.Where(category => category.IsActive);
-        }
-
         return await query
             .OrderByDescending(category => category.IsDefault)
             .ThenBy(category => category.Type)
             .ThenBy(category => category.Name)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync(Category category, CancellationToken cancellationToken = default)
+    {
+        dbContext.Categories.Remove(category);
+        await Task.CompletedTask;
     }
 }

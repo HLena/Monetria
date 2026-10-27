@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import {
-  LayoutDashboard,
   CreditCard,
   ArrowLeftRight,
   Target,
-  PiggyBank,
-  TrendingDown,
   BarChart3,
   Menu,
   X,
@@ -14,19 +11,21 @@ import {
   ChevronRight,
   Repeat,
   LogOut,
+  Settings,
+  Home,
+  PieChart,
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import { useAuthStore } from '../store/AuthStore';
+import { useAuthStore } from '@/app/store';
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { path: '/accounts', label: 'Cuentas', icon: CreditCard },
-  { path: '/movements', label: 'Movimientos', icon: ArrowLeftRight },
-  // { path: '/recurrings', label: 'Recurrentes', icon: Repeat },
-  { path: '/budgets', label: 'Presupuestos', icon: Target },
-  { path: '/savings', label: 'Ahorros', icon: PiggyBank },
-  { path: '/debts', label: 'Deudas', icon: TrendingDown },
+  { path: '/', label: 'Inicio', icon: Home, exact: true },
   { path: '/reports', label: 'Reportes', icon: BarChart3 },
+  { path: '/movements', label: 'Movimientos', icon: ArrowLeftRight },
+  { path: '/budgets', label: 'Presupuestos', icon: PieChart },
+  { path: '/recurrings', label: 'Recurrentes', icon: Repeat },
+  { path: '/debts', label: 'Deudas', icon: CreditCard },
+  { path: '/savings', label: 'Metas de Ahorro', icon: Target },
 ];
 
 export function Layout() {
@@ -86,9 +85,9 @@ export function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <p className="text-slate-500 text-xs uppercase tracking-wider font-medium px-3 mb-3">
+          {/* <p className="text-slate-500 text-xs uppercase tracking-wider font-medium px-3 mb-3">
             Principal
-          </p>
+          </p> */}
           {NAV_ITEMS.map(({ path, label, icon: Icon, exact }) => (
             <NavLink
               key={path}
@@ -114,12 +113,31 @@ export function Layout() {
           ))}
         </nav>
 
+        {/* Settings link */}
+        <div className="px-4 pb-2">
+          <NavLink
+            to="/settings"
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                isActive
+                  ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <Settings className={`w-4.5 h-4.5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+                <span className="flex-1">Configuraciones</span>
+                {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-70" />}
+              </>
+            )}
+          </NavLink>
+        </div>
+
         {/* Footer */}
         <div className="p-4 border-t border-slate-700/50 space-y-3">
-          <div className="px-1">
-            <p className="text-slate-500 text-xs uppercase tracking-wider font-medium px-2 mb-2">Tema</p>
-            <ThemeToggle />
-          </div>
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center flex-shrink-0">
               <span className="text-white text-xs font-bold">{initials}</span>

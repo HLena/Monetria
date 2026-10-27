@@ -1,5 +1,5 @@
 import { CreditCard, Landmark, Wallet } from 'lucide-react';
-import { Account } from '../../types/models';
+import { Account } from '@/app/types/models';
 import { AccountType } from '@monetria/enums';
 
 const SIZES = {

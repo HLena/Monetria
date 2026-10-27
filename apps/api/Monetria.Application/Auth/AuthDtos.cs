@@ -15,4 +15,8 @@ public sealed record AuthResponse(
     string FirstName,
     string LastName,
     string Email,
+    string PreferredCurrency,
+    string DateFormat,
+    string Theme,
+    string? PhoneNumber,
     string Token);

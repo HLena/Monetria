@@ -1,5 +1,9 @@
 # Transactions — Implementation Log
 
+## Update: 2026-07-14 — Limpieza de hooks duplicados
+
+`hooks/useTransactions.ts` (envolvía `useFinanceStore` con `transactions` sin paginar) no tenía consumidores — `Movements.tsx` ya usaba `useTransactionsPaginated` desde que se agregó paginación/filtros/resumen, y nadie migró de vuelta. Se borró el archivo muerto y se renombró `useTransactionsPaginated` → `useTransactions` (archivo y función), ya que pasa a ser el único hook de transacciones. `Movements.tsx` y el barrel `hooks/transactions/index.ts` actualizados; `PAGE_SIZE`/`TYPE_TO_DTO`/`TransactionFilters` se re-exportan igual que antes.
+
 ## Update: 2026-06-02
 
 ### Rename FixedExpense → Recurring + RecurringOccurrence entity
@@ -408,3 +412,101 @@ El campo "Saldo inicial" guardaba en `form.currentBalance` pero el mapper `toCre
 - `limit > 0` — mensaje: "El límite debe ser mayor a 0"
 
 Todos los mensajes de error se muestran con el componente `<ErrorMsg>` (shared).
+
+---
+
+## Update: 2026-07-08
+
+### Rediseño de filtros en página de Movimientos + soporte de rango de fechas
+
+**Motivación:** El filtro de mes seleccionaba un mes fijo, limitando la visibilidad. Se reemplaza por un rango de fechas libre (`startDate`/`endDate`). Sin fechas seleccionadas se muestran todos los movimientos. También se rediseña la UI de filtros siguiendo el estilo de pills de `AccountsSection`.
+
+**Backend — `Monetria.Application/Transactions/TransactionDtos.cs`**
+- `TransactionFilterRequest` ahora incluye `DateOnly? StartDate` y `DateOnly? EndDate`
+- Son mutuamente excluyentes con `Month`/`Year` (se aplican solo si `Month` es null)
+
+**Backend — `Monetria.Infrastructure/Transactions/TransactionRepository.cs`**
+- `ApplyFilters` agrega bloque `else` tras los filtros de mes/año:
+  - Si `StartDate` tiene valor → `t.Date >= StartDate.ToDateTime(...)`
+  - Si `EndDate` tiene valor → `t.Date < (EndDate + 1 día).ToDateTime(...)`
+
+**Frontend — `apps/web/src/app/types/api/transactions.ts`**
+- `TransactionQueryParams` tiene nuevos campos opcionales `startDate?: string` y `endDate?: string`
+
+**Frontend — `apps/web/src/app/hooks/useTransactionsPaginated.ts`**
+- `TransactionFilters.month: string` reemplazado por `startDate: string` y `endDate: string`
+- Estado inicial: `startDate: ''`, `endDate: ''` → sin filtro de fecha por defecto
+- `buildParams` pasa `startDate`/`endDate` al API cuando no están vacíos
+- Dependencias del `useEffect` actualizadas (`filters.startDate`, `filters.endDate`)
+
+**Frontend — `apps/web/src/app/pages/Movements.tsx`**
+- Eliminado: `ToggleGroup`, `Select` de meses, `useMemo`, `generateRecentMonths`, `formatMonthLabel`
+- Añadido: pills de tipo siempre visibles (mismo estilo que `AccountsSection`)
+- Añadido: botón "Filtros" con contador de filtros activos
+- Panel expandible con: `CategorySelect`, cuenta (`Select`), rango de fechas (`input[type=date]`)
+- Botón "Limpiar filtros" visible cuando hay algún filtro activo en el panel
+
+## 2026-10-04 — Endpoints de reportes (`/reports`)
+
+### Nuevos endpoints
+
+```
+GET /reports/monthly-flow?months={1|3|6|12}&granularity={month|week}
+GET /reports/spending-by-category?months={1|3|6|12}
+```
+
+Diseñados para ser reutilizables: el dashboard los consume con valores por defecto (`months=1&granularity=week` y `months=1`), la página de reportes permite al usuario seleccionar el período.
+
+### `GET /reports/monthly-flow`
+
+| Parámetro | Valores | Default |
+|---|---|---|
+| `months` | 1, 3, 6, 12 | 6 |
+| `granularity` | `month`, `week` | `month` |
+
+- `granularity=week` solo válido con `months=1` (mes actual, agrupado por semanas 1–4/5).
+- `granularity=month` devuelve N entradas mensuales, siempre rellenas (meses sin movimientos aparecen con `income=0, expenses=0`).
+- Transfers excluidos.
+- Labels generados en el servidor: `"Oct"` (si months=1), `"Oct 2026"` (multi-mes), `"Sem 1"` (semanal).
+
+### `GET /reports/spending-by-category`
+
+Gastos (Expense) del período agrupados por categoría. Retorna `percentage` precalculado. Ordenado por `amount` descendente. Transactions sin categoría aparecen como `"Sin categoría"`.
+
+### `GET /dashboard` — cambio
+
+Añadido `creditCardDebt`: suma de los balances negativos de cuentas `CreditCard` activas. Calculado sin queries adicionales (reutiliza el loop de balances existente).
+
+## Update: 2026-10-02 — Integración frontend de endpoints de reportes
+
+### Nuevos tipos (`types/api/`)
+
+- `types/api/transactions.ts`: añadidos `FlowEntry`, `MonthlyFlowResponse`, `CategorySpendingEntry`, `SpendingByCategoryResponse`.
+- `types/api/dashboard.ts`: nuevo archivo con `DashboardDto`, `DashboardMonthSummary`, `DashboardAccountEntry`, `DashboardBudgetEntry`, `DashboardRecurringEntry`.
+
+### Nuevas funciones API (`api/`)
+
+- `api/transactions.ts`: añadidos `getMonthlyFlow(months, granularity)` y `getSpendingByCategory(months)`.
+- `api/dashboard.ts`: nuevo archivo con `getDashboard()`.
+
+### Nuevos hooks (`hooks/`)
+
+- `useDashboard()`: ejecuta en paralelo `getDashboard()`, `getMonthlyFlow(1, 'week')` y `getSpendingByCategory(1)`. Retorna `{ data, isLoading, error }`.
+- `useReports(months)`: ejecuta en paralelo `getMonthlyFlow(months, 'month')` y `getSpendingByCategory(months)`. Se re-ejecuta cuando `months` cambia.
+
+### Cambios en páginas
+
+**Dashboard.tsx:**
+- Stats cards (Patrimonio Neto, Ingresos, Gastos, Deuda Tarjetas) ahora usan datos del servidor (`useDashboard`).
+- Gráfico de área muestra flujo semanal del mes actual (Sem 1–4/5) en lugar de los últimos 6 meses computados localmente.
+- Gráfico de torta usa `SpendingByCategoryResponse` del servidor (color por categoría incluido).
+- Accounts grid, transacciones recientes, metas de ahorro y alertas de presupuesto siguen usando el store local.
+- Loading state con skeleton en stat cards y spinner en gráficos.
+
+**Reports.tsx:**
+- Selector de año reemplazado por `ToggleGroup` con opciones `3 | 6 | 12 meses`.
+- Gráfico de barras mensual usa `MonthlyFlowResponse` del servidor.
+- Gráfico de torta por categoría usa `SpendingByCategoryResponse` (con `percentage` precalculado).
+- Balance acumulado y balance mensual derivados del `MonthlyFlowResponse`.
+- Budget performance sigue usando el store (mes actual).
+- Summary cards usan el último y penúltimo entry del flujo mensual para comparar vs mes anterior.

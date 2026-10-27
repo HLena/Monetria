@@ -1,22 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Plus, Wallet } from 'lucide-react';
-import { formatCurrency } from '../store/FinanceContext';
-import { Modal } from '../components/Modal';
-import { useAuthStore } from '../store/AuthStore';
-import { useFinanceStore } from '../store/FinanceStore';
+import { formatCurrency, useAuthStore, useFinanceStore } from '@/app/store';
+import { Modal } from '@/app/components/Modal';
 import { AccountType } from '@monetria/enums';
-import { AccountCardGrid } from '../components/accounts/AccountCardGrid';
-import { AccountForm } from '../components/accounts/AccountForm';
-import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard } from '../components/shared';
-import { useAccounts } from '../hooks/useAccounts';
+import { AccountCardGrid, AccountForm } from '@/app/components/accounts';
+import { HeaderPage, PageContainer, EmptyState, LoadingState, ErrorBanner, SummaryCard } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
+import { useAccounts } from '@/app/hooks';
 
-const FILTER_TABS: [AccountType | 'all', string][] = [
-  ['all', 'Todas'],
-  [AccountType.CreditCard, 'Crédito'],
-  [AccountType.BankAccount, 'Bancaria'],
-  [AccountType.Cash, 'Efectivo'],
-  [AccountType.Wallet, 'Billetera'],
-];
+import { FILTER_TABS } from '@/app/constants/account';
 
 export function Accounts() {
   const user = useAuthStore(s => s.user);
@@ -47,13 +39,10 @@ export function Accounts() {
         title="Mis Cuentas"
         subtitle={isLoading ? 'Cargando cuentas…' : `${accounts.length} cuentas registradas`}
         actions={
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-          >
+          <Button onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4" />
             Nueva Cuenta
-          </button>
+          </Button>
         }
       />
 

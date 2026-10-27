@@ -1,4 +1,4 @@
-import { Currency } from '../../types/finance';
+import { Currency } from '@/app/types/finance';
 
 const CURRENCY_SYMBOL: Record<Currency, string> = { PEN: 'S/', USD: '$' };
 

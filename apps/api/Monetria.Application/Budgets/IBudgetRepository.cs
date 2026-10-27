@@ -8,5 +8,7 @@ public interface IBudgetRepository
     Task<Budget?> GetByIdAsync(Guid budgetId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Budget>> ListByUserIdAsync(Guid userId, int? month = null, int? year = null, CancellationToken cancellationToken = default);
     Task<decimal> GetSpentAmountAsync(Guid userId, Guid categoryId, int month, int year, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Budget>> ListLatestRecurringBeforePeriodAsync(int month, int year, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Budget>> ListByPeriodAsync(int month, int year, CancellationToken cancellationToken = default);
     void Remove(Budget budget);
 }

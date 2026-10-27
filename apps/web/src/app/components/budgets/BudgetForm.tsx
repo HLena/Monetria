@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Budget } from '../../types/finance';
-import { useFinanceStore } from '@/app/store/FinanceStore';
-import { AmountInput } from '../shared/AmountInput';
-import { CategorySelect } from '../shared/CategorySelect';
-import { ErrorMsg } from '../shared/ErrorMsg';
+import { Budget } from '@/app/types/finance';
+import { useFinanceStore } from '@/app/store';
+import { AmountInput, CategorySelect, ErrorMsg, ToggleSwitch } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
 
 export function BudgetForm({
   initial,
@@ -23,7 +22,7 @@ export function BudgetForm({
     limitAmount: initial?.limitAmount ?? ('' as number | ''),
     month: initial?.month ?? now.getMonth() + 1,
     year: initial?.year ?? now.getFullYear(),
-    rolloverUnused: initial?.rolloverUnused ?? false,
+    isRecurring: initial?.isRecurring ?? false,
     spentAmount: initial?.spentAmount ?? 0,
   });
 
@@ -93,13 +92,17 @@ export function BudgetForm({
         </span>
       </div>
 
+      <ToggleSwitch
+        label="Es recurrente"
+        description="Se creará automáticamente el mismo presupuesto cada mes"
+        value={form.isRecurring}
+        onChange={val => set('isRecurring', val)}
+      />
+
       <div className="flex gap-3 pt-2">
-        <button
-          type="submit"
-          className="flex-1 bg-indigo-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
+        <Button type="submit" className="flex-1 rounded-xl h-11">
           {initial ? 'Guardar cambios' : 'Crear Presupuesto'}
-        </button>
+        </Button>
       </div>
     </form>
   );

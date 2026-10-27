@@ -1,47 +1,42 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useFinanceStore } from '../store/FinanceStore';
-import { useAuthStore } from '../store/AuthStore';
-import { getAuthToken } from '../lib/apiClient';
+import { useFinanceStore, useAuthStore } from '@/app/store';
+import { getAuthToken } from '@/app/lib';
 import {
   listTransactions,
   getTransactionsSummary,
   createTransaction as createTransactionApi,
   updateTransaction as updateTransactionApi,
   deleteTransaction as deleteTransactionApi,
-} from '../api/transactions';
+} from '@/app/api';
 import {
   mapTransactionDtoToTransaction,
   toCreateTransactionRequestBody,
   toUpdateTransactionRequestBody,
-} from '../mappers/transactionMappers';
-import type { Transaction } from '../types/finance';
-import type { TransactionSummaryDto, TransactionQueryParams, TransactionTypeDto } from '../types/api/transactions';
-import { getCurrentMonthKey } from '../store/FinanceContext';
+} from '@/app/mappers';
+import type { Transaction } from '@/app/types/finance';
+import type { TransactionSummaryDto, TransactionQueryParams } from '@/app/types/api';
+import { PAGE_SIZE, TYPE_TO_DTO } from '@/app/hooks/useTransactions';
 
-export const PAGE_SIZE = 10;
-
-export interface TransactionFilters {
+export interface AccountTransactionFilters {
   search: string;
   type: 'all' | 'income' | 'expense' | 'transfer';
   categoryId: string;
-  accountId: string;
   month: string;
 }
 
-export const TYPE_TO_DTO: Record<string, TransactionTypeDto | undefined> = {
-  income: 'Income',
-  expense: 'Expense',
-  transfer: 'Transfer',
-  all: undefined,
-};
+const ALL_PAGES_PAGE_SIZE = 100;
 
-function buildParams(filters: TransactionFilters, debouncedSearch: string, page: number): TransactionQueryParams {
-  const params: TransactionQueryParams = { page, pageSize: PAGE_SIZE };
+function buildParams(
+  accountId: string,
+  filters: AccountTransactionFilters,
+  debouncedSearch: string,
+  page: number,
+): TransactionQueryParams {
+  const params: TransactionQueryParams = { page, pageSize: PAGE_SIZE, fromAccountId: accountId };
 
   if (debouncedSearch.trim()) params.description = debouncedSearch.trim();
   if (filters.type !== 'all') params.type = TYPE_TO_DTO[filters.type];
   if (filters.categoryId !== 'all') params.categoryId = filters.categoryId;
-  if (filters.accountId !== 'all') params.fromAccountId = filters.accountId;
 
   if (filters.month) {
     const [year, month] = filters.month.split('-').map(Number);
@@ -52,37 +47,57 @@ function buildParams(filters: TransactionFilters, debouncedSearch: string, page:
   return params;
 }
 
-function buildSummaryParams(filters: TransactionFilters, debouncedSearch: string): Omit<TransactionQueryParams, 'page' | 'pageSize'> {
-  const { page: _p, pageSize: _ps, ...rest } = buildParams(filters, debouncedSearch, 1);
-  return rest;
+async function fetchAllPages(accountId: string): Promise<Transaction[]> {
+  const first = await listTransactions({ fromAccountId: accountId, page: 1, pageSize: ALL_PAGES_PAGE_SIZE });
+  const allDtos = [...first.items];
+
+  if (first.totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: first.totalPages - 1 }, (_, i) =>
+        listTransactions({ fromAccountId: accountId, page: i + 2, pageSize: ALL_PAGES_PAGE_SIZE })
+      )
+    );
+    rest.forEach(r => allDtos.push(...r.items));
+  }
+
+  return allDtos.map(mapTransactionDtoToTransaction);
 }
 
-export function useTransactionsPaginated() {
-  const accounts = useFinanceStore(s => s.accounts);
+export function useAccountTransactions(accountId: string) {
   const categories = useFinanceStore(s => s.categories);
   const listAccounts = useFinanceStore(s => s.listAccounts);
   const loadUserBalance = useFinanceStore(s => s.loadUserBalance);
   const loadCategories = useFinanceStore(s => s.loadCategories);
 
-  const [filters, setFiltersState] = useState<TransactionFilters>({
+  const [filters, setFiltersState] = useState<AccountTransactionFilters>({
     search: '',
     type: 'all',
     categoryId: 'all',
-    accountId: 'all',
-    month: getCurrentMonthKey(),
+    month: '',
   });
 
   const [page, setPageState] = useState(1);
   const [refreshKey, setRefreshKey] = useState(0);
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
+  // Paginated list (current page)
   const [items, setItems] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<TransactionSummaryDto | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Debounce search input
+  // All pages (for analytics: chart, category breakdown)
+  const [allItems, setAllItems] = useState<Transaction[]>([]);
+  const [allItemsLoading, setAllItemsLoading] = useState(false);
+
+  // Reset on accountId change
+  useEffect(() => {
+    setPageState(1);
+    setFiltersState({ search: '', type: 'all', categoryId: 'all', month: '' });
+  }, [accountId]);
+
+  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(filters.search);
@@ -91,30 +106,31 @@ export function useTransactionsPaginated() {
     return () => clearTimeout(timer);
   }, [filters.search]);
 
-  const setFilter = useCallback(<K extends keyof TransactionFilters>(key: K, value: TransactionFilters[K]) => {
+  const setFilter = useCallback(<K extends keyof AccountTransactionFilters>(
+    key: K,
+    value: AccountTransactionFilters[K],
+  ) => {
     setFiltersState(prev => ({ ...prev, [key]: value }));
     if (key !== 'search') setPageState(1);
   }, []);
 
   const setPage = useCallback((p: number) => setPageState(p), []);
 
-  // Load accounts + categories on mount
+  // Load categories on mount
   useEffect(() => {
     const load = () => {
       if (!useAuthStore.persist.hasHydrated()) return;
-      const userId = useAuthStore.getState().user?.userId ?? '';
-      void listAccounts(userId);
       void loadCategories();
     };
     if (useAuthStore.persist.hasHydrated()) load();
     return useAuthStore.persist.onFinishHydration(load);
-  }, [listAccounts, loadCategories]);
+  }, [loadCategories]);
 
-  // Fetch paginated data + summary whenever filters / page / refreshKey change
+  // Paginated fetch (respects filters, page)
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!getAuthToken()) return;
+    if (!accountId || !getAuthToken()) return;
 
     abortRef.current?.abort();
     abortRef.current = new AbortController();
@@ -122,8 +138,8 @@ export function useTransactionsPaginated() {
     setIsLoading(true);
     setError(null);
 
-    const params = buildParams(filters, debouncedSearch, page);
-    const summaryParams = buildSummaryParams(filters, debouncedSearch);
+    const params = buildParams(accountId, filters, debouncedSearch, page);
+    const { page: _p, pageSize: _ps, ...summaryParams } = params;
 
     Promise.all([listTransactions(params), getTransactionsSummary(summaryParams)])
       .then(([listResult, summaryResult]) => {
@@ -138,10 +154,22 @@ export function useTransactionsPaginated() {
         setIsLoading(false);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.type, filters.categoryId, filters.accountId, filters.month, debouncedSearch, page, refreshKey]);
+  }, [accountId, filters.type, filters.categoryId, filters.month, debouncedSearch, page, refreshKey]);
+
+  // All-pages fetch (no filters — for chart and category breakdown)
+  useEffect(() => {
+    if (!accountId || !getAuthToken()) return;
+
+    setAllItemsLoading(true);
+    fetchAllPages(accountId)
+      .then(all => {
+        setAllItems(all);
+        setAllItemsLoading(false);
+      })
+      .catch(() => setAllItemsLoading(false));
+  }, [accountId, refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
-
   const userId = useAuthStore(s => s.user?.userId ?? '');
 
   const addTransaction = useCallback(async (tx: Omit<Transaction, 'id' | 'createdAt'>) => {
@@ -168,8 +196,8 @@ export function useTransactionsPaginated() {
   }, [listAccounts, loadUserBalance, userId, refresh]);
 
   return {
+    // Paginated list
     items,
-    summary,
     page,
     totalPages,
     setPage,
@@ -177,7 +205,12 @@ export function useTransactionsPaginated() {
     setFilter,
     isLoading,
     error,
-    accounts,
+    // Summary (filtered totals)
+    summary,
+    // All transactions (for analytics)
+    allItems,
+    allItemsLoading,
+    // Shared
     categories,
     addTransaction,
     updateTransaction,

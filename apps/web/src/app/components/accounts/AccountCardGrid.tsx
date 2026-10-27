@@ -1,10 +1,10 @@
 import { Link } from 'react-router';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { formatCurrency } from '../../store/FinanceContext';
-import { Account } from '../../types/models';
+import { formatCurrency } from '@/app/store';
+import { Account } from '@/app/types/models';
 import { AccountType } from '@monetria/enums';
-import { AccountTypeIcon } from '../icons/AccountTypeIcon';
-import { usageColor } from '../../constants/accountColors';
+import { AccountTypeIcon } from '@/app/components/icons/AccountTypeIcon';
+import { usageColor } from '@/app/constants/account';
 
 export function AccountCardGrid({ accounts }: { accounts: Account[] }) {
   const netWorth = accounts.reduce(

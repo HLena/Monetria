@@ -1,35 +1,51 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Account, Budget, Debt, FixedExpense, SavingsGoal, Transaction } from '../types/finance';
-import type { CategoryDto } from '../types/api/categories';
-import type { UserBalanceDto } from '../types/api/accounts';
-import { api, getAuthToken } from '../lib/apiClient';
+import { Account, Budget, Debt, Recurring, RecurringOccurrence, SavingsGoal, Transaction } from '@/app/types/finance';
+import type { CategoryDto, CategoryTypeDto } from '@/app/types/api';
+import type { UserBalanceDto } from '@/app/types/api';
+import { api, getAuthToken } from '@/app/lib';
 import { useAuthStore } from './AuthStore';
-import { listAccounts, getAccountById, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi, getUserBalance as getUserBalanceApi } from '../api/accounts';
-import { listCategories as listCategoriesApi } from '../api/categories';
+import { listAccounts, getAccountById, updateAccount as updateAccountApi, deleteAccount as deleteAccountApi, reactivateAccount as reactivateAccountApi, getUserBalance as getUserBalanceApi } from '@/app/api';
+import {
+  listCategories as listCategoriesApi,
+  createCategory as createCategoryApi,
+  updateCategory as updateCategoryApi,
+  deleteCategory as deleteCategoryApi,
+  setSystemCategoryPreference as setSystemCategoryPreferenceApi,
+} from '@/app/api';
 import {
   listTransactions as listTransactionsApi,
   createTransaction as createTransactionApi,
   updateTransaction as updateTransactionApi,
   deleteTransaction as deleteTransactionApi,
-} from '../api/transactions';
+} from '@/app/api';
 import {
   listBudgets as listBudgetsApi,
   createBudget as createBudgetApi,
   updateBudget as updateBudgetApi,
   deleteBudget as deleteBudgetApi,
-} from '../api/budgets';
-import type { BudgetDto } from '../types/api/budgets';
+} from '@/app/api';
+import type { BudgetDto } from '@/app/types/api';
+import type { RecurringDto, RecurringOccurrenceDto } from '@/app/types/api';
+import {
+  listRecurrings as listRecurringsApi,
+  createRecurring as createRecurringApi,
+  updateRecurring as updateRecurringApi,
+  deactivateRecurring as deactivateRecurringApi,
+  listRecurringOccurrences as listRecurringOccurrencesApi,
+  confirmRecurringOccurrence as confirmRecurringOccurrenceApi,
+  skipRecurringOccurrence as skipRecurringOccurrenceApi,
+} from '@/app/api';
 import {
   filterAccountDtosForUser,
   mapAccountDtoToFinanceAccount,
   toCreateAccountRequestBody,
-} from '../mappers/accountMappers';
+} from '@/app/mappers';
 import {
   mapTransactionDtoToTransaction,
   toCreateTransactionRequestBody,
   toUpdateTransactionRequestBody,
-} from '../mappers/transactionMappers';
+} from '@/app/mappers';
 
 interface FinanceStoreState {
   isLoading: boolean;
@@ -39,17 +55,23 @@ interface FinanceStoreState {
   categories: CategoryDto[];
   transactions: Transaction[];
   budgets: Budget[];
-  fixedExpenses: FixedExpense[];
+  recurrings: Recurring[];
+  recurringOccurrences: Record<string, RecurringOccurrence[]>;
   savingsGoals: SavingsGoal[];
   debts: Debt[];
   userBalance: UserBalanceDto | null;
   addAccount: (account: Omit<Account, 'id'>, userId: string) => Promise<void>;
   updateAccount: (id: string, account: Omit<Account, 'id'>) => Promise<void>;
   deleteAccount: (id: string) => Promise<void>;
+  reactivateAccount: (id: string) => Promise<void>;
   /** Requires non-blank userId and a valid token; otherwise leaves accounts empty and does not call the API. */
   listAccounts: (userId: string) => Promise<void>;
   getAccountById: (id: string) => Promise<void>;
   loadCategories: () => Promise<void>;
+  addCategory: (data: { name: string; type: CategoryTypeDto; color?: string; keyIcon?: string }) => Promise<void>;
+  updateCategory: (id: string, data: { name: string; color?: string; keyIcon?: string }) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  toggleDefaultCategory: (id: string, currentlyActive: boolean) => Promise<void>;
   loadTransactions: () => Promise<void>;
   loadUserBalance: () => Promise<void>;
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
@@ -59,6 +81,17 @@ interface FinanceStoreState {
   addBudget: (budget: Omit<Budget, 'id' | 'createdAt'>) => Promise<void>;
   updateBudget: (id: string, budget: Omit<Budget, 'id' | 'createdAt'>) => Promise<void>;
   deleteBudget: (id: string) => Promise<void>;
+  loadRecurrings: () => Promise<void>;
+  addRecurring: (recurring: Omit<Recurring, 'id'>) => Promise<void>;
+  updateRecurring: (id: string, recurring: Omit<Recurring, 'id'>) => Promise<void>;
+  deactivateRecurring: (id: string) => Promise<void>;
+  loadRecurringOccurrences: (recurringId: string) => Promise<void>;
+  confirmRecurringOccurrence: (
+    occurrenceId: string,
+    recurringId: string,
+    realAmount: number | null,
+  ) => Promise<void>;
+  skipRecurringOccurrence: (occurrenceId: string, recurringId: string) => Promise<void>;
 }
 
 function mapBudgetDto(dto: BudgetDto): Budget {
@@ -69,8 +102,41 @@ function mapBudgetDto(dto: BudgetDto): Budget {
     month: dto.month,
     year: dto.year,
     spentAmount: dto.spentAmount,
-    rolloverUnused: dto.rolloverUnused,
+    isRecurring: dto.isRecurring,
     createdAt: dto.createdAt,
+  };
+}
+
+function mapRecurringDto(dto: RecurringDto): Recurring {
+  return {
+    id: dto.id,
+    accountId: dto.accountId,
+    toAccountId: dto.toAccountId ?? undefined,
+    categoryId: dto.categoryId ?? undefined,
+    categoryName: dto.categoryName ?? undefined,
+    name: dto.name,
+    type: dto.type,
+    amountType: dto.amountType,
+    amount: dto.amount ?? undefined,
+    estimatedAmount: dto.estimatedAmount ?? undefined,
+    frequency: dto.frequency,
+    startDate: dto.startDate,
+    endDate: dto.endDate ?? undefined,
+    nextDueDate: dto.nextDueDate,
+    isActive: dto.isActive,
+  };
+}
+
+function mapOccurrenceDto(dto: RecurringOccurrenceDto): RecurringOccurrence {
+  return {
+    id: dto.id,
+    recurringId: dto.recurringId,
+    scheduledDate: dto.scheduledDate,
+    status: dto.status,
+    suggestedAmount: dto.suggestedAmount ?? undefined,
+    realAmount: dto.realAmount ?? undefined,
+    transactionId: dto.transactionId ?? undefined,
+    confirmedAt: dto.confirmedAt ?? undefined,
   };
 }
 
@@ -84,7 +150,8 @@ export const useFinanceStore = create<FinanceStoreState>()(
       categories: [],
       transactions: [],
       budgets: [],
-      fixedExpenses: [],
+      recurrings: [],
+      recurringOccurrences: {},
       savingsGoals: [],
       debts: [],
       userBalance: null,
@@ -132,6 +199,18 @@ export const useFinanceStore = create<FinanceStoreState>()(
           await get().listAccounts(useAuthStore.getState().user?.userId ?? '');
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo eliminar la cuenta';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      reactivateAccount: async (id: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          await reactivateAccountApi(id);
+          await get().listAccounts(useAuthStore.getState().user?.userId ?? '');
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo reactivar la cuenta';
           set({ error: msg, isLoading: false });
           throw caught;
         }
@@ -185,10 +264,77 @@ export const useFinanceStore = create<FinanceStoreState>()(
       loadCategories: async () => {
         if (!getAuthToken()) return;
         try {
-          const dtos = await listCategoriesApi();
-          set({ categories: dtos.filter(c => c.isActive) });
+          const dtos = await listCategoriesApi(true);
+          set({ categories: dtos });
         } catch {
           // non-critical — category resolution falls back gracefully
+        }
+      },
+
+      addCategory: async (data: { name: string; type: CategoryTypeDto; color?: string; keyIcon?: string }) => {
+        const tempId = `temp-${Date.now()}`;
+        const tempCategory: CategoryDto = {
+          id: tempId,
+          userId: 'pending',
+          name: data.name.trim(),
+          type: data.type,
+          isDefault: false,
+          isActive: true,
+          color: data.color ?? null,
+          keyIcon: data.keyIcon ?? null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        set(state => ({ categories: [...state.categories, tempCategory] }));
+        try {
+          const created = await createCategoryApi({
+            name: data.name,
+            type: data.type,
+            color: data.color,
+            keyIcon: data.keyIcon,
+          });
+          set(state => ({ categories: state.categories.map(c => (c.id === tempId ? created : c)) }));
+        } catch (caught) {
+          set(state => ({ categories: state.categories.filter(c => c.id !== tempId) }));
+          throw caught;
+        }
+      },
+
+      updateCategory: async (id: string, data: { name: string; color?: string; keyIcon?: string }) => {
+        const previous = get().categories.find(c => c.id === id);
+        set(state => ({
+          categories: state.categories.map(c => (c.id === id ? { ...c, ...data, name: data.name.trim() } : c)),
+        }));
+        try {
+          const updated = await updateCategoryApi(id, data);
+          set(state => ({ categories: state.categories.map(c => (c.id === id ? updated : c)) }));
+        } catch (caught) {
+          if (previous) set(state => ({ categories: state.categories.map(c => (c.id === id ? previous : c)) }));
+          throw caught;
+        }
+      },
+
+      deleteCategory: async (id: string) => {
+        const previous = get().categories.find(c => c.id === id);
+        set(state => ({ categories: state.categories.filter(c => c.id !== id) }));
+        try {
+          await deleteCategoryApi(id);
+        } catch (caught) {
+          if (previous) set(state => ({ categories: [...state.categories, previous] }));
+          throw caught;
+        }
+      },
+
+      toggleDefaultCategory: async (id: string, currentlyActive: boolean) => {
+        set(state => ({
+          categories: state.categories.map(c => (c.id === id ? { ...c, isActive: !currentlyActive } : c)),
+        }));
+        try {
+          await setSystemCategoryPreferenceApi(id, !currentlyActive);
+        } catch {
+          set(state => ({
+            categories: state.categories.map(c => (c.id === id ? { ...c, isActive: currentlyActive } : c)),
+          }));
         }
       },
 
@@ -286,9 +432,9 @@ export const useFinanceStore = create<FinanceStoreState>()(
             limitAmount: budget.limitAmount,
             month: budget.month,
             year: budget.year,
-            rolloverUnused: budget.rolloverUnused,
+            isRecurring: budget.isRecurring,
           });
-          await get().loadBudgets();
+          await get().loadBudgets(budget.month, budget.year);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo crear el presupuesto';
           set({ error: msg, isLoading: false });
@@ -304,9 +450,9 @@ export const useFinanceStore = create<FinanceStoreState>()(
             limitAmount: budget.limitAmount,
             month: budget.month,
             year: budget.year,
-            rolloverUnused: budget.rolloverUnused,
+            isRecurring: budget.isRecurring,
           });
-          await get().loadBudgets();
+          await get().loadBudgets(budget.month, budget.year);
         } catch (caught) {
           const msg = caught instanceof Error ? caught.message : 'No se pudo actualizar el presupuesto';
           set({ error: msg, isLoading: false });
@@ -325,12 +471,126 @@ export const useFinanceStore = create<FinanceStoreState>()(
           throw caught;
         }
       },
+
+      loadRecurrings: async () => {
+        if (!getAuthToken()) { set({ recurrings: [] }); return; }
+        set({ isLoading: true, error: null });
+        try {
+          const { items } = await listRecurringsApi();
+          set({ recurrings: items.map(mapRecurringDto), isLoading: false, error: null });
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudieron cargar los recurrentes';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      addRecurring: async (recurring: Omit<Recurring, 'id'>) => {
+        set({ isLoading: true, error: null });
+        try {
+          await createRecurringApi({
+            accountId: recurring.accountId,
+            toAccountId: recurring.toAccountId ?? null,
+            categoryId: recurring.categoryId ?? null,
+            name: recurring.name,
+            type: recurring.type,
+            amountType: recurring.amountType,
+            amount: recurring.amount ?? null,
+            estimatedAmount: recurring.estimatedAmount ?? null,
+            frequency: recurring.frequency,
+            startDate: recurring.startDate,
+            endDate: recurring.endDate ?? null,
+            nextDueDate: recurring.nextDueDate,
+          });
+          await get().loadRecurrings();
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo crear el recurrente';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      updateRecurring: async (id: string, recurring: Omit<Recurring, 'id'>) => {
+        set({ isLoading: true, error: null });
+        try {
+          await updateRecurringApi(id, {
+            accountId: recurring.accountId,
+            toAccountId: recurring.toAccountId ?? null,
+            categoryId: recurring.categoryId ?? null,
+            name: recurring.name,
+            type: recurring.type,
+            amountType: recurring.amountType,
+            amount: recurring.amount ?? null,
+            estimatedAmount: recurring.estimatedAmount ?? null,
+            frequency: recurring.frequency,
+            startDate: recurring.startDate,
+            endDate: recurring.endDate ?? null,
+            nextDueDate: recurring.nextDueDate,
+            isActive: recurring.isActive,
+          });
+          await get().loadRecurrings();
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo actualizar el recurrente';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      deactivateRecurring: async (id: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          await deactivateRecurringApi(id);
+          await get().loadRecurrings();
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo pausar el recurrente';
+          set({ error: msg, isLoading: false });
+          throw caught;
+        }
+      },
+
+      loadRecurringOccurrences: async (recurringId: string) => {
+        try {
+          const dtos = await listRecurringOccurrencesApi(recurringId);
+          set(state => ({
+            recurringOccurrences: { ...state.recurringOccurrences, [recurringId]: dtos.map(mapOccurrenceDto) },
+          }));
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudieron cargar las ocurrencias';
+          set({ error: msg });
+          throw caught;
+        }
+      },
+
+      confirmRecurringOccurrence: async (occurrenceId: string, recurringId: string, realAmount: number | null) => {
+        try {
+          await confirmRecurringOccurrenceApi(occurrenceId, { realAmount });
+          await get().loadRecurringOccurrences(recurringId);
+          void get().listAccounts(useAuthStore.getState().user?.userId ?? '').catch(() => undefined);
+          void get().loadUserBalance().catch(() => undefined);
+          void get().loadTransactions().catch(() => undefined);
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo confirmar la ocurrencia';
+          set({ error: msg });
+          throw caught;
+        }
+      },
+
+      skipRecurringOccurrence: async (occurrenceId: string, recurringId: string) => {
+        try {
+          await skipRecurringOccurrenceApi(occurrenceId);
+          await get().loadRecurringOccurrences(recurringId);
+        } catch (caught) {
+          const msg = caught instanceof Error ? caught.message : 'No se pudo omitir la ocurrencia';
+          set({ error: msg });
+          throw caught;
+        }
+      },
     }),
     {
       name: 'finance-storage',
       partialize: state => ({
         budgets: state.budgets,
-        fixedExpenses: state.fixedExpenses,
+        recurrings: state.recurrings,
         savingsGoals: state.savingsGoals,
         debts: state.debts,
       }),

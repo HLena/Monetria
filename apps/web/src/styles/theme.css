@@ -1,5 +1,33 @@
 :root {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --primary:            oklch(0.511 0.262 276.97);  /* indigo-600 */
+  --primary-foreground: oklch(1 0 0);
+  --secondary:          oklch(0.968 0.007 247.9);   /* slate-100 */
+  --secondary-foreground: oklch(0.279 0.041 256.8); /* slate-800 */
+  --destructive:        oklch(0.577 0.245 27.33);   /* red-500 */
+  --background:         oklch(1 0 0);
+  --foreground:         oklch(0.279 0.041 256.8);   /* slate-800 */
+  --accent:             oklch(0.968 0.007 247.9);   /* slate-100 */
+  --accent-foreground:  oklch(0.279 0.041 256.8);
+  --input:              oklch(0.929 0.013 255.5);   /* slate-200 */
+  --ring:               oklch(0.623 0.214 259.1);   /* indigo-400 */
+  --border:             oklch(0.929 0.013 255.5);   /* slate-200 */
+}
+
+.dark {
+  --primary:            oklch(0.511 0.262 276.97);  /* indigo-600 */
+  --primary-foreground: oklch(1 0 0);
+  --secondary:          oklch(0.279 0.041 256.8);   /* slate-800 */
+  --secondary-foreground: oklch(0.968 0.007 247.9); /* slate-100 */
+  --destructive:        oklch(0.577 0.245 27.33);
+  --background:         oklch(0.129 0.042 264.7);   /* slate-900 */
+  --foreground:         oklch(0.968 0.007 247.9);   /* slate-100 */
+  --accent:             oklch(0.279 0.041 256.8);   /* slate-800 */
+  --accent-foreground:  oklch(0.968 0.007 247.9);
+  --input:              oklch(0.279 0.041 256.8);   /* slate-800 */
+  --ring:               oklch(0.623 0.214 259.1);   /* indigo-400 */
+  --border:             oklch(0.372 0.044 257.3);   /* slate-700 */
 }
 
 * {

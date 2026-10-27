@@ -28,4 +28,10 @@ public sealed class UserRepository(MonetriaDbContext dbContext) : IUserRepositor
         var normalizedEmail = email.Trim().ToLower();
         return dbContext.Users.AnyAsync(user => user.Email.ToLower() == normalizedEmail, cancellationToken);
     }
+
+    public Task UpdateAsync(User user, CancellationToken cancellationToken = default)
+    {
+        dbContext.Users.Update(user);
+        return Task.CompletedTask;
+    }
 }

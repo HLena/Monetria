@@ -146,7 +146,7 @@ public sealed class ApplicationServiceTests
     public async Task CreateCategoryAsync_WhenNameExistsForUserAndType_ThrowsInvalidOperationException()
     {
         await using var dbContext = CreateDbContext();
-        var service = new CategoryService(new CategoryRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+        var service = new CategoryService(new CategoryRepository(dbContext), new UserCategoryPreferenceRepository(dbContext), new MonetriaUnitOfWork(dbContext));
         var userId = Guid.NewGuid();
         var request = new CreateCategoryRequest("Food", TransactionType.Expense, "#F97316");
         await service.CreateAsync(userId, request);
@@ -315,21 +315,6 @@ public sealed class ApplicationServiceTests
         var request = CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense, amount: -10);
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(userId, request));
-    }
-
-    [Fact]
-    public async Task CreateTransactionAsync_WithInactiveCategory_ThrowsInvalidOperationException()
-    {
-        await using var dbContext = CreateDbContext();
-        var userId = Guid.NewGuid();
-        var account = AddAccount(dbContext, userId, AccountType.Cash);
-        var category = AddCategory(dbContext, userId, TransactionType.Expense);
-        category.IsActive = false;
-        await dbContext.SaveChangesAsync();
-        var service = CreateTransactionService(dbContext);
-        var request = CreateTransactionRequest(account.Id, category.Id, TransactionType.Expense);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(userId, request));
     }
 
     [Fact]
@@ -552,7 +537,6 @@ public sealed class ApplicationServiceTests
             Name = name,
             Type = type,
             Color = "#64748B",
-            IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -1106,6 +1090,18 @@ public sealed class ApplicationServiceTests
 
         public Task<int> CountByUserIdAsync(Guid userId, TransactionFilterRequest filter, CancellationToken ct = default)
             => Task.FromResult(0);
+
+        public Task<TransactionSummaryResponse> GetSummaryByUserIdAsync(Guid userId, TransactionFilterRequest filter, CancellationToken ct = default)
+            => Task.FromResult(new TransactionSummaryResponse(0, 0, 0));
+
+        public Task<IReadOnlyList<MonthFlowPoint>> GetMonthlyFlowAsync(Guid userId, DateTime periodStart, DateTime periodEnd, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<MonthFlowPoint>>(new List<MonthFlowPoint>());
+
+        public Task<IReadOnlyList<WeekFlowPoint>> GetWeeklyFlowAsync(Guid userId, int month, int year, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<WeekFlowPoint>>(new List<WeekFlowPoint>());
+
+        public Task<IReadOnlyList<CategorySpendingPoint>> GetSpendingByCategoryAsync(Guid userId, DateTime periodStart, DateTime periodEnd, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CategorySpendingPoint>>(new List<CategorySpendingPoint>());
     }
 
     private sealed class TestJwtTokenGenerator : IJwtTokenGenerator
@@ -1130,8 +1126,12 @@ public sealed class ApplicationServiceTests
         Guid accountId,
         RecurringAmountType amountType,
         decimal? amount = 100,
-        decimal? estimatedAmount = null)
+        decimal? estimatedAmount = null,
+        RecurringFrequency frequency = RecurringFrequency.Monthly,
+        DateOnly? nextDueDate = null,
+        DateOnly? endDate = null)
     {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var recurring = new Recurring
         {
             Id = Guid.NewGuid(),
@@ -1142,9 +1142,10 @@ public sealed class ApplicationServiceTests
             AmountType = amountType,
             Amount = amount,
             EstimatedAmount = estimatedAmount,
-            Frequency = RecurringFrequency.Monthly,
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            NextDueDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            Frequency = frequency,
+            StartDate = today,
+            NextDueDate = nextDueDate ?? today,
+            EndDate = endDate,
             IsActive = true
         };
         dbContext.Recurrings.Add(recurring);
@@ -1266,6 +1267,134 @@ public sealed class ApplicationServiceTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.ConfirmAsync(userId, occurrence.Id, new ConfirmOccurrenceRequest(100)));
+    }
+
+    // ── RecurringOccurrenceGeneration ───────────────────────────────────────
+
+    private static RecurringOccurrenceGenerationService CreateGenerationService(MonetriaDbContext dbContext) =>
+        new(new RecurringRepository(dbContext),
+            new RecurringOccurrenceRepository(dbContext),
+            new TransactionRepository(dbContext),
+            new MonetriaUnitOfWork(dbContext));
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WithFixedRecurringDue_CreatesTransactionAndAutoRegisteredOccurrence()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.Fixed, amount: 150);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrences = await dbContext.RecurringOccurrences
+            .Where(o => o.RecurringId == recurring.Id).ToListAsync();
+        Assert.Single(occurrences);
+        Assert.Equal(RecurringOccurrenceStatus.AutoRegistered, occurrences[0].Status);
+        Assert.Equal(150, occurrences[0].RealAmount);
+        Assert.NotNull(occurrences[0].TransactionId);
+        Assert.True(await dbContext.Transactions.AnyAsync(t => t.Id == occurrences[0].TransactionId));
+
+        var updated = await dbContext.Recurrings.FindAsync(recurring.Id);
+        Assert.True(updated!.NextDueDate > DateOnly.FromDateTime(DateTime.UtcNow));
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WithEstimatedRecurringDue_CreatesPendingOccurrenceWithSuggestedAmount()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(
+            dbContext, userId, account.Id, RecurringAmountType.Estimated, amount: null, estimatedAmount: 220);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrence = await dbContext.RecurringOccurrences.SingleAsync(o => o.RecurringId == recurring.Id);
+        Assert.Equal(RecurringOccurrenceStatus.Pending, occurrence.Status);
+        Assert.Equal(220, occurrence.SuggestedAmount);
+        Assert.Null(occurrence.TransactionId);
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WithVariableFreeRecurringDue_CreatesPendingOccurrenceWithoutSuggestedAmount()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.VariableFree, amount: null);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrence = await dbContext.RecurringOccurrences.SingleAsync(o => o.RecurringId == recurring.Id);
+        Assert.Equal(RecurringOccurrenceStatus.Pending, occurrence.Status);
+        Assert.Null(occurrence.SuggestedAmount);
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WithMultipleMissedPeriods_CatchesUpAllOccurrences()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var recurring = AddRecurring(
+            dbContext, userId, account.Id, RecurringAmountType.Fixed, amount: 10,
+            frequency: RecurringFrequency.Daily, nextDueDate: today.AddDays(-3));
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrences = await dbContext.RecurringOccurrences
+            .Where(o => o.RecurringId == recurring.Id).ToListAsync();
+        Assert.Equal(4, occurrences.Count);
+
+        var updated = await dbContext.Recurrings.FindAsync(recurring.Id);
+        Assert.Equal(today.AddDays(1), updated!.NextDueDate);
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_WhenNextDueDateExceedsEndDate_DeactivatesRecurring()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var recurring = AddRecurring(
+            dbContext, userId, account.Id, RecurringAmountType.Fixed, amount: 10,
+            frequency: RecurringFrequency.Monthly, nextDueDate: today, endDate: today);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+
+        var updated = await dbContext.Recurrings.FindAsync(recurring.Id);
+        Assert.False(updated!.IsActive);
+    }
+
+    [Fact]
+    public async Task GenerateDueOccurrencesAsync_CalledTwice_DoesNotDuplicate()
+    {
+        await using var dbContext = CreateDbContext();
+        var userId = Guid.NewGuid();
+        var account = AddAccount(dbContext, userId, AccountType.Cash);
+        var recurring = AddRecurring(dbContext, userId, account.Id, RecurringAmountType.Fixed, amount: 10);
+        await dbContext.SaveChangesAsync();
+        var service = CreateGenerationService(dbContext);
+
+        await service.GenerateDueOccurrencesAsync();
+        await service.GenerateDueOccurrencesAsync();
+
+        var occurrences = await dbContext.RecurringOccurrences
+            .Where(o => o.RecurringId == recurring.Id).ToListAsync();
+        Assert.Single(occurrences);
     }
 
     // ── SavingsPocket ──────────────────────────────────────────────────────
@@ -1423,6 +1552,101 @@ public sealed class ApplicationServiceTests
 
         Assert.Single(result);
         Assert.Equal(1, result[0].Month);
+    }
+
+    // ── BudgetRecurrence ─────────────────────────────────────────────────
+
+    private static BudgetRecurrenceService CreateBudgetRecurrenceService(MonetriaDbContext dbContext) =>
+        new(new BudgetRepository(dbContext), new MonetriaUnitOfWork(dbContext));
+
+    [Fact]
+    public async Task GenerateForCurrentPeriodAsync_WithRecurringBudgetFromPreviousMonth_CreatesBudgetForCurrentMonth()
+    {
+        await using var dbContext = CreateDbContext();
+        var budgetService = CreateBudgetService(dbContext);
+        var recurrenceService = CreateBudgetRecurrenceService(dbContext);
+        var userId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var previousMonth = now.AddMonths(-1);
+
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 300, previousMonth.Month, previousMonth.Year, IsRecurring: true));
+
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+
+        var current = await budgetService.ListByUserIdAsync(userId, now.Month, now.Year);
+
+        Assert.Single(current);
+        Assert.Equal(300, current[0].LimitAmount);
+        Assert.True(current[0].IsRecurring);
+    }
+
+    [Fact]
+    public async Task GenerateForCurrentPeriodAsync_WhenBudgetAlreadyExistsForCurrentMonth_DoesNotDuplicate()
+    {
+        await using var dbContext = CreateDbContext();
+        var budgetService = CreateBudgetService(dbContext);
+        var recurrenceService = CreateBudgetRecurrenceService(dbContext);
+        var userId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var previousMonth = now.AddMonths(-1);
+
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 300, previousMonth.Month, previousMonth.Year, IsRecurring: true));
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 400, now.Month, now.Year, IsRecurring: true));
+
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+
+        var current = await budgetService.ListByUserIdAsync(userId, now.Month, now.Year);
+
+        Assert.Single(current);
+        Assert.Equal(400, current[0].LimitAmount);
+    }
+
+    [Fact]
+    public async Task GenerateForCurrentPeriodAsync_WithNonRecurringBudget_DoesNotCreateNewBudget()
+    {
+        await using var dbContext = CreateDbContext();
+        var budgetService = CreateBudgetService(dbContext);
+        var recurrenceService = CreateBudgetRecurrenceService(dbContext);
+        var userId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var previousMonth = now.AddMonths(-1);
+
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 300, previousMonth.Month, previousMonth.Year, IsRecurring: false));
+
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+
+        var current = await budgetService.ListByUserIdAsync(userId, now.Month, now.Year);
+
+        Assert.Empty(current);
+    }
+
+    [Fact]
+    public async Task GenerateForCurrentPeriodAsync_CalledTwice_IsIdempotent()
+    {
+        await using var dbContext = CreateDbContext();
+        var budgetService = CreateBudgetService(dbContext);
+        var recurrenceService = CreateBudgetRecurrenceService(dbContext);
+        var userId = Guid.NewGuid();
+        var categoryId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var previousMonth = now.AddMonths(-1);
+
+        await budgetService.CreateAsync(userId, new CreateBudgetRequest(
+            categoryId, 300, previousMonth.Month, previousMonth.Year, IsRecurring: true));
+
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+        await recurrenceService.GenerateForCurrentPeriodAsync();
+
+        var current = await budgetService.ListByUserIdAsync(userId, now.Month, now.Year);
+
+        Assert.Single(current);
     }
 
     // ── Debt ──────────────────────────────────────────────────────────────
@@ -1712,5 +1936,134 @@ public sealed class ApplicationServiceTests
         Assert.Equal(3, page1.Items.Count);
         Assert.Equal(2, page2.Items.Count);
         Assert.Equal(5, page1.TotalCount);
+    }
+
+    // ── UserService ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithValidData_UpdatesNameAndPreferences()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana@example.com", Password));
+
+        var result = await userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest(
+            "María", "López", "USD", "MM/DD/YYYY", "dark", "+51999000111"));
+
+        Assert.Equal("María", result.FirstName);
+        Assert.Equal("López", result.LastName);
+        Assert.Equal("USD", result.PreferredCurrency);
+        Assert.Equal("MM/DD/YYYY", result.DateFormat);
+        Assert.Equal("dark", result.Theme);
+        Assert.Equal("+51999000111", result.PhoneNumber);
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithEmptyFirstName_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana2@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("  ", "García", null, null, null, null)));
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithInvalidCurrency_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana3@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", "EUR", null, null, null)));
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithInvalidTheme_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana4@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", null, null, "system", null)));
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithPhoneTooLong_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana5@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", null, null, null, "123456789012345678901")));
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_WithNullPhone_ClearsPhoneNumber()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Ana", "García", "ana6@example.com", Password));
+
+        await userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", null, null, null, "+51999000111"));
+        var result = await userService.UpdateProfileAsync(auth.UserId, new UpdateProfileRequest("Ana", "García", null, null, null, null));
+
+        Assert.Null(result.PhoneNumber);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithCorrectCurrentPassword_Succeeds()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Bob", "Smith", "bob@example.com", Password));
+
+        await userService.ChangePasswordAsync(auth.UserId, new ChangePasswordRequest(Password, "NewPassword99"));
+
+        var logged = await authService.LoginAsync(new LoginRequest("bob@example.com", "NewPassword99"));
+        Assert.NotNull(logged.Token);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithWrongCurrentPassword_ThrowsUnauthorizedAccessException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Bob", "Smith", "bob2@example.com", Password));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            userService.ChangePasswordAsync(auth.UserId, new ChangePasswordRequest("WrongPass123", "NewPassword99")));
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithShortNewPassword_ThrowsArgumentException()
+    {
+        await using var dbContext = CreateDbContext();
+        var authService = CreateAuthService(dbContext);
+        var userService = CreateUserService(dbContext);
+        var auth = await authService.RegisterAsync(new RegisterRequest("Bob", "Smith", "bob3@example.com", Password));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            userService.ChangePasswordAsync(auth.UserId, new ChangePasswordRequest(Password, "short")));
+    }
+
+    private static UserService CreateUserService(MonetriaDbContext dbContext)
+    {
+        return new UserService(
+            new UserRepository(dbContext),
+            new PasswordService(),
+            new MonetriaUnitOfWork(dbContext));
     }
 }

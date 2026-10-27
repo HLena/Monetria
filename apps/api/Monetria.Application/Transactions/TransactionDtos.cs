@@ -46,9 +46,40 @@ public sealed record TransactionFilterRequest(
     Guid? FromAccountId = null,
     int? Limit = null,
     int? Page = null,
-    int? PageSize = null);
+    int? PageSize = null,
+    string? StartDate = null,
+    string? EndDate = null);
 
 public sealed record TransactionSummaryResponse(
     decimal TotalIncome,
     decimal TotalExpenses,
     int TotalCount);
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+
+public sealed record FlowEntry(string Label, decimal Income, decimal Expenses);
+
+public sealed record MonthlyFlowResponse(
+    int Months,
+    string Granularity,
+    IReadOnlyList<FlowEntry> Data);
+
+public sealed record CategorySpendingEntry(
+    Guid? CategoryId,
+    string CategoryName,
+    string? Color,
+    string? KeyIcon,
+    decimal Amount,
+    decimal Percentage);
+
+public sealed record SpendingByCategoryResponse(
+    int Months,
+    string PeriodStart,
+    string PeriodEnd,
+    decimal TotalExpenses,
+    IReadOnlyList<CategorySpendingEntry> Data);
+
+// Raw types used between repository and service (not exposed to API)
+public sealed record MonthFlowPoint(int Month, int Year, decimal Income, decimal Expenses);
+public sealed record WeekFlowPoint(int WeekOfMonth, decimal Income, decimal Expenses);
+public sealed record CategorySpendingPoint(Guid? CategoryId, string? CategoryName, string? Color, string? KeyIcon, decimal Amount);

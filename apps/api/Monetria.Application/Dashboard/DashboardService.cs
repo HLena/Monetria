@@ -29,11 +29,14 @@ public sealed class DashboardService(
 
         var accountEntries = new List<AccountBalanceEntry>(activeAccounts.Count);
         var netWorth = 0m;
+        var creditCardDebt = 0m;
         foreach (var account in activeAccounts)
         {
             var delta = await transactionRepository.GetAccountBalanceDeltaAsync(account.Id, cancellationToken);
             var balance = account.InitialBalance.GetValueOrDefault(0) + delta;
             netWorth += balance;
+            if (account.Type == AccountType.CreditCard && balance < 0)
+                creditCardDebt += Math.Abs(balance);
             accountEntries.Add(MapAccountEntry(account, balance));
         }
 
@@ -55,7 +58,7 @@ public sealed class DashboardService(
                 userId, budget.CategoryId, budget.Month, budget.Year, cancellationToken);
             budgetEntries.Add(new BudgetSummaryEntry(
                 budget.Id, budget.CategoryId, budget.LimitAmount, spent,
-                budget.Month, budget.Year, budget.RolloverUnused));
+                budget.Month, budget.Year, budget.IsRecurring));
         }
 
         var recurrings = await recurringRepository.ListByUserIdAsync(userId, new RecurringFilterRequest(PageSize: 100), cancellationToken);
@@ -67,6 +70,7 @@ public sealed class DashboardService(
 
         return new DashboardResponse(
             netWorth,
+            creditCardDebt,
             new MonthSummary(month, year, monthIncome, monthExpenses, monthIncome - monthExpenses),
             accountEntries,
             recentTransactions.Select(MapTransactionResponse).ToList(),

@@ -60,4 +60,35 @@ export interface TransactionQueryParams {
   month?: number;
   year?: number;
   fromAccountId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface FlowEntry {
+  label: string;
+  income: number;
+  expenses: number;
+}
+
+export interface MonthlyFlowResponse {
+  months: number;
+  granularity: string;
+  data: FlowEntry[];
+}
+
+export interface CategorySpendingEntry {
+  categoryId: string | null;
+  categoryName: string;
+  color: string | null;
+  keyIcon: string | null;
+  amount: number;
+  percentage: number;
+}
+
+export interface SpendingByCategoryResponse {
+  months: number;
+  periodStart: string;
+  periodEnd: string;
+  totalExpenses: number;
+  data: CategorySpendingEntry[];
 }

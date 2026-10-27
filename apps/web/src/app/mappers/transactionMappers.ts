@@ -3,9 +3,9 @@ import type {
   CreateTransactionRequestBody,
   UpdateTransactionRequestBody,
   TransactionTypeDto,
-} from '../types/api/transactions';
-import type { Transaction, TransactionType, Currency } from '../types/finance';
-import type { CategoryDto } from '../types/api/categories';
+} from '@/app/types/api';
+import type { Transaction, TransactionType, Currency } from '@/app/types/finance';
+import type { CategoryDto } from '@/app/types/api';
 
 const TYPE_FROM_DTO: Record<TransactionTypeDto, TransactionType> = {
   Income: 'income',

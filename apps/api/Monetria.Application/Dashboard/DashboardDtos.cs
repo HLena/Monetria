@@ -5,6 +5,7 @@ namespace Monetria.Application.Dashboard;
 
 public sealed record DashboardResponse(
     decimal NetWorth,
+    decimal CreditCardDebt,
     MonthSummary CurrentMonth,
     IReadOnlyList<AccountBalanceEntry> Accounts,
     IReadOnlyList<TransactionResponse> RecentTransactions,
@@ -34,7 +35,7 @@ public sealed record BudgetSummaryEntry(
     decimal SpentAmount,
     int Month,
     int Year,
-    bool RolloverUnused);
+    bool IsRecurring);
 
 public sealed record UpcomingRecurringEntry(
     Guid Id,

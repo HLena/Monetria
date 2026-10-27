@@ -27,4 +27,8 @@ public interface ITransactionService
         Guid userId,
         TransactionFilterRequest filter,
         CancellationToken cancellationToken = default);
+
+    Task<MonthlyFlowResponse> GetMonthlyFlowAsync(Guid userId, int months, CancellationToken cancellationToken = default);
+    Task<MonthlyFlowResponse> GetWeeklyFlowAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<SpendingByCategoryResponse> GetSpendingByCategoryAsync(Guid userId, int months, CancellationToken cancellationToken = default);
 }

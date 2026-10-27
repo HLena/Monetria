@@ -8,4 +8,5 @@ public interface IRecurringRepository
     Task<Recurring?> GetByIdAsync(Guid recurringId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Recurring>> ListByUserIdAsync(Guid userId, RecurringFilterRequest filter, CancellationToken cancellationToken = default);
     Task<int> CountByUserIdAsync(Guid userId, RecurringFilterRequest filter, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Recurring>> ListActiveDueAsync(DateOnly today, CancellationToken cancellationToken = default);
 }

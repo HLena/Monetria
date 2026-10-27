@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, AlertTriangle, CheckCircle, Edit2, Trash2, Target } from 'lucide-react';
-import { Budget } from '../types/finance';
-import { Modal } from '../components/Modal';
-import { CategoryIconCircle } from '../lib/categoryIcons';
-import { useFinanceStore } from '../store/FinanceStore';
-import { PageContainer, HeaderPage, SummaryCard, EmptyState, LoadingState, ErrorBanner } from '../components/shared';
-import { BudgetForm } from '../components/budgets/BudgetForm';
+import { Budget } from '@/app/types/finance';
+import { Modal } from '@/app/components/Modal';
+import { CategoryIconCircle } from '@/app/lib';
+import { useCategories, useBudgets } from '@/app/hooks';
+import { PageContainer, HeaderPage, SummaryCard, EmptyState, LoadingState, ErrorBanner, MonthNavigator } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
+import { BudgetForm } from '@/app/components/budgets/BudgetForm';
 
 function fmt(n: number) {
   return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(n);
@@ -24,18 +25,15 @@ interface BudgetWithMeta extends Budget {
 }
 
 export function Budgets() {
-  const { budgets, categories, isLoading, error, loadBudgets, addBudget, updateBudget, deleteBudget, loadCategories } = useFinanceStore();
   const [showForm, setShowForm] = useState(false);
   const [editBudget, setEditBudget] = useState<Budget | null>(null);
 
   const now = new Date();
-  const [filterMonth] = useState(now.getMonth() + 1);
-  const [filterYear] = useState(now.getFullYear());
+  const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(now.getFullYear());
 
-  useEffect(() => {
-    void loadCategories();
-    loadBudgets(filterMonth, filterYear);
-  }, [filterMonth, filterYear]);
+  const { categories } = useCategories();
+  const { budgets, isLoading, error, addBudget, updateBudget, deleteBudget } = useBudgets(filterMonth, filterYear);
 
   const budgetsWithMeta: BudgetWithMeta[] = budgets.map(b => {
     const cat = categories.find(c => c.id === b.categoryId);
@@ -73,15 +71,18 @@ export function Budgets() {
     <PageContainer>
       <HeaderPage
         title="Presupuestos"
-        subtitle={`${MONTH_NAMES[filterMonth - 1]} ${filterYear}`}
         actions={
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 dark:shadow-none"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Presupuesto
-          </button>
+          <>
+            <MonthNavigator
+              month={filterMonth}
+              year={filterYear}
+              onChange={(m, y) => { setFilterMonth(m); setFilterYear(y); }}
+            />
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="w-4 h-4" />
+              Nuevo Presupuesto
+            </Button>
+          </>
         }
       />
 
@@ -115,9 +116,7 @@ export function Budgets() {
             message="No hay presupuestos para este mes"
             description="Crea tu primer presupuesto para controlar tus gastos"
             action={
-              <button onClick={() => setShowForm(true)} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors">
-                Crear presupuesto
-              </button>
+              <Button onClick={() => setShowForm(true)}>Crear presupuesto</Button>
             }
           />
         </div>

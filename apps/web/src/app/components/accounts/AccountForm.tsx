@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
-import { Account } from '../../types/models';
+import { Account } from '@/app/types/models';
 import { AccountType } from '@monetria/enums';
-import { CARD_COLORS } from '../../constants/accountColors';
-import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
-import { FormField } from '../shared/FormField';
-import { SectionLabel } from '../shared/SectionLabel';
-import { ColorPicker } from '../shared/ColorPicker';
-import { Divider } from '../shared/Divider';
-import { ErrorMsg } from '../shared/ErrorMsg';
+import { CARD_COLORS } from '@/app/constants/account';
+import { Input } from '@/app/components/ui';
+import { Select } from '@/app/components/ui';
+import { Button } from '@/app/components/ui/Button';
+import { FormField, SectionLabel, ColorPicker, Divider, ErrorMsg } from '@/app/components/shared';
 import { Landmark, CreditCard, Banknote, Smartphone } from 'lucide-react';
 
 type TypeConfig = {
@@ -86,6 +83,7 @@ export function AccountForm({
   const [form, setForm] = useState<Omit<Account, 'id'>>({
     name: initial?.name ?? '',
     type: initial?.type ?? AccountType.Cash,
+    isActive: initial?.isActive ?? true,
     cardLast4Digits: initial?.cardLast4Digits ?? '',
     cardHolderName: initial?.cardHolderName ?? '',
     expiryDate: initial?.expiryDate ?? '',
@@ -389,9 +387,9 @@ export function AccountForm({
       />
 
       <div className="flex gap-3 pt-2">
-        <button type="submit" className="flex-1 bg-indigo-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <Button type="submit" className="flex-1 rounded-xl h-11">
           {initial ? 'Guardar cambios' : 'Agregar cuenta'}
-        </button>
+        </Button>
       </div>
     </form>
   );

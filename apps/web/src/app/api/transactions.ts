@@ -1,4 +1,4 @@
-import { api } from '../lib/apiClient';
+import { api } from '@/app/lib';
 import type {
   TransactionDto,
   CreateTransactionRequestBody,
@@ -6,7 +6,9 @@ import type {
   TransactionResponse,
   TransactionSummaryDto,
   TransactionQueryParams,
-} from '../types/api/transactions';
+  MonthlyFlowResponse,
+  SpendingByCategoryResponse,
+} from '@/app/types/api';
 
 function toQueryString(params: Record<string, string | number | boolean | undefined | null>): string {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
@@ -34,4 +36,21 @@ export async function updateTransaction(id: string, body: UpdateTransactionReque
 
 export async function deleteTransaction(id: string): Promise<void> {
   await api.delete(`/transactions/${id}`);
+}
+
+export async function getMonthlyFlow(
+  months: 1 | 3 | 6 | 12,
+  granularity: 'month' | 'week',
+): Promise<MonthlyFlowResponse> {
+  return api.get<MonthlyFlowResponse>(
+    `/transactions/monthly-flow?months=${months}&granularity=${granularity}`,
+  );
+}
+
+export async function getSpendingByCategory(
+  months: 1 | 3 | 6 | 12,
+): Promise<SpendingByCategoryResponse> {
+  return api.get<SpendingByCategoryResponse>(
+    `/transactions/spending-by-category?months=${months}`,
+  );
 }

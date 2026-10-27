@@ -1,40 +1,187 @@
-import { useEffect } from 'react';
-import { useFinanceStore } from '../store/FinanceStore';
-import { useAuthStore } from '../store/AuthStore';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useFinanceStore, useAuthStore } from '@/app/store';
+import { getAuthToken } from '@/app/lib';
+import {
+  listTransactions,
+  getTransactionsSummary,
+  createTransaction as createTransactionApi,
+  updateTransaction as updateTransactionApi,
+  deleteTransaction as deleteTransactionApi,
+} from '@/app/api';
+import {
+  mapTransactionDtoToTransaction,
+  toCreateTransactionRequestBody,
+  toUpdateTransactionRequestBody,
+} from '@/app/mappers';
+import type { Transaction } from '@/app/types/finance';
+import type { TransactionSummaryDto, TransactionQueryParams, TransactionTypeDto } from '@/app/types/api';
 
-export function useTransactions() {
-  const {
-    accounts,
-    transactions,
-    categories,
-    isLoading,
-    error,
-    listAccounts,
-    loadTransactions,
-    loadCategories,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-  } = useFinanceStore();
+export const PAGE_SIZE = 10;
 
+export interface TransactionFilters {
+  type: 'all' | 'income' | 'expense' | 'transfer';
+  categoryId: string;
+  accountId: string;
+  startDate: string;
+  endDate: string;
+}
+
+export const TYPE_TO_DTO: Record<string, TransactionTypeDto | undefined> = {
+  income: 'Income',
+  expense: 'Expense',
+  transfer: 'Transfer',
+  all: undefined,
+};
+
+function buildParams(filters: TransactionFilters, page: number): TransactionQueryParams {
+  const params: TransactionQueryParams = { page, pageSize: PAGE_SIZE };
+
+  if (filters.type !== 'all') params.type = TYPE_TO_DTO[filters.type];
+  if (filters.categoryId !== 'all') params.categoryId = filters.categoryId;
+  if (filters.accountId !== 'all') params.fromAccountId = filters.accountId;
+  if (filters.startDate) params.startDate = filters.startDate;
+  if (filters.endDate) params.endDate = filters.endDate;
+
+  return params;
+}
+
+function buildSummaryParams(filters: TransactionFilters): Omit<TransactionQueryParams, 'page' | 'pageSize'> {
+  const { page: _p, pageSize: _ps, ...rest } = buildParams(filters, 1);
+  return rest;
+}
+
+const ALL_PAGES_PAGE_SIZE = 100;
+
+/** Fetches every page for a single account — used for analytics views (charts, category breakdowns) that need the full unpaginated history. */
+export async function fetchAllTransactionsForAccount(accountId: string): Promise<Transaction[]> {
+  const first = await listTransactions({ fromAccountId: accountId, page: 1, pageSize: ALL_PAGES_PAGE_SIZE });
+  const allDtos = [...first.items];
+
+  if (first.totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: first.totalPages - 1 }, (_, i) =>
+        listTransactions({ fromAccountId: accountId, page: i + 2, pageSize: ALL_PAGES_PAGE_SIZE }),
+      ),
+    );
+    rest.forEach(r => allDtos.push(...r.items));
+  }
+
+  return allDtos.map(mapTransactionDtoToTransaction);
+}
+
+export function useTransactions(initialFilters?: Partial<TransactionFilters>) {
+  const accounts = useFinanceStore(s => s.accounts);
+  const categories = useFinanceStore(s => s.categories);
+  const listAccounts = useFinanceStore(s => s.listAccounts);
+  const loadUserBalance = useFinanceStore(s => s.loadUserBalance);
+  const loadCategories = useFinanceStore(s => s.loadCategories);
+
+  const [filters, setFiltersState] = useState<TransactionFilters>({
+    type: 'all',
+    categoryId: 'all',
+    accountId: 'all',
+    startDate: '',
+    endDate: '',
+    ...initialFilters,
+  });
+
+  const [page, setPageState] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const [items, setItems] = useState<Transaction[]>([]);
+  const [summary, setSummary] = useState<TransactionSummaryDto | null>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const setFilter = useCallback(<K extends keyof TransactionFilters>(key: K, value: TransactionFilters[K]) => {
+    setFiltersState(prev => ({ ...prev, [key]: value }));
+    setPageState(1);
+  }, []);
+
+  const setPage = useCallback((p: number) => setPageState(p), []);
+
+  // Load accounts + categories on mount
   useEffect(() => {
     const load = () => {
       if (!useAuthStore.persist.hasHydrated()) return;
       const userId = useAuthStore.getState().user?.userId ?? '';
       void listAccounts(userId);
       void loadCategories();
-      void loadTransactions();
     };
     if (useAuthStore.persist.hasHydrated()) load();
     return useAuthStore.persist.onFinishHydration(load);
-  }, [listAccounts, loadCategories, loadTransactions]);
+  }, [listAccounts, loadCategories]);
+
+  // Fetch paginated data + summary whenever filters / page / refreshKey change
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!getAuthToken()) return;
+
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+
+    setIsLoading(true);
+    setError(null);
+
+    const params = buildParams(filters, page);
+    const summaryParams = buildSummaryParams(filters);
+
+    Promise.all([listTransactions(params), getTransactionsSummary(summaryParams)])
+      .then(([listResult, summaryResult]) => {
+        setItems(listResult.items.map(mapTransactionDtoToTransaction));
+        setTotalPages(Math.ceil(listResult.totalCount / PAGE_SIZE));
+        setSummary(summaryResult);
+        setIsLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : 'Error al cargar transacciones');
+        setIsLoading(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.type, filters.categoryId, filters.accountId, filters.startDate, filters.endDate, page, refreshKey]);
+
+  const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
+
+  const userId = useAuthStore(s => s.user?.userId ?? '');
+
+  const addTransaction = useCallback(async (tx: Omit<Transaction, 'id' | 'createdAt'>) => {
+    const body = toCreateTransactionRequestBody(tx, categories);
+    await createTransactionApi(body);
+    void listAccounts(userId).catch(() => undefined);
+    void loadUserBalance().catch(() => undefined);
+    refresh();
+  }, [categories, listAccounts, loadUserBalance, userId, refresh]);
+
+  const updateTransaction = useCallback(async (id: string, tx: Omit<Transaction, 'id' | 'createdAt'>) => {
+    const body = toUpdateTransactionRequestBody(tx, categories);
+    await updateTransactionApi(id, body);
+    void listAccounts(userId).catch(() => undefined);
+    void loadUserBalance().catch(() => undefined);
+    refresh();
+  }, [categories, listAccounts, loadUserBalance, userId, refresh]);
+
+  const deleteTransaction = useCallback(async (id: string) => {
+    await deleteTransactionApi(id);
+    void listAccounts(userId).catch(() => undefined);
+    void loadUserBalance().catch(() => undefined);
+    refresh();
+  }, [listAccounts, loadUserBalance, userId, refresh]);
 
   return {
-    accounts,
-    transactions,
-    categories,
+    items,
+    summary,
+    page,
+    totalPages,
+    setPage,
+    filters,
+    setFilter,
     isLoading,
     error,
+    accounts,
+    categories,
     addTransaction,
     updateTransaction,
     deleteTransaction,

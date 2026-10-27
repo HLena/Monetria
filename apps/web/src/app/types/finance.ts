@@ -1,11 +1,18 @@
 export { AccountType } from '@monetria/enums';
 export type { Account } from '@/app/types/models';
+import type {
+  RecurringType,
+  RecurringAmountType,
+  RecurringFrequency,
+  RecurringOccurrenceStatus,
+} from './api/recurrings';
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
 export type BudgetPeriod = 'monthly' | 'weekly';
-export type FixedExpensePeriod = 'monthly' | 'weekly' | 'yearly';
 export type DebtType = 'personal_loan' | 'credit_card' | 'mortgage' | 'auto_loan' | 'other';
 export type Currency = 'PEN' | 'USD';
+
+export type { RecurringType, RecurringAmountType, RecurringFrequency, RecurringOccurrenceStatus };
 
 export const CURRENCY_SYMBOL: Record<Currency, string> = {
   PEN: 'S/',
@@ -59,13 +66,17 @@ export const CATEGORY_COLORS: Record<string, string> = {
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 export type IncomeCategory = (typeof INCOME_CATEGORIES)[number];
 
-export function fixedExpenseMonthlyEquivalent(amount: number, period: FixedExpensePeriod): number {
-  switch (period) {
-    case 'monthly':
-      return amount;
-    case 'weekly':
+export function recurringMonthlyEquivalent(amount: number, frequency: RecurringFrequency): number {
+  switch (frequency) {
+    case 'Daily':
+      return amount * 30;
+    case 'Weekly':
       return (amount * 52) / 12;
-    case 'yearly':
+    case 'Biweekly':
+      return (amount * 26) / 12;
+    case 'Monthly':
+      return amount;
+    case 'Yearly':
       return amount / 12;
     default:
       return amount;
@@ -95,22 +106,37 @@ export interface Budget {
   month: number;
   year: number;
   spentAmount: number;
-  rolloverUnused: boolean;
+  isRecurring: boolean;
   createdAt: string;
 }
 
-export interface FixedExpense {
+export interface Recurring {
   id: string;
-  name: string;
-  amount: number;
-  category: string;
   accountId: string;
-  period: FixedExpensePeriod;
-  /** Día del mes (1–31) en que suele cargarse; opcional */
-  dueDay?: number;
+  toAccountId?: string;
+  categoryId?: string;
+  categoryName?: string;
+  name: string;
+  type: RecurringType;
+  amountType: RecurringAmountType;
+  amount?: number;
+  estimatedAmount?: number;
+  frequency: RecurringFrequency;
+  startDate: string; // 'YYYY-MM-DD'
+  endDate?: string;
+  nextDueDate: string;
   isActive: boolean;
-  notes?: string;
-  createdAt: string;
+}
+
+export interface RecurringOccurrence {
+  id: string;
+  recurringId: string;
+  scheduledDate: string;
+  status: RecurringOccurrenceStatus;
+  suggestedAmount?: number;
+  realAmount?: number;
+  transactionId?: string;
+  confirmedAt?: string;
 }
 
 export interface SavingsGoal {

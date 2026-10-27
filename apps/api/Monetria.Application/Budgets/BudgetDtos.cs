@@ -5,14 +5,14 @@ public sealed record CreateBudgetRequest(
     decimal LimitAmount,
     int Month,
     int Year,
-    bool RolloverUnused = false);
+    bool IsRecurring = false);
 
 public sealed record UpdateBudgetRequest(
     Guid CategoryId,
     decimal LimitAmount,
     int Month,
     int Year,
-    bool RolloverUnused = false);
+    bool IsRecurring = false);
 
 public sealed record BudgetResponse(
     Guid Id,
@@ -21,6 +21,6 @@ public sealed record BudgetResponse(
     decimal LimitAmount,
     int Month,
     int Year,
-    bool RolloverUnused,
+    bool IsRecurring,
     decimal SpentAmount,
     DateTime CreatedAt);

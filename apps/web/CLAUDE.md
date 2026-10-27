@@ -57,3 +57,18 @@ empty state
 ## Type Sync Rule
 After any backend DTO change, update types in src/types/api/ first,
 then fix the hook, then fix the component. Never the reverse order.
+
+# Frontend Rules
+
+## Imports
+- Always use `@` path alias, never relative paths with `../`
+- `@` resolves to `apps/web/src/`
+- Always import from barrel `index.ts`, not from individual files
+
+## Barrel files
+- Every folder with 2+ components must have an `index.ts`
+- Re-export everything from the barrel
+
+## Never
+- `import { X } from '../../something'` — use `@/` instead
+- `import { X } from '@/app/components/shared/X'` — use the barrel

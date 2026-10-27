@@ -5,8 +5,7 @@ import {
   Budget,
   SavingsGoal,
   Debt,
-  FixedExpense,
-} from '../types/finance';
+} from '@/app/types/finance';
 
 const genId = () => Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 
@@ -28,7 +27,6 @@ interface FinanceContextType {
   accounts: Account[];
   transactions: Transaction[];
   budgets: Budget[];
-  fixedExpenses: FixedExpense[];
   savingsGoals: SavingsGoal[];
   debts: Debt[];
 
@@ -43,10 +41,6 @@ interface FinanceContextType {
   addBudget: (budget: Omit<Budget, 'id' | 'createdAt'>) => void;
   updateBudget: (id: string, updates: Partial<Budget>) => void;
   deleteBudget: (id: string) => void;
-
-  addFixedExpense: (item: Omit<FixedExpense, 'id' | 'createdAt'>) => void;
-  updateFixedExpense: (id: string, updates: Partial<FixedExpense>) => void;
-  deleteFixedExpense: (id: string) => void;
 
   addSavingsGoal: (goal: Omit<SavingsGoal, 'id' | 'createdAt'>) => void;
   updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => void;
@@ -85,9 +79,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>(() =>
     loadFromStorage('fin_budgets', [])
   );
-  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(() =>
-    loadFromStorage('fin_fixed_expenses', [])
-  );
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() =>
     loadFromStorage('fin_savings', [])
   );
@@ -98,7 +89,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { saveToStorage('fin_accounts', accounts); }, [accounts]);
   useEffect(() => { saveToStorage('fin_transactions', transactions); }, [transactions]);
   useEffect(() => { saveToStorage('fin_budgets', budgets); }, [budgets]);
-  useEffect(() => { saveToStorage('fin_fixed_expenses', fixedExpenses); }, [fixedExpenses]);
   useEffect(() => { saveToStorage('fin_savings', savingsGoals); }, [savingsGoals]);
   useEffect(() => { saveToStorage('fin_debts', debts); }, [debts]);
 
@@ -126,13 +116,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteBudget = (id: string) =>
     setBudgets(prev => prev.filter(b => b.id !== id));
 
-  const addFixedExpense = (item: Omit<FixedExpense, 'id' | 'createdAt'>) =>
-    setFixedExpenses(prev => [...prev, { ...item, id: genId(), createdAt: new Date().toISOString() }]);
-  const updateFixedExpense = (id: string, updates: Partial<FixedExpense>) =>
-    setFixedExpenses(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
-  const deleteFixedExpense = (id: string) =>
-    setFixedExpenses(prev => prev.filter(f => f.id !== id));
-
   // Savings Goals
   const addSavingsGoal = (goal: Omit<SavingsGoal, 'id' | 'createdAt'>) =>
     setSavingsGoals(prev => [...prev, { ...goal, id: genId(), createdAt: new Date().toISOString() }]);
@@ -155,13 +138,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         accounts,
         transactions,
         budgets,
-        fixedExpenses,
         savingsGoals,
         debts,
         addAccount, updateAccount, deleteAccount,
         addTransaction, updateTransaction, deleteTransaction,
         addBudget, updateBudget, deleteBudget,
-        addFixedExpense, updateFixedExpense, deleteFixedExpense,
         addSavingsGoal, updateSavingsGoal, deleteSavingsGoal,
         addDebt, updateDebt, deleteDebt,
       }}

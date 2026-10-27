@@ -18,6 +18,7 @@ using Monetria.Infrastructure.Auth;
 using Monetria.Infrastructure.Budgets;
 using Monetria.Infrastructure.Categories;
 using Monetria.Infrastructure.Debts;
+using Monetria.Infrastructure.Jobs;
 using Monetria.Infrastructure.Recurrings;
 using Monetria.Infrastructure.Persistence;
 using Monetria.Infrastructure.SavingsGoals;
@@ -45,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IBudgetRepository, BudgetRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IUserCategoryPreferenceRepository, UserCategoryPreferenceRepository>();
         services.AddScoped<IDebtRepository, DebtRepository>();
         services.AddScoped<IRecurringRepository, RecurringRepository>();
         services.AddScoped<IRecurringOccurrenceRepository, RecurringOccurrenceRepository>();
@@ -57,16 +59,21 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IBudgetService, BudgetService>();
+        services.AddScoped<IBudgetRecurrenceService, BudgetRecurrenceService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IDebtService, DebtService>();
         services.AddScoped<IRecurringService, RecurringService>();
         services.AddScoped<IRecurringOccurrenceService, RecurringOccurrenceService>();
+        services.AddScoped<IRecurringOccurrenceGenerationService, RecurringOccurrenceGenerationService>();
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<ISavingsGoalService, SavingsGoalService>();
         services.AddScoped<ISavingsPocketService, SavingsPocketService>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<IUserService, UserService>();
+
+        services.AddHostedService<BudgetRecurrenceHostedService>();
+        services.AddHostedService<RecurringOccurrenceGenerationHostedService>();
 
         return services;
     }

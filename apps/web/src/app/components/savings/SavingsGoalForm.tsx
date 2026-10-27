@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { SavingsGoal, CATEGORY_COLORS } from '../../types/finance';
-import { FORM_COLORS } from '../../../lib/colors';
-import { Input } from '../ui/Input';
-import { FormField } from '../shared/FormField';
-import { CategorySelect } from '../shared/CategorySelect';
-import { ColorPicker } from '../shared/ColorPicker';
+import { SavingsGoal, CATEGORY_COLORS } from '@/app/types/finance';
+import { FORM_COLORS } from '@/lib/colors';
+import { Input } from '@/app/components/ui';
+import { FormField, CategorySelect, ColorPicker } from '@/app/components/shared';
+import { Button } from '@/app/components/ui/Button';
 
 const GOAL_CATEGORIES = ['Viajes', 'Tecnología', 'Hogar', 'Vehículo', 'Educación', 'Emergencia', 'Inversión', 'Retiro', 'Otro'];
 
@@ -113,9 +112,9 @@ export function SavingsGoalForm({
       </FormField>
 
       <div className="flex gap-3 pt-2">
-        <button type="submit" className="flex-1 bg-indigo-600 text-white rounded-xl py-3 text-sm font-medium hover:bg-indigo-700 transition-colors">
+        <Button type="submit" className="flex-1 rounded-xl h-11">
           {initial ? 'Guardar cambios' : 'Crear meta'}
-        </button>
+        </Button>
       </div>
     </form>
   );

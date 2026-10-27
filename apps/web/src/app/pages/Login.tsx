@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Navigate, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/app/components/ui/Button';
-import { Input } from '@/app/components/ui/Input';
-import { Label } from '@/app/components/ui/Label';
-import { useAuthStore } from '../store/AuthStore';
+import { Button, Input } from '@/app/components/ui';
+import { FormField } from '@/app/components/shared';
+import { useAuthStore } from '@/app/store';
 
 type Tab = 'login' | 'register';
 
@@ -27,13 +26,21 @@ export function Login() {
   const [activeTab, setActiveTab] = useState<Tab>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { login, register } = useAuthStore();
+  const { login, register, accessToken } = useAuthStore();
   const navigate = useNavigate();
 
   const loginForm = useForm<LoginFormValues>({ defaultValues: { email: '', password: '' } });
   const registerForm = useForm<RegisterFormValues>({
     defaultValues: { firstName: '', lastName: '', email: '', password: '', confirmPassword: '' },
   });
+
+  if (accessToken) return <Navigate to="/" replace />;
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
 
   const onLogin = async (data: LoginFormValues) => {
     try {
@@ -77,7 +84,7 @@ export function Login() {
           <div className="grid grid-cols-2 border-b border-slate-200 dark:border-slate-800">
             <button
               type="button"
-              onClick={() => setActiveTab('login')}
+              onClick={() => handleTabChange('login')}
               className={`py-3.5 text-sm font-medium transition-colors ${
                 activeTab === 'login'
                   ? 'text-violet-600 dark:text-violet-400 border-b-2 border-violet-600 dark:border-violet-400'
@@ -88,7 +95,7 @@ export function Login() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('register')}
+              onClick={() => handleTabChange('register')}
               className={`py-3.5 text-sm font-medium transition-colors ${
                 activeTab === 'register'
                   ? 'text-violet-600 dark:text-violet-400 border-b-2 border-violet-600 dark:border-violet-400'
@@ -103,8 +110,7 @@ export function Login() {
             {/* Login Form */}
             {activeTab === 'login' && (
               <form onSubmit={loginForm.handleSubmit(onLogin)} noValidate className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="login-email">Correo electrónico</Label>
+                <FormField label="Correo electrónico">
                   <Input
                     id="login-email"
                     type="email"
@@ -119,12 +125,11 @@ export function Login() {
                     })}
                   />
                   {loginForm.formState.errors.email && (
-                    <p className="text-xs text-red-500">{loginForm.formState.errors.email.message}</p>
+                    <p className="text-xs text-red-500 mt-1">{loginForm.formState.errors.email.message}</p>
                   )}
-                </div>
+                </FormField>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="login-password">Contraseña</Label>
+                <FormField label="Contraseña">
                   <div className="relative">
                     <Input
                       id="login-password"
@@ -146,9 +151,9 @@ export function Login() {
                     </button>
                   </div>
                   {loginForm.formState.errors.password && (
-                    <p className="text-xs text-red-500">{loginForm.formState.errors.password.message}</p>
+                    <p className="text-xs text-red-500 mt-1">{loginForm.formState.errors.password.message}</p>
                   )}
-                </div>
+                </FormField>
 
                 <Button
                   type="submit"
@@ -163,9 +168,7 @@ export function Login() {
             {/* Register Form */}
             {activeTab === 'register' && (
               <form onSubmit={registerForm.handleSubmit(onRegister)} noValidate className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="register-first-name">Nombre(s)</Label>
+                  <FormField label="Nombre(s)" required>
                     <Input
                       id="register-first-name"
                       type="text"
@@ -177,11 +180,10 @@ export function Login() {
                       })}
                     />
                     {registerForm.formState.errors.firstName && (
-                      <p className="text-xs text-red-500">{registerForm.formState.errors.firstName.message}</p>
+                      <p className="text-xs text-red-500 mt-1">{registerForm.formState.errors.firstName.message}</p>
                     )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="register-last-name">Apellido(s)</Label>
+                  </FormField>
+                  <FormField label="Apellido(s)" required>
                     <Input
                       id="register-last-name"
                       type="text"
@@ -193,13 +195,11 @@ export function Login() {
                       })}
                     />
                     {registerForm.formState.errors.lastName && (
-                      <p className="text-xs text-red-500">{registerForm.formState.errors.lastName.message}</p>
+                      <p className="text-xs text-red-500 mt-1">{registerForm.formState.errors.lastName.message}</p>
                     )}
-                  </div>
-                </div>
+                  </FormField>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="register-email">Correo electrónico</Label>
+                <FormField label="Correo electrónico" required>
                   <Input
                     id="register-email"
                     type="email"
@@ -214,12 +214,11 @@ export function Login() {
                     })}
                   />
                   {registerForm.formState.errors.email && (
-                    <p className="text-xs text-red-500">{registerForm.formState.errors.email.message}</p>
+                    <p className="text-xs text-red-500 mt-1">{registerForm.formState.errors.email.message}</p>
                   )}
-                </div>
+                </FormField>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="register-password">Contraseña</Label>
+                <FormField label="Contraseña" required>
                   <div className="relative">
                     <Input
                       id="register-password"
@@ -242,12 +241,11 @@ export function Login() {
                     </button>
                   </div>
                   {registerForm.formState.errors.password && (
-                    <p className="text-xs text-red-500">{registerForm.formState.errors.password.message}</p>
+                    <p className="text-xs text-red-500 mt-1">{registerForm.formState.errors.password.message}</p>
                   )}
-                </div>
+                </FormField>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="register-confirm-password">Confirmar contraseña</Label>
+                <FormField label="Confirmar contraseña" required>
                   <div className="relative">
                     <Input
                       id="register-confirm-password"
@@ -271,11 +269,11 @@ export function Login() {
                     </button>
                   </div>
                   {registerForm.formState.errors.confirmPassword && (
-                    <p className="text-xs text-red-500">
+                    <p className="text-xs text-red-500 mt-1">
                       {registerForm.formState.errors.confirmPassword.message}
                     </p>
                   )}
-                </div>
+                </FormField>
 
                 <Button
                   type="submit"
