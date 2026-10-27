@@ -15,10 +15,10 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { formatCurrency, useFinanceStore } from '@/app/store';
+import { formatCurrency } from '@/app/store';
 import { PageContainer, HeaderPage, LoadingState, ErrorBanner, ToggleGroup } from '@/app/components/shared';
 import type { ToggleOption } from '@/app/components/shared';
-import { useReports } from '@/app/hooks';
+import { useReports, useCategories, useBudgets } from '@/app/hooks';
 
 type MonthsStr = '3' | '6' | '12';
 
@@ -62,7 +62,9 @@ function SummaryCard({ label, value, prev, icon: Icon, color }: {
 }
 
 export function Reports() {
-  const { budgets, categories, accounts } = useFinanceStore();
+  const now = new Date();
+  const { budgets } = useBudgets(now.getMonth() + 1, now.getFullYear());
+  const { categories } = useCategories();
   const [monthsStr, setMonthsStr] = useState<MonthsStr>('3');
   const months = parseInt(monthsStr) as 3 | 6 | 12;
   const { data, isLoading, error } = useReports(months);
@@ -105,18 +107,12 @@ export function Reports() {
   const budgetPerformance = budgets.map(b => {
     const cat = categories.find(c => c.id === b.categoryId);
     return {
-      category: cat?.name ?? b.categoryId,
+      category: cat?.name,
       spent: b.spentAmount,
       limit: b.limitAmount,
       color: cat?.color ?? '#6366f1',
     };
   });
-
-  const accountData = accounts.map(a => ({
-    name: a.name,
-    value: a.currentBalance,
-    color: a.colorCode,
-  }));
 
   return (
     <PageContainer>
