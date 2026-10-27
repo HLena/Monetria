@@ -257,10 +257,11 @@ export function Dashboard() {
       {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Recent Transactions */}
+        
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-3 px-1">
             <h2 className="text-slate-700 dark:text-slate-200 font-semibold">Transacciones Recientes</h2>
-            <Link to="/transactions" className="text-indigo-600 dark:text-indigo-400 text-xs font-medium flex items-center gap-1 hover:gap-2 transition-all">
+            <Link to="/movements" className="text-indigo-600 dark:text-indigo-400 text-xs font-medium flex items-center gap-1 hover:gap-2 transition-all">
               Ver todas <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
