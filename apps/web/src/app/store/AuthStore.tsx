@@ -19,16 +19,7 @@ export interface AuthUser {
 /** Formato JSON que devuelve el backend (login / register) */
 interface AuthApiResponse {
   token: string;
-  user: {
-    userId: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    preferredCurrency: string;
-    dateFormat: string;
-    theme: string;
-    phoneNumber: string | null;
-  };
+  user: AuthUser
 }
 
 interface AuthState {
