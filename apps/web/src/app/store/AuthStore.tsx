@@ -16,10 +16,19 @@ export interface AuthUser {
   phoneNumber: string | null;
 }
 
-/** Formato JSON que devuelve el backend (login / register) — camelCase o PascalCase (.NET) */
+/** Formato JSON que devuelve el backend (login / register) */
 interface AuthApiResponse {
   token: string;
-  user: AuthUser;
+  user: {
+    userId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    preferredCurrency: string;
+    dateFormat: string;
+    theme: string;
+    phoneNumber: string | null;
+  };
 }
 
 interface AuthState {

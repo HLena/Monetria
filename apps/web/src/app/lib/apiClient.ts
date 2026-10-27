@@ -54,6 +54,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers: mergedHeaders,
   });
   if (!res.ok) {
+    if (res.status === 401 && getAuthToken()) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth-storage');
+      window.location.replace('/login');
+      return undefined as T;
+    }
     const data = await res.json().catch(() => null);
     throw new Error(parseErrorMessage(data, res.status));
   }

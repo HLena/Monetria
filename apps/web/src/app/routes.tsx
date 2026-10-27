@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router';
 import { Layout } from './components/Layout';
+import { ProtectedRoute } from './components/shared';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Accounts } from './pages/Accounts';
@@ -17,19 +18,24 @@ export const router = createBrowserRouter([
   { path: '/login', Component: Login },
   {
     path: '/',
-    Component: Layout,
+    Component: ProtectedRoute,
     children: [
-      { index: true, Component: Dashboard },
-      { path: 'accounts', Component: Accounts },
-      { path: 'accounts/:id', Component: AccountDetail },
-      { path: 'movements', Component: Movements },
-      { path: 'recurrings', Component: Recurrings },
-      { path: 'budgets', Component: Budgets },
-      { path: 'savings', Component: Savings },
-      { path: 'debts', Component: DebtPlanning },
-      { path: 'reports', Component: Reports },
-      { path: 'settings', Component: Settings },
-      { path: '*', Component: NotFound },
+      {
+        Component: Layout,
+        children: [
+          { index: true, Component: Dashboard },
+          { path: 'accounts', Component: Accounts },
+          { path: 'accounts/:id', Component: AccountDetail },
+          { path: 'movements', Component: Movements },
+          { path: 'recurrings', Component: Recurrings },
+          { path: 'budgets', Component: Budgets },
+          { path: 'savings', Component: Savings },
+          { path: 'debts', Component: DebtPlanning },
+          { path: 'reports', Component: Reports },
+          { path: 'settings', Component: Settings },
+          { path: '*', Component: NotFound },
+        ],
+      },
     ],
   },
 ]);

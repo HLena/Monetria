@@ -18,4 +18,5 @@ export { ToggleSwitch } from './ToggleSwitch';
 export { MonthNavigator } from './MonthNavigator';
 export { SectionCard } from './SectionCard';
 export { SaveButton } from './SaveButton';
+export { ProtectedRoute } from './ProtectedRoute';
 export { SummaryCard } from '@/app/components/ui';

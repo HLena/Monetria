@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Navigate, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,8 +26,16 @@ export function Login() {
   const [activeTab, setActiveTab] = useState<Tab>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { login, register } = useAuthStore();
+  const { login, register, accessToken } = useAuthStore();
   const navigate = useNavigate();
+
+  if (accessToken) return <Navigate to="/" replace />;
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
 
   const loginForm = useForm<LoginFormValues>({ defaultValues: { email: '', password: '' } });
   const registerForm = useForm<RegisterFormValues>({
@@ -76,7 +84,7 @@ export function Login() {
           <div className="grid grid-cols-2 border-b border-slate-200 dark:border-slate-800">
             <button
               type="button"
-              onClick={() => setActiveTab('login')}
+              onClick={() => handleTabChange('login')}
               className={`py-3.5 text-sm font-medium transition-colors ${
                 activeTab === 'login'
                   ? 'text-violet-600 dark:text-violet-400 border-b-2 border-violet-600 dark:border-violet-400'
@@ -87,7 +95,7 @@ export function Login() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('register')}
+              onClick={() => handleTabChange('register')}
               className={`py-3.5 text-sm font-medium transition-colors ${
                 activeTab === 'register'
                   ? 'text-violet-600 dark:text-violet-400 border-b-2 border-violet-600 dark:border-violet-400'
